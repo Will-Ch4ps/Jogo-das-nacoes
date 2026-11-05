@@ -33,7 +33,8 @@ if (url && chave) {
   const dados = ler.ok ? await ler.json() : null;
   confere(ler.ok, 'site consegue ler o banco', `status ${ler.status}`);
   confere(Array.isArray(dados?.paises) && dados.paises.length > 0, 'jogo criado no banco', dados?.paises ? `rodada ${dados.rodada}, ${dados.paises.length} países` : 'entre uma vez no admin para criar');
-  confere(!JSON.stringify(dados || {}).match(/"(moedas|codigo)"/), 'tela pública sem dinheiro nem códigos');
+  // Acordo público pode ter "moedas" nos efeitos: é o valor combinado, que o jornal mostra. O cofre do país e os códigos, nunca.
+  confere(!(dados?.paises || []).some(c => 'moedas' in c || 'pop' in c || 'renda' in c) && !JSON.stringify(dados || {}).includes('"codigo"'), 'tela pública sem dinheiro nem códigos');
   const errada = await rpc('jn_admin_carregar', { p_senha: 'senha-errada-de-teste' });
   confere(!errada.ok, 'senha errada é recusada', `status ${errada.status}`);
   const codigo = await rpc('jn_pais_ver', { p_codigo: 'XXXXXX' });
