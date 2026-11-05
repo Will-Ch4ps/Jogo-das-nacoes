@@ -191,7 +191,7 @@ function abaDinheiro() {
       contextoPais(c.id),
       h('p', { class: 'meta', style: 'margin:6px 0 10px' }, `Manutenção total nesta rodada: ${fmt(conta.total)} moedas. Se um grupo pedir para cortar a de uma área, ela entra em crise na rodada seguinte.`),
       h('div', { class: 'efeitos' }, G.AREAS.map(a => {
-        const nivel = c.niveis[a.id], real = G.nivelReal(c, a.id, E), custo = G.custoSubir(nivel, E.params), max = nivel >= G.NIVEL_MAX, linha = conta.linhas.find(l => l.area === a.id), cortada = !!c.cortadas?.[a.id];
+        const nivel = c.niveis[a.id], real = G.nivelReal(c, a.id, E), custo = G.custoSubir(nivel, E.params), max = nivel >= G.NIVEL_COMPRA_MAX, linha = conta.linhas.find(l => l.area === a.id), cortada = !!c.cortadas?.[a.id];
         return h('div', { class: 'linha-area' },
           h('span', { class: 'area-nome' }, icone(a.id, 19), h('span', {}, h('strong', {}, `${a.nome}: nível ${nivel}`), real !== nivel && h('b', { class: 'real' }, ` · vale ${real} agora`),
             h('small', {}, `${G.PESOS[a.peso].nome} · manutenção: ${linha.valor} por rodada${G.problema(c, a.id) ? ' · em crise' : ''}${linha.estado === 'sem dinheiro' ? ' · falta dinheiro' : ''}`))),
@@ -214,7 +214,7 @@ const VALORES = G.VALORES_ACORDO;
 const novoAcordo = () => ({ modelo: 'pagamento', a: E.paises[0]?.id, b: E.paises[1]?.id, tam: 1, valor: '', unica: '', qtdComida: 1, preco: 'igual', area: 'emp', niveis: 1, precoApoio: 0, titulo: '', desc: '', dur: 3, secreto: false, todos: false, paises: {}, efeitos: {} });
 // Os campos do acordo: usados no registro direto e no ajuste de um pedido.
 function camposAcordo(F) {
-  const modelos = [{ v: 'pagamento', t: 'Pagamento', d: 'cobrança, pedágio, ajuda' }, { v: 'comida', t: 'Comida', d: 'um alimenta o outro' }, { v: 'apoio', t: 'Apoio em uma área', d: 'treinamento, obras' }, { v: 'livre', t: 'Livre', d: 'monte como quiser' }];
+  const modelos = [{ v: 'pagamento', t: 'Pagamento', d: 'cobrança, pedágio, ajuda' }, { v: 'comida', t: 'Comida', d: 'um alimenta o outro' }, { v: 'apoio', t: 'Empréstimo de níveis', d: 'tropas, técnicos, obras' }, { v: 'livre', t: 'Livre', d: 'monte como quiser' }];
   const duoOk = F.a && F.b && F.a !== F.b;
   let corpo;
   if (F.modelo === 'pagamento') {
@@ -232,8 +232,8 @@ function camposAcordo(F) {
     ];
   } else if (F.modelo === 'apoio') {
     corpo = [
-      h('div', { class: 'frase' }, selPais(F, 'a'), 'ajuda', selPais(F, 'b'), 'em', selArea(F, 'area')),
-      bloco('Quanto a área sobe enquanto durar?', pilulas([1, 2, 3].map(v => ({ v, t: `+${v} ${v === 1 ? 'nível' : 'níveis'}` })), F.niveis, v => { F.niveis = v; })),
+      h('div', { class: 'frase' }, selPais(F, 'a'), 'empresta a', selPais(F, 'b'), 'em', selArea(F, 'area')),
+      bloco('Quantos níveis?', pilulas([1, 2, 3].map(v => ({ v, t: `${v} ${v === 1 ? 'nível' : 'níveis'}` })), F.niveis, v => { F.niveis = v; })),
       bloco('Quem recebe paga algo por isso? (opcional)', pilulas([0, 5, 10, 20].map(v => ({ v, t: v ? `${v} por rodada` : 'De graça' })), F.precoApoio, v => { F.precoApoio = v; })),
     ];
   } else {
@@ -250,13 +250,10 @@ function camposAcordo(F) {
     const linhas = d.tipo === 'global' ? [['Todos', d.efeitos['*']]] : d.paises.map(id => [nomeDe(id), d.efeitos[id]]);
     if (!linhas.length) return [h('p', { class: 'vazio' }, 'Escolha os países para ver como fica.')];
     const tempo = d.duracao == null ? 'até o fim do jogo' : d.duracao === 1 ? 'por 1 rodada' : `por ${d.duracao} rodadas`;
-    const apoio = F.modelo === 'apoio' && duoOk && E.paises.find(c => c.id === F.b);
-    const fica = apoio && G.comoFicaArea(apoio, F.area, Number(F.niveis), E);
     return [
-      fica && h('p', {}, h('b', {}, `${G.AREAS.find(a => a.id === F.area).nome} de ${apoio.nome}: nível ${fica.de} → ${fica.para}. `), `Hoje: ${fica.hoje}. Com o apoio: ${fica.comApoio}.`),
       ...linhas.map(([n, ef]) => h('p', {}, h('b', {}, `${n}: `), G.textoEfeito(ef) || 'nada muda nos números')),
-      apoio && h('p', { class: 'meta' }, `Quem ajuda paga ${G.custoApoio(F.area, F.niveis, E.params)} moedas por rodada: a manutenção dos níveis que está dando.`),
-      h('p', { class: 'meta' }, `Vale ${tempo}, a partir desta rodada.`)].filter(Boolean);
+      duoOk || F.modelo === 'livre' ? G.pesoDoAcordo(E, d).map(t => h('p', { class: 'meta' }, t)) : null,
+      h('p', { class: 'meta' }, `Vale ${tempo}, a partir desta rodada.`)].flat().filter(Boolean);
   });
   return [
     bloco('Que tipo de combinado é?', pilulas(modelos, F.modelo, v => { F.modelo = v; if (v === 'livre') { F.paises = F.paises || {}; F.efeitos = F.efeitos || {}; for (const id of [F.a, F.b]) if (id) { F.paises[id] = true; F.efeitos[id] ||= []; } } })),
@@ -341,8 +338,8 @@ async function recusarPedido(p, motivo) {
   } catch { ui.msg = { tipo: 'erro', texto: 'Sem conexão: o pedido continua na fila. Tente de novo.' }; }
   ui.decidindo.delete(p.id); await buscarPedidos(); render();
 }
-async function aprovarTodos(tipo) {
-  const lista = naFila().filter(p => p.tipo === tipo);
+async function aprovarTodos(filtro) {
+  const lista = naFila().filter(filtro);
   let feitos = 0;
   for (const p of lista) if (await aprovarPedido(p)) feitos++;
   ui.msg = { tipo: feitos === lista.length ? 'ok' : 'erro', texto: `${feitos} de ${lista.length} aprovados.${feitos === lista.length ? '' : ' Os outros continuam na fila, com o motivo no cartão.'}` };
@@ -364,16 +361,18 @@ function camposEdicao(p, d) {
     bloco('Etiqueta da matéria (opcional)', pilulas([{ v: '', t: 'Nenhuma' }, ...CHAPEUS.map(c => ({ v: c, t: c }))], d.chapeu || '', v => { d.chapeu = v; })),
   ];
 }
-function cartaoPedido(p) {
+function cartaoPedido(p, item) {
   const nomes = id => nomeDe(id), teste = G.checarPedido(E, p), ocupado = ui.decidindo.has(p.id), ed = ui.edPedido?.id === p.id ? ui.edPedido : null;
   let frase;
   try { frase = G.frasePedido(p, nomes); } catch { frase = 'Pedido com dados inválidos'; }
   return h('li', { class: 'cartao pedido' + (teste.ok ? '' : ' com-erro') },
-    h('div', { class: 'cartao-topo' }, h('strong', {}, nomeDe(p.pais)), h('span', { class: 'etiquetas' }, p.rodada !== E.rodada && h('span', { class: 'etiqueta aviso' }, `Rodada ${p.rodada}`), h('span', { class: 'etiqueta' }, NOME_PEDIDO[p.tipo]))),
+    h('div', { class: 'cartao-topo' }, h('strong', {}, NOME_PEDIDO[p.tipo]), h('span', { class: 'etiquetas' }, p.rodada !== E.rodada && h('span', { class: 'etiqueta aviso' }, `Rodada ${p.rodada}`), item?.ok && p.tipo !== 'noticia' && h('span', { class: 'etiqueta' }, G.textoCusto(item)))),
     h('p', { class: 'pedido-frase' }, frase),
-    G.detalhePedido(E, p).map(t => h('p', { class: 'meta pedido-detalhe' }, t)),
+    (item?.detalhe || G.detalhePedido(E, p)).map(t => h('p', { class: 'meta pedido-detalhe' }, t)),
     p.tipo === 'acordo' && p.dados.modelo === 'livre' && !ed && h('p', { class: 'meta' }, 'Combinado livre, sem números. Se quiser que mude algo no jogo, use Ajustar.'),
     !teste.ok && h('p', { class: 'pedido-erro' }, teste.erro),
+    item?.ok && p.tipo === 'acordo' && item.linhas.length > 0 && h('div', { class: 'peso-acordo' }, h('p', { class: 'resumo-titulo' }, `Na conta de ${nomeDe(p.pais)}, por rodada`), item.linhas.map(l => h('div', { class: 'resumo-linha' }, h('span', {}, l.rotulo), h('strong', {}, `${l.valor > 0 ? '+' : ''}${fmt(l.valor)}`)))),
+    teste.ok && item && !item.ok && h('p', { class: 'pedido-erro' }, `Sozinho cabe, mas não junto com os pedidos acima: ${item.erro}`),
     ed
       ? h('div', { class: 'form pedido-edicao' }, camposEdicao(p, ed.d),
         h('div', { class: 'linha-acoes', style: 'width:100%;margin:0' },
@@ -389,6 +388,21 @@ function cartaoPedido(p) {
           h('button', { class: 'btn peq leve', disabled: ocupado, onclick: () => abrirEdicao(p) }, 'Ajustar'),
           h('button', { class: 'btn peq leve', disabled: ocupado, onclick: () => { ui.recusando = p.id; render(); } }, 'Recusar')));
 }
+// Tudo o que um país pediu, com a conta final: dá para aprovar de uma vez.
+function pacotePedidos(id, fila) {
+  const doPais = fila.filter(p => p.pais === id), sim = G.simularPedidos(E, id, fila.filter(p => p.pais === id || p.para === id));
+  const itemDe = p => sim.itens.find(i => i.p.id === p.id), tudoCabe = doPais.every(p => itemDe(p)?.ok), { antes, depois } = sim;
+  const dinheiro = doPais.some(p => p.tipo !== 'noticia');
+  return h('section', { class: 'pacote' },
+    h('div', { class: 'pacote-topo' }, h('strong', {}, nomeDe(id)), h('span', { class: 'etiqueta' }, `${doPais.length} ${doPais.length === 1 ? 'pedido' : 'pedidos'}`)),
+    dinheiro && h('p', { class: 'pacote-conta' }, `Moedas ${fmt(antes.moedas)} → ${fmt(depois.moedas)} · Sobra por rodada ${antes.sobra > 0 ? '+' : ''}${fmt(antes.sobra)} → ${depois.sobra > 0 ? '+' : ''}${fmt(depois.sobra)} · Fim da rodada: ${depois.falta ? `faltam ${fmt(depois.falta)}` : fmt(depois.fim)}`),
+    dinheiro && depois.falta > 0 && h('p', { class: 'pedido-erro' }, `Se aprovar tudo, ${nomeDe(id)} passa fome nesta rodada.`),
+    dinheiro && depois.semManutencao.length > 0 && h('p', { class: 'pedido-erro' }, `Falta dinheiro para a manutenção de ${depois.semManutencao.join(', ')}.`),
+    doPais.length > 1 && h('div', { class: 'linha-acoes', style: 'margin:6px 0 8px' },
+      h('button', { class: 'btn peq', disabled: !tudoCabe, onclick: () => aprovarTodos(p => p.pais === id) }, `Aprovar tudo (${doPais.length})`),
+      !tudoCabe && h('span', { class: 'meta' }, 'Nem tudo cabe: aprove um por um ou recuse algum.')),
+    h('ul', { class: 'lista' }, doPais.map(p => cartaoPedido(p, itemDe(p)))));
+}
 function abaPedidos() {
   const fila = naFila(), jan = E.janelas || {}, investimentos = fila.filter(p => p.tipo === 'subir').length;
   const janela = (k, nome, aberta, fechada) => h('div', { class: 'janela' + (jan[k] ? ' aberta' : '') },
@@ -402,8 +416,8 @@ function abaPedidos() {
         janela('acoes', 'Ações', 'Os grupos já podem mandar pedidos.', 'Os grupos ainda não podem pedir.'),
         janela('noticias', 'Jornal', 'Os grupos já podem mandar textos.', 'Os grupos ainda não podem mandar textos.'))),
     painel(`Fila (${fila.length})`,
-      investimentos > 1 && h('div', { class: 'linha-acoes', style: 'margin:0 0 10px' }, h('button', { class: 'btn peq', onclick: () => aprovarTodos('subir') }, `Aprovar todos os investimentos (${investimentos})`)),
-      fila.length ? h('ul', { class: 'lista' }, fila.map(cartaoPedido)) : h('p', { class: 'vazio-txt' }, 'Nada esperando por você.')),
+      investimentos > 1 && h('div', { class: 'linha-acoes', style: 'margin:0 0 10px' }, h('button', { class: 'btn peq leve', onclick: () => aprovarTodos(p => p.tipo === 'subir') }, `Aprovar todos os investimentos (${investimentos})`)),
+      fila.length ? [...new Set(fila.map(p => p.pais))].map(id => pacotePedidos(id, fila)) : h('p', { class: 'vazio-txt' }, 'Nada esperando por você.')),
     h('details', { class: 'painel painel-dobra', open: ui.acoesAberto, ontoggle: ev => { ui.acoesAberto = ev.target.open; } },
       h('summary', {}, h('h2', {}, 'Ações por rodada')),
       h('div', { class: 'form', style: 'margin-bottom:10px' },
@@ -789,7 +803,7 @@ function abaPaises() {
           h('td', {}, num(c.moedas, v => () => { c.moedas = Math.max(0, v); }, `Dinheiro de ${c.nome}`)),
           h('td', {}, num(c.pop, v => () => { c.pop = Math.max(0, v); }, `Pessoas de ${c.nome}`)),
           h('td', {}, num(c.renda, v => () => { c.renda = v; }, `Renda de ${c.nome}`)),
-          G.AREAS.map(a => h('td', {}, num(c.niveis[a.id], v => () => { c.niveis[a.id] = Math.max(0, Math.min(G.NIVEL_MAX, Math.round(v))); }, `${a.nome} de ${c.nome}`))),
+          G.AREAS.map(a => h('td', {}, num(c.niveis[a.id], v => () => { c.niveis[a.id] = Math.max(0, Math.min(G.NIVEL_COMPRA_MAX, Math.round(v))); }, `${a.nome} de ${c.nome}`))),
           h('td', {}, botaoConfirma('rm' + c.id, 'Remover', 'Confirmar', () => commit(e => { e.paises = e.paises.filter(x => x.id !== c.id); }, { msg: `${c.nome} removido.` }))))))))),
     painelLinks(),
     painel('Mudar todos de uma vez', h('form', { class: 'form', onsubmit: ev => {
@@ -869,7 +883,9 @@ function iniciar(dados) {
   if (!vazio && E.eventos.some(ev => !ev.efeito)) E.eventos = structuredClone(EVENTOS_INICIAIS);
   G.garantirCodigos(E);
   const nomesCorrigidos = !vazio && G.corrigirNomesPadrao(E);
-  if (vazio || semCodigo || nomesCorrigidos) { save.sujo = true; loopSalvar(); }
+  const fichaAntiga = E.versaoFicha !== G.VERSAO_FICHA;
+  E.versaoFicha = G.VERSAO_FICHA;
+  if (vazio || semCodigo || nomesCorrigidos || fichaAntiga) { save.sujo = true; loopSalvar(); }
   render();
   buscarPedidos();
   if (!ui.buscando) ui.buscando = setInterval(buscarPedidos, 4000);

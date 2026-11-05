@@ -24,7 +24,9 @@ O professor abre e fecha duas janelas: a de **ações** e a do **jornal**. Com a
 - **Acordo:** só o país que montou gasta a ação. O outro país aceita ou recusa, sem gastar nada, e só depois o pedido chega ao professor.
 - **Jornal:** não usa ação. O texto só sai se o professor aprovar.
 - **Recusado ou cancelado:** a ação volta para o grupo.
-- **O professor** aprova, ajusta ou recusa cada pedido. Se ajustar um acordo, os dois países veem a versão final.
+- **Peso do acordo:** antes de mandar ou aceitar, o grupo vê linha a linha o que muda na conta (pagamento, desconto, o que ganha e o que perde) e o que acontece com cada lado. Depois de aprovado, isso continua na aba Acordos, e a conta da rodada mostra a ajuda em linhas próprias.
+- **Conta antes de enviar:** a aba mostra quanto cada pedido custa, somado ao que já foi pedido, e com quanto o país fica. O que não cabe não pode ser enviado.
+- **O professor** vê os pedidos de cada país juntos, com a conta final, e pode aprovar tudo de uma vez. Ele também aprova, ajusta ou recusa cada pedido. Se ajustar um acordo, os dois países veem a versão final.
 - **Continuam na conversa com o professor:** projetos, ataques e missões cumpridas.
 
 ## Toda rodada
@@ -36,7 +38,7 @@ O professor abre e fecha duas janelas: a de **ações** e a do **jornal**. Com a
 **Faltou dinheiro para a comida?** O dinheiro zera e o país perde 10% das pessoas.
 
 ## Áreas: investimento, manutenção e peso
-Vão do nível 1 ao 10. **Os níveis 5 e 10 valem em dobro.** Cada área tem duas contas separadas:
+Rendem até o nível 10. **Os níveis 5 e 10 valem em dobro.** Dá para comprar até o 15: acima do 10 o nível não rende mais, mas serve para emprestar sem perder força. Cada área tem duas contas separadas:
 
 - **Investimento:** subir um nível custa o próximo nível × 10 moedas (do 2 para o 3 custa 30), igual em todas as áreas, uma vez só.
 - **Manutenção:** cada nível comprado tem uma despesa por rodada, conforme o peso da área. É cobrada depois da comida e dos acordos.
@@ -68,7 +70,7 @@ Os grupos combinam entre si e mandam o pedido na aba Pedidos, ou chamam o profes
 - **Cortar ou retomar a manutenção** de uma área, para sobrar dinheiro por um tempo.
 - **Transferir dinheiro** para outro país.
 - **Fazer um acordo:** pode mudar dinheiro na hora, moedas por rodada, comida e nível de área, por quantas rodadas combinarem. Pode ser secreto. Bloquear uma rota ou cobrar por algo também é um acordo: quem combina são os grupos.
-- **Apoiar outro país em uma área:** quem ajuda paga a manutenção dos níveis que está dando e não pode dar mais níveis do que tem.
+- **Emprestar níveis a outro país:** quem empresta perde a força daqueles níveis enquanto durar e continua pagando a manutenção normal. Quem recebe ganha a força e não paga manutenção por ela, só o preço combinado. Não dá para emprestar mais do que o país comprou nem o que já está emprestado. Exemplo: com Poder militar 12, emprestar 2 deixa o país no 10.
 - **Fornecer comida:** quem recebe deixa de pagar essa parte da conta de comida e paga o preço combinado a quem fornece.
 - **Publicar uma notícia:** o grupo manda o texto no formato que quiser e o professor publica no jornal com a fonte "Imprensa de [país]". Vale tudo, inclusive boato, com a moderação do professor. Também vale mandar uma mensagem a outro país, aberta no jornal ou só para quem recebe. Se a notícia mudar algo no jogo, o professor decide se os alunos veem o efeito.
 - **Tentar um projeto ou ação arriscada:** o grupo explica a ideia e o professor define, antes de rolar, o custo, a dificuldade e o efeito.

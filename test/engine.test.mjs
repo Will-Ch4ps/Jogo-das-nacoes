@@ -180,16 +180,46 @@ test('fome: a conta de comida cresce com a população e a fome derruba a manute
   assert.equal(G.contaComida(f.paises[0], f).linhas[0].valor, 90);
 });
 
-test('apoio custa a quem ajuda e não pode passar do nível dele', () => {
+test('empréstimo: quem empresta perde a força, mantém a manutenção, e não dá o que não tem', () => {
   const s = comManut(modelo({ moedas: 100 }), outro({ moedas: 100 }));
-  const ajudaAntes = G.calcular(s.paises[0], s).sobra;
-  const efeitos = G.efeitosDoApoio(s, { de: 'm', para: 'o', area: 'emp', niveis: 2 });
-  assert.deepEqual(efeitos.m, { moedas: -6 }); // 2 níveis x manutenção 3
-  assert.deepEqual(efeitos.o, { areas: { emp: 2 } });
-  G.registrarAcordo(s, { titulo: 'Apoio', tipo: 'paises', paises: ['m', 'o'], efeitos, duracao: 2 });
-  assert.equal(G.calcular(s.paises[0], s).sobra, ajudaAntes - 6); // quem ajuda paga de verdade
-  assert.throws(() => G.efeitosDoApoio(s, { de: 'm', para: 'o', area: 'emp', niveis: 3 }), /não pode dar 3 níveis/);
-  assert.deepEqual(G.efeitosDoApoio(s, { de: 'm', para: 'o', area: 'mil', niveis: 1, preco: 10 }).m, { moedas: 9 });
+  const antes = G.calcular(s.paises[0], s);
+  const efeitos = G.efeitosDoApoio(s, { de: 'm', para: 'o', area: 'mil', niveis: 2 });
+  assert.deepEqual(efeitos.m, { areas: { mil: -2 } });
+  assert.deepEqual(efeitos.o, { areas: { mil: 2 } });
+  G.registrarAcordoDoForm(s, { modelo: 'apoio', a: 'm', b: 'o', area: 'mil', niveis: 2, precoApoio: 0, dur: 2 });
+  assert.equal(G.nivelReal(s.paises[0], 'mil', s), 0, 'perde a força');
+  assert.equal(G.nivelReal(s.paises[1], 'mil', s), 4, 'quem recebe ganha');
+  assert.equal(s.paises[0].niveis.mil, 2, 'o comprado continua igual');
+  assert.equal(G.calcular(s.paises[0], s).manutencao.total, antes.manutencao.total, 'a manutenção continua igual');
+  assert.equal(G.calcular(s.paises[0], s).sobra, antes.sobra, 'sem custo extra');
+  assert.throws(() => G.efeitosDoApoio(s, { de: 'm', para: 'o', area: 'mil', niveis: 1 }), /0 níveis de Poder militar para emprestar/);
+  assert.throws(() => G.efeitosDoApoio(s, { de: 'm', para: 'o', area: 'emp', niveis: 3 }), /não pode dar 3/);
+  assert.deepEqual(G.efeitosDoApoio(s, { de: 'm', para: 'o', area: 'emp', niveis: 1, preco: 10 }).m, { areas: { emp: -1 }, moedas: 10 });
+  // Quando o acordo acaba, tudo volta.
+  const depois = G.fecharRodada(G.fecharRodada(s));
+  assert.equal(G.nivelReal(depois.paises[0], 'mil', depois), 2);
+  assert.equal(G.niveisParaEmprestar(depois, 'm', 'mil'), 2);
+});
+
+test('comprar acima do 10 não rende mais, custa manutenção e permite emprestar sem perder força', () => {
+  const s = comManut(modelo({ moedas: 1000 }), outro());
+  s.paises[0].niveis.emp = 10;
+  const noDez = G.calcular(s.paises[0], s);
+  assert.equal(G.custoSubir(10, s.params), 110);
+  G.subirNivel(s, 'm', 'emp'); G.subirNivel(s, 'm', 'emp');
+  assert.equal(s.paises[0].niveis.emp, 12);
+  assert.equal(G.nivelReal(s.paises[0], 'emp', s), 10);
+  assert.equal(G.forca(12), G.forca(10));
+  const noDoze = G.calcular(s.paises[0], s);
+  assert.equal(noDoze.entra, noDez.entra, 'não rende mais');
+  assert.equal(noDoze.manutencao.total, noDez.manutencao.total + 6, 'mas custa manutenção');
+  G.registrarAcordoDoForm(s, { modelo: 'apoio', a: 'm', b: 'o', area: 'emp', niveis: 2, precoApoio: 15, dur: 2 });
+  assert.equal(G.nivelReal(s.paises[0], 'emp', s), 10, 'emprestou o que sobrava');
+  assert.equal(G.calcular(s.paises[0], s).entra >= noDez.entra + 15, true);
+  assert.match(G.pesoDoAcordo(s, s.acordos.at(-1)).join(' '), /Emprego de Modelo continua no nível 10/);
+  s.paises[0].niveis.emp = 15;
+  assert.throws(() => G.subirNivel(s, 'm', 'emp'), /máximo/);
+  assert.equal(G.visaoDoPais(s.paises[0], s).areas.find(a => a.id === 'emp').proximo, null);
 });
 
 test('apoio em uma área sobe o nível, sem mexer no dinheiro se for de graça', () => {
@@ -391,7 +421,7 @@ test('subir nível: custa nível seguinte x 10 e tem limite', () => {
   assert.equal(s.paises[0].moedas, 20);
   assert.equal(s.paises[0].niveis.emp, 3);
   assert.throws(() => G.subirNivel(s, 'm', 'emp'), /precisa de 40/);
-  s.paises[0].moedas = 999; s.paises[0].niveis.sau = 10;
+  s.paises[0].moedas = 999; s.paises[0].niveis.sau = 15;
   assert.throws(() => G.subirNivel(s, 'm', 'sau'), /máximo/);
 });
 
@@ -916,4 +946,179 @@ test('as janelas chegam à tela pública, sem pedidos nem códigos', () => {
   assert.deepEqual(G.partePublica(s).janelas, { acoes: false, noticias: false });
   s.janelas = { acoes: true, noticias: false };
   assert.deepEqual(G.partePublica(s).janelas, { acoes: true, noticias: false });
+});
+
+test('conta dos pedidos: soma tudo na ordem, sem mudar o jogo, e acusa o que não cabe', () => {
+  const s = jogoPedidos();
+  s.paises[0].moedas = 100;
+  s.paises[0].niveis.emp = 2;
+  const n = (id, tipo, dados, extra = {}) => ped(tipo, dados, { id, ...extra });
+  // Subir duas vezes a mesma área: o segundo nível custa mais (30 e depois 40), e o dinheiro acaba no terceiro pedido.
+  const r = G.simularPedidos(s, 'm', [n(1, 'subir', { area: 'emp' }), n(2, 'subir', { area: 'emp' }), n(3, 'dinheiro', { para: 'o', valor: 50 })]);
+  assert.equal(r.itens[0].moedas, -30);
+  assert.equal(r.itens[1].moedas, -40);
+  assert.equal(r.itens[2].ok, false);
+  assert.match(r.itens[2].erro, /só tem 30/);
+  assert.equal(r.depois.moedas, 30);
+  assert.equal(s.paises[0].moedas, 100, 'o jogo de verdade não mudou');
+  assert.equal(s.paises[0].niveis.emp, 2);
+  assert.equal(r.itens[1].detalhe[0].startsWith('Nível 3 para 4'), true, 'o detalhe já considera o pedido anterior');
+});
+
+test('conta dos pedidos: acordo muda a sobra por rodada, e o aviso de fome aparece', () => {
+  const s = jogoPedidos();
+  const antes = G.calcular(s.paises[0], s).sobra;
+  const r = G.simularPedidos(s, 'm', [ped('acordo', { modelo: 'pagamento', a: 'm', b: 'o', tam: 'x', valor: 500, dur: 2 }, { para: 'o' })]);
+  assert.equal(r.itens[0].porRodada, -500);
+  assert.equal(r.depois.sobra, antes - 500);
+  assert.ok(r.depois.falta > 0);
+  assert.equal(G.textoCusto(r.itens[0]), '−500 por rodada');
+  assert.equal(G.textoCusto({ moedas: 0, porRodada: 0 }), 'Não muda o dinheiro');
+});
+
+test('o celular faz a mesma conta que o admin, só com a ficha do próprio país', () => {
+  const e = novo();
+  G.registrarAcordo(e, { titulo: 'Pacto', tipo: 'paises', paises: ['p1', 'p2'], efeitos: { p1: { moedas: 7, areas: { emp: 2 } }, p2: { moedas: -7 } }, duracao: 3 });
+  G.registrarAcordo(e, { titulo: 'Geral', tipo: 'global', paises: [], efeitos: { '*': { comida: -5 } }, duracao: 2 });
+  G.cortarManutencao(e, 'p1', 'seg', true);
+  const f = JSON.parse(JSON.stringify(G.visaoDoPais(e.paises[0], e)));
+  const mini = G.estadoDaFicha(f, JSON.parse(JSON.stringify(G.partePublica(e))).paises);
+  const pedidos = [
+    { id: 1, pais: 'p1', tipo: 'subir', dados: { area: 'emp' } },
+    { id: 2, pais: 'p1', para: 'p3', tipo: 'acordo', dados: { modelo: 'pagamento', a: 'p3', b: 'p1', tam: 1, unica: 15, dur: 2 } },
+    { id: 3, pais: 'p1', tipo: 'manutencao', dados: { area: 'sau', cortar: true } },
+    { id: 4, pais: 'p1', tipo: 'dinheiro', dados: { para: 'p4', valor: 10 } },
+  ];
+  const noAdmin = G.simularPedidos(e, 'p1', pedidos), noCelular = G.simularPedidos(mini, 'p1', pedidos);
+  assert.deepEqual(noCelular.antes, noAdmin.antes);
+  assert.deepEqual(noCelular.depois, noAdmin.depois);
+  assert.deepEqual(noCelular.itens.map(i => [i.ok, i.moedas, i.porRodada]), noAdmin.itens.map(i => [i.ok, i.moedas, i.porRodada]));
+  assert.ok(noAdmin.itens.every(i => i.ok));
+});
+
+test('a ficha de um país não leva dados de outro nem o código', () => {
+  const e = novo();
+  G.registrarAcordo(e, { titulo: 'Pacto', tipo: 'paises', paises: ['p1', 'p2'], efeitos: { p1: { moedas: 7 }, p2: { moedas: -9 } }, duracao: 3 });
+  const base = G.visaoDoPais(e.paises[0], e).base;
+  assert.deepEqual(Object.keys(base.acordos[0].efeitos), ['p1']);
+  assert.ok(!JSON.stringify(base).includes(e.paises[1].codigo));
+  assert.ok(!JSON.stringify(base).includes(e.paises[0].codigo));
+});
+
+test('o que conta na conta do país: o que mandou e os acordos que já aceitou', () => {
+  const lista = [
+    ped('subir', {}, { id: 5, estado: 'fila' }),
+    ped('acordo', {}, { id: 2, para: 'o', estado: 'aguardando' }),
+    ped('acordo', {}, { id: 3, para: 'o', estado: 'aguardando', rodada: 0 }),
+    ped('subir', {}, { id: 4, estado: 'aprovado' }),
+    ped('acordo', {}, { id: 6, pais: 'o', para: 'm', estado: 'fila' }),
+    ped('acordo', {}, { id: 7, pais: 'o', para: 'm', estado: 'aguardando' }),
+  ];
+  assert.deepEqual(G.pedidosQueContam(lista, 'm', 1).map(p => p.id), [2, 5, 6]);
+});
+
+const somaDaConta = (c, e) => Math.round(G.linhasDaConta(c, e).reduce((t, l) => t + l.valor, 0));
+const apoioForm = extra => ({ modelo: 'apoio', a: 'm', b: 'o', area: 'emp', niveis: 2, precoApoio: 10, dur: 3, ...extra });
+
+test('a conta em linhas sempre fecha com a sobra da rodada', () => {
+  const e = novo();
+  G.registrarAcordoDoForm(e, { modelo: 'apoio', a: 'p7', b: 'p1', area: 'emp', niveis: 2, precoApoio: 10, dur: 3 });
+  G.registrarAcordoDoForm(e, { modelo: 'apoio', a: 'p9', b: 'p1', area: 'alim', niveis: 3, precoApoio: 0, dur: 3 });
+  G.registrarAcordoDoForm(e, { modelo: 'comida', a: 'p2', b: 'p1', qtdComida: 1, preco: 'metade', dur: 3 });
+  G.registrarAcordoDoForm(e, { modelo: 'pagamento', a: 'p1', b: 'p3', tam: 0, dur: 2 });
+  G.aplicarEfeito(e, ['p4'], { areas: { emp: -1 }, moedas: -5 }, { duracao: 2 });
+  G.cortarManutencao(e, 'p5', 'sau', true);
+  const fechado = G.fecharRodada(e);
+  for (const j of [e, fechado]) for (const c of j.paises) assert.equal(somaDaConta(c, j), Math.round(G.calcular(c, j).sobra), c.id);
+  for (const c of e.paises) {
+    const v = G.visaoDoPais(c, e);
+    assert.equal(Math.round(v.recebe - v.paga), Math.round(v.sobra), c.id);
+  }
+});
+
+test('na conta, quem empresta vê o nível que vale e o pagamento; quem recebe vê o ganho separado', () => {
+  const s = jogoPedidos();
+  s.params.manutencaoPct = 100;
+  s.paises[0].niveis.emp = 4;
+  s.paises[1].niveis.emp = 3;
+  G.registrarAcordoDoForm(s, apoioForm());
+  const quemEmpresta = G.visaoDoPais(s.paises[0], s), quemRecebe = G.visaoDoPais(s.paises[1], s);
+  assert.equal(quemEmpresta.entradas.find(l => l.rotulo === 'Emprego nível 2 (2 emprestados)').valor, 20);
+  assert.equal(quemEmpresta.entradas.find(l => /pagamento recebido/.test(l.rotulo)).valor, 10);
+  // Do nível 3 para o 5: o nível 5 vale em dobro, então o empréstimo vale 3 de força, ou 30 moedas.
+  assert.equal(quemRecebe.entradas.find(l => l.rotulo === 'Emprego nível 3').valor, 30);
+  assert.equal(quemRecebe.entradas.find(l => /\+2 em Emprego/.test(l.rotulo)).valor, 30);
+  assert.equal(quemRecebe.saidas.find(l => /: pagamento$/.test(l.rotulo)).valor, 10);
+  assert.equal(s.paises[0].niveis.emp, 4, 'o comprado não muda');
+});
+
+test('ajuda na Alimentação aparece como desconto próprio, e comida de outro país também', () => {
+  const s = jogoPedidos();
+  s.paises[0].niveis.alim = 3;
+  s.paises[0].niveis.emp = 3;
+  s.paises[1].niveis.alim = 1;
+  s.paises[1].pop = 100;
+  s.params.economiaAlimentacao = 10;
+  G.registrarAcordoDoForm(s, apoioForm({ area: 'alim', niveis: 2, precoApoio: 0 }));
+  G.registrarAcordoDoForm(s, { modelo: 'comida', a: 'm', b: 'o', qtdComida: 0, preco: 'gratis', dur: 2 });
+  const l = G.contaComida(s.paises[1], s).linhas;
+  assert.equal(l.find(x => x.rotulo.startsWith('Alimentação nível 1')).valor, -10);
+  assert.equal(l.find(x => /\+2 em Alimentação/.test(x.rotulo)).valor, -20);
+  assert.equal(l.find(x => /desconto/.test(x.rotulo)).valor, -10);
+  assert.equal(G.contaComida(s.paises[1], s).total, 60);
+});
+
+test('efeito que piora a área não é separado em parcelas', () => {
+  const s = jogoPedidos();
+  s.paises[0].niveis.emp = 4;
+  G.aplicarEfeito(s, ['m'], { areas: { emp: -1 } }, { duracao: 2 });
+  const v = G.visaoDoPais(s.paises[0], s);
+  assert.equal(v.entradas.find(l => l.rotulo === 'Emprego nível 3').valor, 30);
+  assert.equal(somaDaConta(s.paises[0], s), Math.round(G.calcular(s.paises[0], s).sobra));
+});
+
+test('peso do acordo: a prévia mostra custo, ganho e fim, para os dois lados', () => {
+  const s = jogoPedidos();
+  s.params.manutencaoPct = 100;
+  s.paises[0].niveis.mil = 4;
+  s.paises[1].niveis.mil = 1;
+  const r = G.simularPedidos(s, 'm', [ped('acordo', apoioForm({ area: 'mil', niveis: 3, precoApoio: 20 }), { para: 'o' })]);
+  const t = r.itens[0].peso.join(' ');
+  assert.match(t, /Poder militar de Outro: nível 1 para 4/);
+  assert.match(t, /Poder militar de Modelo: nível 4 para 1/);
+  assert.match(t, /Outro paga 20 por rodada a Modelo/);
+  assert.match(t, /Modelo continua pagando a manutenção normal/);
+  assert.match(t, /os níveis voltam/);
+  assert.ok(r.itens[0].linhas.some(l => /pagamento recebido/.test(l.rotulo) && l.valor === 20));
+  assert.ok(!r.itens[0].linhas.some(l => /manutenção/i.test(l.rotulo)), 'sem custo extra de manutenção');
+});
+
+test('peso de acordo já ativo fala do nível sem o próprio acordo, e a ficha mostra', () => {
+  const s = jogoPedidos();
+  s.paises[0].niveis.emp = 2;
+  s.paises[1].niveis.emp = 2;
+  G.registrarAcordoDoForm(s, apoioForm());
+  const f = G.visaoDoPais(s.paises[1], s);
+  const t = f.acordos.find(a => a.origem === 'acordo').peso.join(' ');
+  assert.match(t, /Emprego de Outro: nível 2 para 4/);
+});
+
+test('efeito oculto de notícia não vira explicação na ficha', () => {
+  const s = jogoPedidos();
+  G.aplicarEfeito(s, ['m'], { moedas: -5 }, { titulo: 'Oculto', duracao: 2 });
+  assert.deepEqual(G.visaoDoPais(s.paises[0], s).acordos.find(a => a.titulo === 'Oculto').peso, []);
+});
+
+test('a conta do pedido é igual no celular e no admin, inclusive linha a linha', () => {
+  const e = novo();
+  G.registrarAcordoDoForm(e, { modelo: 'apoio', a: 'p2', b: 'p1', area: 'alim', niveis: 1, precoApoio: 5, dur: 2 });
+  const f = JSON.parse(JSON.stringify(G.visaoDoPais(e.paises[0], e)));
+  const mini = G.estadoDaFicha(f, JSON.parse(JSON.stringify(G.partePublica(e))).paises);
+  const pedidos = [
+    { id: 1, pais: 'p1', para: 'p3', tipo: 'acordo', dados: { modelo: 'apoio', a: 'p1', b: 'p3', area: 'tec', niveis: 1, precoApoio: 10, dur: 2 } },
+    { id: 2, pais: 'p4', para: 'p1', tipo: 'acordo', estado: 'fila', dados: { modelo: 'comida', a: 'p4', b: 'p1', qtdComida: 1, preco: 'metade', dur: 2 } },
+  ];
+  const a = G.simularPedidos(e, 'p1', pedidos), b = G.simularPedidos(mini, 'p1', pedidos);
+  assert.deepEqual(b.itens.map(i => i.linhas), a.itens.map(i => i.linhas));
+  assert.ok(a.itens[1].linhas.some(l => /desconto/.test(l.rotulo)));
 });

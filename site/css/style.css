@@ -607,3 +607,20 @@ body.com-artigo { overflow: hidden; }
 .acoes-paises .acoes { display: flex; flex: none; gap: 4px; }
 .form-pedido { align-items: stretch; }
 .form-pedido > * { width: 100%; max-width: none; flex: none; margin-left: 0; }
+
+/* A conta dos pedidos, antes de enviar e antes de aprovar */
+.resumo-pedidos { margin: 10px 0 2px; padding: 10px 12px; background: var(--fundo-2); border: 1px solid var(--linha); border-left: 3px solid var(--acento); border-radius: 0 var(--raio-p) var(--raio-p) 0; }
+.resumo-titulo { margin-bottom: 4px; font-size: 13px; font-weight: 700; color: var(--acento); }
+.resumo-linha { display: flex; justify-content: space-between; gap: 10px; padding: 2px 0; }
+.resumo-linha span { color: var(--suave); }
+.resumo-pedidos .pedido-erro { margin-top: 6px; }
+.lista-pedir small + small { margin-top: 1px; }
+.pacote { padding: 12px; background: var(--fundo-2); border: 1px solid var(--linha); border-radius: var(--raio-p); }
+.pacote + .pacote { margin-top: 12px; }
+.pacote-topo { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 17px; }
+.pacote-conta { margin: 4px 0 2px; font-weight: 600; color: var(--ouro); }
+
+/* O peso de um acordo: custo, desconto e o que acontece com cada lado */
+.peso-acordo { display: grid; gap: 8px; margin: 8px 0 2px; padding: 10px 12px; background: var(--fundo-2); border: 1px solid var(--linha); border-radius: var(--raio-p); }
+.peso-lista { margin: 4px 0 0; padding-left: 18px; color: var(--suave); font-size: 14px; }
+.peso-lista li + li { margin-top: 3px; }

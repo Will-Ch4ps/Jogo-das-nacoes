@@ -21,6 +21,7 @@ export const AREAS = [
   area('mil', 'Poder militar', 'estrategica', 'fronteiras', 'Cada nível dá +1 para atacar e se defender em ataque militar', 'Fronteiras frágeis: −1 nesses dados', 'guerra', 'festa'),
 ];
 export const NIVEL_MAX = 10;
+export const NIVEL_COMPRA_MAX = 15; // Acima do 10 o nível não rende mais: é a reserva para emprestar sem perder força.
 const nomeArea = id => AREAS.find(a => a.id === id)?.nome || id;
 
 export const PARAMS_INICIAIS = {
@@ -72,7 +73,7 @@ export function escalarEfeito(ef, mult) {
 function aplicarNaHora(c, f) {
   if (f.moedasAgora) c.moedas = Math.max(0, c.moedas + f.moedasAgora);
   if (f.popAgoraPct) c.pop = um(c.pop * (1 + f.popAgoraPct / 100));
-  for (const [a, n] of Object.entries(f.niveisPerm || {})) c.niveis[a] = Math.max(0, Math.min(NIVEL_MAX, c.niveis[a] + n));
+  for (const [a, n] of Object.entries(f.niveisPerm || {})) c.niveis[a] = Math.max(0, Math.min(NIVEL_COMPRA_MAX, c.niveis[a] + n));
 }
 // Aplica um efeito a um ou mais países. O que é contínuo vira um compromisso com duração, visível na ficha.
 export function aplicarEfeito(e, ids, ef, { titulo = 'Efeito', descricao = '', duracao = null, secreto = true, origem = 'efeito' } = {}) {
@@ -122,14 +123,14 @@ export const escolhasTemDuracao = (lista = []) => lista.some(it => tipoEfeito(it
 
 /* ---------- Níveis: o comprado (investimento) e o real (comprado + acordos e efeitos) ---------- */
 // Os níveis 5 e 10 valem em dobro: é o único bônus especial do jogo.
-export const forca = n => n + (n >= 5 ? 1 : 0) + (n >= 10 ? 1 : 0);
+export const forca = nivel => { const n = Math.min(NIVEL_MAX, nivel); return n + (n >= 5 ? 1 : 0) + (n >= 10 ? 1 : 0); };
 export const custoSubir = (nivel, p) => (nivel + 1) * p.precoNivel;
 
 export function acordosDoPais(e, id) {
   return e.acordos.filter(a => a.estado === 'ativo' && (a.tipo === 'global' || a.paises.includes(id)));
 }
 export const bonusDaArea = (c, area, e) => acordosDoPais(e, c.id)
-  .map(a => ({ titulo: a.titulo, valor: Number(efeitoDe(a, c.id).areas?.[area] || 0), restantes: a.restantes }))
+  .map(a => ({ id: a.id, titulo: a.titulo, valor: Number(efeitoDe(a, c.id).areas?.[area] || 0), restantes: a.restantes }))
   .filter(x => x.valor);
 export const nivelReal = (c, area, e) => Math.max(0, Math.min(NIVEL_MAX, c.niveis[area] + bonusDaArea(c, area, e).reduce((t, x) => t + x.valor, 0)));
 
@@ -200,16 +201,35 @@ export function perdasDoPais(c, e) {
   if (d('seg')) out.push({ area: 'seg', rotulo: 'Crime', valor: Math.round((c.moedas * p.crimePct) / 100) });
   return out;
 }
+// Quanto cada acordo soma ao nível de uma área, já contando o dobro dos níveis 5 e 10.
+// Se algum efeito piora a área, não dá para separar em parcelas: a conta mostra o nível que vale.
+function parcelasDaArea(c, area, e) {
+  const bonus = bonusDaArea(c, area, e);
+  if (bonus.some(b => b.valor < 0)) return null;
+  const teto = n => Math.min(NIVEL_MAX, n);
+  let soma = c.niveis[area];
+  return bonus.map(b => { const de = teto(soma), para = teto(soma + b.valor); soma += b.valor; return { ...b, forca: forca(para) - forca(de) }; });
+}
 // Conta da comida linha por linha. Comida coberta por acordo sai daqui, para ninguém pagar duas vezes.
 export function contaComida(c, e) {
-  const base = Math.round(c.pop), linhas = [{ rotulo: `Alimentar ${base} mil pessoas`, valor: base }];
+  const base = Math.round(c.pop), linhas = [{ k: 'base', rotulo: `Alimentar ${base} mil pessoas`, valor: base }];
   let resta = base, extra = 0;
-  const real = nivelReal(c, 'alim', e), econ = Math.min(resta, forca(real) * e.params.economiaAlimentacao);
-  if (econ) { linhas.push({ rotulo: `Alimentação nível ${real} economiza`, valor: -econ }); resta -= econ; }
+  const x = e.params.economiaAlimentacao, parcelas = parcelasDaArea(c, 'alim', e);
+  if (parcelas?.length) {
+    const proprio = Math.min(resta, forca(c.niveis.alim) * x);
+    if (proprio) { linhas.push({ k: 'alim', rotulo: `Alimentação nível ${Math.min(NIVEL_MAX, c.niveis.alim)} economiza`, valor: -proprio }); resta -= proprio; }
+    for (const b of parcelas) {
+      const v = Math.min(resta, b.forca * x);
+      if (v) { linhas.push({ k: `ajuda:${b.id}`, rotulo: `${b.titulo}: +${b.valor} em Alimentação`, valor: -v, restantes: b.restantes }); resta -= v; }
+    }
+  } else {
+    const real = nivelReal(c, 'alim', e), econ = Math.min(resta, forca(real) * x);
+    if (econ) { linhas.push({ k: 'alim', rotulo: `Alimentação nível ${real}${foraDaArea(c, 'alim', e)} economiza`, valor: -econ }); resta -= econ; }
+  }
   for (const a of acordosDoPais(e, c.id)) {
     const v = Number(efeitoDe(a, c.id).comida || 0);
-    if (v < 0) { const ab = Math.min(resta, -v); if (ab) { linhas.push({ rotulo: a.titulo, valor: -ab, restantes: a.restantes }); resta -= ab; } }
-    if (v > 0) { linhas.push({ rotulo: a.titulo, valor: v, restantes: a.restantes }); extra += v; }
+    if (v < 0) { const ab = Math.min(resta, -v); if (ab) { linhas.push({ k: `comida:${a.id}`, rotulo: `${a.titulo}: desconto`, valor: -ab, restantes: a.restantes }); resta -= ab; } }
+    if (v > 0) { linhas.push({ k: `comida:${a.id}`, rotulo: a.titulo, valor: v, restantes: a.restantes }); extra += v; }
   }
   return { linhas, total: resta + extra };
 }
@@ -224,6 +244,80 @@ export function calcular(c, e) {
   const antes = entra - comida - totalPerdas;
   const manutencao = contaManutencao(c, e, c.moedas + antes);
   return { entra, comida, perdas, totalPerdas, manutencao, sobra: antes - manutencao.total };
+}
+// Tudo o que entra por rodada, com o que vem da ajuda separado do que o país conquistou sozinho.
+// Rótulo de quem emprestou: o nível que vale, e quantos estão fora.
+const foraDaArea = (c, area, e) => { const n = bonusDaArea(c, area, e).filter(b => b.valor < 0 && acordosDoPais(e, c.id).find(a => a.id === b.id)?.apoio?.de === c.id).reduce((t, b) => t - b.valor, 0); return n ? ` (${n} emprestados)` : ''; };
+function entradasDaConta(c, e) {
+  const p = e.params, parcelas = parcelasDaArea(c, 'emp', e), out = [{ k: 'renda', rotulo: 'Renda do país', valor: c.renda }];
+  if (parcelas?.length) {
+    out.push({ k: 'emp', rotulo: `Emprego nível ${Math.min(NIVEL_MAX, c.niveis.emp)}`, valor: forca(c.niveis.emp) * p.moedasPorEmprego });
+    for (const b of parcelas) if (b.forca) out.push({ k: `ajuda:${b.id}`, rotulo: `${b.titulo}: +${b.valor} em Emprego`, valor: b.forca * p.moedasPorEmprego, restantes: b.restantes });
+  } else {
+    const real = nivelReal(c, 'emp', e);
+    out.push({ k: 'emp', rotulo: `Emprego nível ${real}${foraDaArea(c, 'emp', e)}`, valor: forca(real) * p.moedasPorEmprego });
+  }
+  if (rendaDeInfra(c, e)) out.push({ k: 'infra', rotulo: `Infraestrutura: ${acordosAtivos(c, e)} ${acordosAtivos(c, e) === 1 ? 'acordo' : 'acordos'}`, valor: rendaDeInfra(c, e) });
+  for (const a of acordosDoPais(e, c.id)) {
+    const m = moedasDoAcordo(a, c.id);
+    if (m > 0) out.push({ k: `acordo:${a.id}`, rotulo: a.apoio ? `${a.titulo}: pagamento recebido` : a.titulo, valor: m, restantes: a.restantes });
+  }
+  return out;
+}
+function saidasDaConta(c, e) {
+  const out = perdasDoPais(c, e).map(x => ({ k: `perda:${x.area}`, rotulo: x.rotulo, valor: x.valor, ruim: true }));
+  for (const a of acordosDoPais(e, c.id)) {
+    const m = moedasDoAcordo(a, c.id);
+    if (m < 0) out.push({ k: `acordo:${a.id}`, rotulo: a.apoio ? `${a.titulo}: pagamento` : a.titulo, valor: -m, restantes: a.restantes });
+  }
+  return out;
+}
+// A conta inteira em uma lista só, com o sinal certo. A soma é a sobra da rodada.
+export function linhasDaConta(c, e) {
+  return [
+    ...entradasDaConta(c, e),
+    ...contaComida(c, e).linhas.map(l => ({ ...l, k: `c:${l.k}`, valor: -l.valor })),
+    ...calcular(c, e).manutencao.linhas.filter(l => l.estado === 'paga' && l.valor).map(l => ({ k: `m:${l.area}`, rotulo: `Manutenção de ${l.rotulo}`, valor: -l.valor })),
+    ...saidasDaConta(c, e).map(l => ({ ...l, valor: -l.valor })),
+  ];
+}
+// O que mudou na conta entre dois momentos: é o peso real de um pedido.
+function diferencaDaConta(antes, depois) {
+  const mapa = new Map(antes.map(l => [l.k, l])), out = [];
+  for (const l of depois) { const v = Math.round(l.valor - (mapa.get(l.k)?.valor || 0)); if (v) out.push({ rotulo: l.rotulo, valor: v }); mapa.delete(l.k); }
+  for (const l of mapa.values()) if (Math.round(l.valor)) out.push({ rotulo: l.rotulo, valor: -Math.round(l.valor) });
+  return out;
+}
+// O acordo explicado em frases: o que cada lado ganha, quanto custa e o que acontece no fim.
+export function pesoDoAcordo(e, a) {
+  if (a.tipo === 'global') return [];
+  const semEste = { ...e, acordos: e.acordos.filter(x => x.id !== a.id) }, t = [];
+  const nome = id => paisPorId(e, id)?.nome || 'removido';
+  const area = (id, qual, n) => {
+    const c = paisPorId(e, id);
+    if (!c || !AREAS.some(x => x.id === qual)) return;
+    const f = comoFicaArea(c, qual, n, semEste);
+    if (f.de === f.para) { t.push(`${nomeArea(qual)} de ${nome(id)} continua no nível ${f.de}.`); return; }
+    t.push(`${nomeArea(qual)} de ${nome(id)}: nível ${f.de} para ${f.para} enquanto durar.`);
+    if (c.pop > 0) t.push(`Hoje: ${f.hoje}. Com o acordo: ${f.comApoio}.`);
+  };
+  if (a.apoio) {
+    const { de, para, area: qual, niveis, preco } = a.apoio;
+    area(para, qual, Number(niveis));
+    area(de, qual, -Number(niveis));
+    t.push(preco ? `${nome(para)} paga ${preco} por rodada a ${nome(de)}.` : `${nome(para)} não paga nada pelo empréstimo.`);
+    t.push(`${nome(de)} continua pagando a manutenção normal. No fim do acordo, os níveis voltam.`);
+    return t;
+  }
+  for (const id of a.paises) {
+    const ef = normEf(a.efeitos[id]);
+    if (ef.moedas > 0) t.push(`${nome(id)} recebe ${ef.moedas} por rodada.`);
+    if (ef.moedas < 0) t.push(`${nome(id)} paga ${-ef.moedas} por rodada.`);
+    if (ef.comida < 0) t.push(`${nome(id)} tem ${-ef.comida} de desconto na comida por rodada.`);
+    if (ef.comida > 0) t.push(`${nome(id)} paga ${ef.comida} a mais de comida por rodada.`);
+    for (const [q, n] of Object.entries(ef.areas || {})) if (n) area(id, q, Number(n));
+  }
+  return t;
 }
 export const riqueza = (c, p) => Math.round(c.moedas + c.pop * p.valorPessoa);
 export function ranking(e) {
@@ -496,7 +590,7 @@ export function desfazerFechamento(e) {
 /* ---------- Ações ---------- */
 export function subirNivel(e, id, area) {
   const c = paisPorId(e, id), atual = c.niveis[area];
-  if (atual >= NIVEL_MAX) throw new Error(`${c.nome} já está no nível máximo nessa área.`);
+  if (atual >= NIVEL_COMPRA_MAX) throw new Error(`${c.nome} já está no nível máximo nessa área.`);
   const custo = custoSubir(atual, e.params);
   if (custo > c.moedas) throw new Error(`${c.nome} precisa de ${custo} moedas e tem ${c.moedas}.`);
   c.moedas -= custo;
@@ -515,7 +609,7 @@ export function criarAcordo(e, d) {
   const a = {
     id: novoId('a'), titulo: d.titulo, descricao: d.descricao || '', tipo: d.tipo, paises: d.paises || [],
     efeitos: d.efeitos || {}, duracao: d.duracao ?? null, restantes: d.duracao ?? null, estado: 'ativo',
-    visibilidade: d.visibilidade || 'publico', origem: d.origem || 'acordo', inicio: e.rodada,
+    visibilidade: d.visibilidade || 'publico', origem: d.origem || 'acordo', inicio: e.rodada, ...(d.apoio ? { apoio: d.apoio } : {}),
   };
   e.acordos.push(a);
   return a;
@@ -536,14 +630,18 @@ export function registrarAcordo(e, d) {
   }
   return criarAcordo(e, { ...d, efeitos });
 }
-// Apoio em uma área: quem ajuda paga a manutenção dos níveis que está dando e não pode dar mais do que tem.
-export const custoApoio = (area, niveis, p) => Math.round((Number(niveis) * AREAS.find(a => a.id === area).manut * p.manutencaoPct) / 100);
+// Empréstimo de níveis: quem empresta perde a força deles enquanto durar e continua pagando a manutenção normal.
+// Só dá para emprestar o que o país comprou e ainda não emprestou. Quem compra acima do 10 empresta sem enfraquecer.
+export function niveisParaEmprestar(e, id, area) {
+  const c = paisPorId(e, id), fora = acordosDoPais(e, id).filter(a => a.apoio?.de === id && a.apoio.area === area).reduce((t, a) => t + Number(a.apoio.niveis), 0);
+  return Math.max(0, (c?.niveis[area] || 0) - fora);
+}
 export function efeitosDoApoio(e, { de, para, area, niveis, preco = 0 }) {
   const A = paisPorId(e, de), n = Number(niveis), v = Number(preco) || 0;
   if (!A || !paisPorId(e, para) || de === para) throw new Error('Escolha dois países diferentes.');
-  if (n > A.niveis[area]) throw new Error(`${A.nome} tem nível ${A.niveis[area]} em ${nomeArea(area)} e não pode dar ${n} ${n === 1 ? 'nível' : 'níveis'}.`);
-  const saldo = v - custoApoio(area, n, e.params);
-  return { [de]: saldo ? { moedas: saldo } : {}, [para]: { areas: { [area]: n }, ...(v ? { moedas: -v } : {}) } };
+  const livres = niveisParaEmprestar(e, de, area);
+  if (n > livres) throw new Error(`${A.nome} tem ${livres} ${livres === 1 ? 'nível' : 'níveis'} de ${nomeArea(area)} para emprestar e não pode dar ${n}.`);
+  return { [de]: { areas: { [area]: -n }, ...(v ? { moedas: v } : {}) }, [para]: { areas: { [area]: n }, ...(v ? { moedas: -v } : {}) } };
 }
 // Comida entre países: quem recebe deixa de pagar essa parte da conta e paga o preço combinado.
 export function fornecimentoDeComida(e, { de, para, quantidade, preco = 0, custoProducao = 0, duracao = null, visibilidade = 'publico' }) {
@@ -748,19 +846,10 @@ export function visaoDoPais(c, e) {
   const acordos = acordosDoPais(e, c.id).map(a => ({
     titulo: a.titulo, descricao: a.descricao, moedas: moedasDoAcordo(a, c.id), restantes: a.restantes, ateRodada: ateRodada(a, e.rodada), efeito: textoEfeito(efeitoDe(a, c.id)),
     origem: a.origem || 'acordo', secreto: a.visibilidade === 'oculto' && a.tipo !== 'global' && (a.origem || 'acordo') === 'acordo',
+    peso: (a.origem || 'acordo') === 'acordo' ? pesoDoAcordo(e, a) : [],
     comQuem: a.tipo === 'global' ? 'todos os países' : a.paises.filter(id => id !== c.id).map(id => paisPorId(e, id)?.nome || 'removido').join(', '),
   }));
-  const realEmp = nivelReal(c, 'emp', e);
-  const entradas = [
-    { rotulo: 'Renda do país', valor: c.renda },
-    { rotulo: `Emprego nível ${realEmp}`, valor: forca(realEmp) * p.moedasPorEmprego },
-  ];
-  if (rendaDeInfra(c, e)) entradas.push({ rotulo: `Infraestrutura: ${acordosAtivos(c, e)} ${acordosAtivos(c, e) === 1 ? 'acordo' : 'acordos'}`, valor: rendaDeInfra(c, e) });
-  const saidas = perdas.map(x => ({ rotulo: x.rotulo, valor: x.valor, ruim: true }));
-  for (const a of acordos) {
-    if (a.moedas > 0) entradas.push({ rotulo: a.titulo, valor: a.moedas, restantes: a.restantes });
-    if (a.moedas < 0) saidas.push({ rotulo: a.titulo, valor: -a.moedas, restantes: a.restantes });
-  }
+  const entradas = entradasDaConta(c, e), saidas = saidasDaConta(c, e);
   const recebe = entradas.reduce((t, x) => t + x.valor, 0), paga = comida.total + manutencao.total + saidas.reduce((t, x) => t + x.valor, 0), fim = c.moedas + sobra;
   return {
     id: c.id, nome: c.nome, perfil: c.perfil, cor: c.cor, rodada: e.rodada, moedas: c.moedas, pop: c.pop, pos: r.pos, riqueza: r.riqueza,
@@ -768,11 +857,16 @@ export function visaoDoPais(c, e) {
     comida, entradas, saidas, recebe, paga, sobra, fimDaRodada: Math.max(0, fim), falta: fim < 0 ? -fim : 0, perdaFome: p.perdaFome,
     areas: AREAS.map(a => ({
       id: a.id, nivel: c.niveis[a.id], real: nivelReal(c, a.id, e), bonus: bonusDaArea(c, a.id, e), agora: efeitoAgora(c, a.id, e),
-      problema: problema(c, a.id), rodadasSem: c.semManutencao?.[a.id] || 0, cortada: !!c.cortadas?.[a.id], manut: manutencao.linhas.find(l => l.area === a.id), proximo: c.niveis[a.id] >= NIVEL_MAX ? null : custoSubir(c.niveis[a.id], p),
+      problema: problema(c, a.id), rodadasSem: c.semManutencao?.[a.id] || 0, cortada: !!c.cortadas?.[a.id], manut: manutencao.linhas.find(l => l.area === a.id), proximo: c.niveis[a.id] >= NIVEL_COMPRA_MAX ? null : custoSubir(c.niveis[a.id], p),
     })),
     projetos: c.projetos || 0, proximoProjeto: custoDoProjeto(c, e), tentativas: (c.tentativas || []).slice().reverse(), acordos,
     mensagens: e.noticias.filter(n => n.privada && n.estado === 'publicada' && (n.para === c.id || n.de === c.id)).map(n => noticiaParaLeitor(n, e)).reverse(),
     missoes: (c.missoes || []).map(m => { const pr = progressoMissao(m, c, e); return { id: m.id, titulo: m.titulo, dificuldade: m.dificuldade, premio: m.premio, texto: comNomesPaises(m.texto, e), estado: pr.estado, progresso: pr.texto }; }), serie: (c.serie || []).slice(-6), proximas: [],
+    // O que o celular precisa para fazer a conta dos pedidos antes de enviar. Só dados do próprio país.
+    base: {
+      renda: c.renda, niveis: c.niveis, cortadas: c.cortadas || {}, semManutencao: c.semManutencao || {}, params: p,
+      acordos: acordosDoPais(e, c.id).map(a => ({ id: a.id, titulo: a.titulo, tipo: a.tipo, paises: a.paises, estado: a.estado, origem: a.origem, restantes: a.restantes, apoio: a.apoio, efeitos: a.tipo === 'global' ? { '*': efeitoDe(a, c.id) } : { [c.id]: efeitoDe(a, c.id) } })),
+    },
   };
 }
 // Simula as próximas rodadas, se ninguém fizer mais nada: mostra quando os acordos acabam e o mínimo sobe.
@@ -805,7 +899,7 @@ function comidaDoForm(F) {
 }
 // Na prévia, um apoio impossível não pode travar a tela: o erro só aparece ao registrar.
 function efeitosApoioPrevia(e, F) {
-  try { return efeitosDoApoio(e, { de: F.a, para: F.b, area: F.area, niveis: F.niveis, preco: n0(F.precoApoio) }); } catch { return { [F.a]: {}, [F.b]: { areas: { [F.area]: Number(F.niveis) } } }; }
+  try { return efeitosDoApoio(e, { de: F.a, para: F.b, area: F.area, niveis: F.niveis, preco: n0(F.precoApoio) }); } catch { return { [F.a]: { areas: { [F.area]: -Number(F.niveis) } }, [F.b]: { areas: { [F.area]: Number(F.niveis) } } }; }
 }
 // Transforma o que foi escolhido na tela no acordo que o jogo registra.
 export function montarAcordo(e, F) {
@@ -826,8 +920,8 @@ export function montarAcordo(e, F) {
     const { q, p } = comidaDoForm(F);
     return { ...base, ...par, titulo: titulo || `Comida de ${A} para ${B}`, efeitos: { [F.a]: { moedas: p }, [F.b]: { moedas: -p, comida: -q } } };
   }
-  const nomeA = nomeArea(F.area);
-  return { ...base, descricao: base.descricao || `${A} apoia ${nomeA} de ${B}: +${F.niveis} ${Number(F.niveis) === 1 ? 'nível' : 'níveis'} enquanto durar.`, ...par, titulo: titulo || `${A} apoia ${nomeA} de ${B}`, efeitos: efeitosApoioPrevia(e, F) };
+  const nomeA = nomeArea(F.area), qtd = `${F.niveis} ${Number(F.niveis) === 1 ? 'nível' : 'níveis'}`;
+  return { ...base, descricao: base.descricao || `${A} empresta ${qtd} de ${nomeA} a ${B} enquanto durar.`, ...par, titulo: titulo || `${A} empresta ${nomeA} a ${B}`, efeitos: efeitosApoioPrevia(e, F), apoio: { de: F.a, para: F.b, area: F.area, niveis: Number(F.niveis), preco: n0(F.precoApoio) } };
 }
 // Confere e registra. Um erro aqui não deixa nada pela metade: quem chama desfaz a mudança.
 export function registrarAcordoDoForm(e, F) {
@@ -851,13 +945,14 @@ export function fraseAcordo(F, nomeDe) {
     t = `${A} fornece comida a ${B}: a conta de ${B} cai ${q} moedas por rodada, ${p ? `e ${B} paga ${p} moedas por rodada` : 'de graça'}`;
   } else if (F.modelo === 'apoio') {
     const n = Number(F.niveis), v = n0(F.precoApoio);
-    t = `${A} ajuda ${B} em ${nomeArea(F.area)}: +${n} ${n === 1 ? 'nível' : 'níveis'}${v ? `, e ${B} paga ${v} moedas por rodada` : ', de graça'}`;
+    t = `${A} empresta ${n} ${n === 1 ? 'nível' : 'níveis'} de ${nomeArea(F.area)} a ${B}${v ? `, e ${B} paga ${v} moedas por rodada` : ', de graça'}`;
   } else t = String(F.desc || '').trim() || 'Combinado livre';
   const d = duracaoDoForm(F), tempo = d == null ? 'Vale até o fim do jogo' : d === 1 ? 'Vale por 1 rodada' : `Vale por ${d} rodadas`;
   return `${t.replace(/[.!?]$/, '')}. ${tempo}.${F.secreto ? ' Acordo secreto.' : ''}`;
 }
 
 /* ---------- Pedidos dos grupos: nada muda no jogo até o professor aprovar ---------- */
+export const VERSAO_FICHA = 2; // Sobe quando a ficha ganha campos novos: o admin grava de novo ao abrir.
 export const limiteAcoes = (e, id) => Math.max(0, Number(e.params.acoesPorRodada ?? 5) + Number(e.acoesExtra?.[id] || 0));
 // Recusado e cancelado devolvem a ação. Notícia não gasta. No acordo, só quem montou gasta.
 export const acoesUsadas = (pedidos, id, rodada) => pedidos.filter(p => p.pais === id && p.rodada === rodada && p.tipo !== 'noticia' && ['aguardando', 'fila', 'aprovado'].includes(p.estado)).length;
@@ -925,11 +1020,48 @@ export function detalhePedido(e, p) {
   if (p.tipo === 'acordo') {
     try {
       const a = montarAcordo(e, acordoDoPedido(p));
-      return [a.titulo, ...a.paises.map(id => `${paisPorId(e, id)?.nome}: ${textoEfeito(a.efeitos[id]) || 'nada muda nos números'}`)];
+      const peso = pesoDoAcordo(e, a);
+      return [a.titulo, ...(peso.length ? peso : ['Só o combinado, sem números.'])];
     } catch { return []; }
   }
   if (p.tipo === 'noticia') return d.texto ? [d.texto] : [];
   return [];
+}
+
+/* ---------- Conta dos pedidos: quanto fica se tudo for aprovado, na ordem em que chegou ---------- */
+const fotoDaConta = (e, id) => {
+  const c = paisPorId(e, id), k = calcular(c, e), fim = c.moedas + k.sobra;
+  return { moedas: c.moedas, sobra: k.sobra, fim: Math.max(0, fim), falta: fim < 0 ? -fim : 0, semManutencao: k.manutencao.linhas.filter(l => l.estado === 'sem dinheiro').map(l => l.rotulo) };
+};
+// Aplica os pedidos em uma cópia, um depois do outro. Nada muda no jogo de verdade.
+export function simularPedidos(base, id, lista) {
+  const e = structuredClone({ ...base, historico: [] }), antes = fotoDaConta(e, id);
+  const itens = lista.map(p => {
+    const a = fotoDaConta(e, id), detalhe = detalhePedido(e, p), linhasAntes = linhasDaConta(paisPorId(e, id), e);
+    try {
+      const feito = aplicarPedido(e, p);
+      const d = fotoDaConta(e, id);
+      return { p, ok: true, detalhe, moedas: Math.round(d.moedas - a.moedas), porRodada: Math.round(d.sobra - a.sobra), linhas: diferencaDaConta(linhasAntes, linhasDaConta(paisPorId(e, id), e)), peso: p.tipo === 'acordo' ? pesoDoAcordo(e, feito) : [] };
+    } catch (err) { return { p, ok: false, detalhe, erro: err.message }; }
+  });
+  return { e, antes, depois: fotoDaConta(e, id), itens };
+}
+export function textoCusto(i) {
+  const s = v => (v > 0 ? `+${v}` : `−${-v}`), t = [];
+  if (i.moedas) t.push(`${s(i.moedas)} agora`);
+  if (i.porRodada) t.push(`${s(i.porRodada)} por rodada`);
+  return t.join(' · ') || 'Não muda o dinheiro';
+}
+// O que já está comprometido: o que o país mandou, e os acordos de outros que ele já aceitou.
+export const pedidosQueContam = (pedidos, id, rodada) => pedidos
+  .filter(p => (p.pais === id && (p.estado === 'fila' || (p.estado === 'aguardando' && p.rodada === rodada))) || (p.para === id && p.estado === 'fila'))
+  .sort((a, b) => a.id - b.id);
+// O celular só conhece o próprio país: monta um jogo pequeno com a ficha, para usar as mesmas contas do jogo.
+export function estadoDaFicha(f, paises) {
+  const b = f.base;
+  const eu = { id: f.id, nome: f.nome, moedas: f.moedas, pop: f.pop, renda: b.renda, niveis: { ...b.niveis }, cortadas: { ...b.cortadas }, semManutencao: { ...b.semManutencao }, projetos: f.projetos };
+  const outros = paises.filter(c => c.id !== f.id).map(c => ({ id: c.id, nome: c.nome, moedas: 1e9, pop: 0, renda: 0, niveis: { ...c.niveis } }));
+  return { rodada: f.rodada, params: b.params, paises: [eu, ...outros], acordos: structuredClone(b.acordos), noticias: [], marcas: [], trocas: [], historico: [], acoes: [] };
 }
 
 // Códigos sem letras e números que se confundem (O e 0, I e 1).
