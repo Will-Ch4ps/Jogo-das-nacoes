@@ -57,24 +57,39 @@ function colunaMapa() {
 
 const destaque = (v, r, cls) => h('div', { class: 'destaque' }, h('strong', { class: cls || '' }, v), h('span', {}, r));
 
-// História, ponto forte, ponto fraco e desafio: tudo público.
-function dossie(c) {
-  const hs = HISTORIAS[c.id];
-  const rotas = ROTAS.filter(r => r.de === c.id || r.para === c.id);
+// Troca {p1} pelo nome que o grupo escolheu para o país.
+const comNomes = t => t.replace(/\{(p\d+)\}/g, (_, id) => (paisDe(id) ? nomeDe(id) : 'um vizinho'));
+
+// História, forças, fraquezas e caminhos. É público: cada grupo estuda o seu e os outros.
+function dossie(id) {
+  const hs = HISTORIAS[id];
   return [
     h('p', { class: 'clima' }, hs.clima),
-    h('p', { class: 'historia' }, hs.historia),
+    hs.historia.split('\n\n').map(par => h('p', { class: 'historia' }, comNomes(par))),
     h('dl', { class: 'tracos' },
       h('div', { class: 'forte' }, h('dt', {}, 'Ponto forte'), h('dd', {}, hs.forte)),
       h('div', { class: 'fraco' }, h('dt', {}, 'Ponto fraco'), h('dd', {}, hs.fraco)),
       h('div', { class: 'desafio' }, h('dt', {}, 'Desafio'), h('dd', {}, hs.desafio))),
-    h('h4', {}, 'Áreas'), areasDoPais(c.niveis, { compacto: true, problemas: c.problemas || [] }),
-    h('h4', {}, 'Vizinhos'), h('div', { class: 'chips' }, (c.vizinhos || []).filter(paisDe).map(v => h('button', { class: 'pais-chip', style: `--cor:${paisDe(v).cor}`, onclick: () => escolher(v, true) }, h('span', {}, nomeDe(v))))),
-    rotas.length > 0 && h('div', {}, h('h4', {}, 'Rotas'), h('ul', { class: 'rotas-lista' }, rotas.map(r => h('li', {}, h('strong', {}, r.nome), ` · ${r.tipo === 'mar' ? 'mar' : 'terra'}, com ${nomeDe(r.de === c.id ? r.para : r.de)}`)))),
+    h('h4', {}, 'Caminhos possíveis'),
+    h('ul', { class: 'caminhos' }, hs.caminhos.map(c => h('li', {}, h('strong', {}, c.titulo), h('p', {}, comNomes(c.texto))))),
+    h('h4', {}, 'Quem pode interessar'),
+    h('ul', { class: 'parceiros' }, hs.parceiros.filter(x => paisDe(x.pais)).map(x => h('li', {},
+      h('button', { class: 'parceiro', style: `--cor:${paisDe(x.pais).cor}`, onclick: () => abrirDossie(x.pais) }, nomeDe(x.pais)), h('span', {}, comNomes(x.texto))))),
+    h('p', { class: 'comeco' }, comNomes(hs.comeco)),
   ];
 }
+function abrirDossie(id) {
+  ui.abertos.add(id); ui.aba = 'paises'; render();
+  const alvo = document.getElementById(`dossie-${id}`);
+  if (alvo) window.scrollTo({ top: alvo.getBoundingClientRect().top + window.scrollY - (document.querySelector('.topo')?.offsetHeight || 0) - 10, behavior: 'smooth' });
+}
+const rotasDe = c => {
+  const rotas = ROTAS.filter(r => r.de === c.id || r.para === c.id);
+  return rotas.length > 0 && h('div', {}, h('h4', {}, 'Rotas'), h('ul', { class: 'rotas-lista' }, rotas.map(r => h('li', {}, h('strong', {}, r.nome), ` · ${r.tipo === 'mar' ? 'mar' : 'terra'}, com ${nomeDe(r.de === c.id ? r.para : r.de)}`))));
+};
+const vizinhosDe = c => h('div', { class: 'chips' }, (c.vizinhos || []).filter(paisDe).map(v => h('button', { class: 'pais-chip', style: `--cor:${paisDe(v).cor}`, onclick: () => escolher(v, true) }, h('span', {}, nomeDe(v)))));
 
-// O que todos veem ao tocar em um país no mapa.
+// O que todos veem ao tocar em um país no mapa: o resumo. A história completa fica na tela Países.
 function cartaoPublico(c) {
   const acordos = J.acordos.filter(a => a.tipo === 'global' || a.paises.includes(c.id));
   const qtdNoticias = J.noticias.filter(n => n.paisId === c.id || n.fontePais === c.id).length;
@@ -84,9 +99,13 @@ function cartaoPublico(c) {
       h('button', { class: 'btn-fechar', 'aria-label': 'Fechar país', onclick: () => escolher(null) }, icone('fechar', 18))),
     h('div', { class: 'detalhe-corpo' },
       h('div', { class: 'destaques dois' }, destaque(`${c.pos}º`, 'posição'), destaque(fmt(c.riqueza), 'riqueza')),
-      dossie(c),
-      acordos.length > 0 && h('div', {}, h('h4', {}, 'Acordos públicos'), h('ul', { class: 'lista' }, acordos.map(a => cartaoAcordo(a)))),
-      qtdNoticias > 0 && h('button', { class: 'btn leve btn-ver-jornal', onclick: () => { ui.jornalPais = c.id; ui.jornalFonte = 'todas'; ui.jornalVista = 'noticias'; trocaAba('jornal'); } }, icone('jornal', 19), `Ver ${qtdNoticias} ${qtdNoticias === 1 ? 'notícia' : 'notícias'} no jornal`)));
+      h('div', { class: 'acoes-pais' },
+        h('button', { class: 'btn leve', onclick: () => abrirDossie(c.id) }, icone('globo', 19), 'História e caminhos'),
+        qtdNoticias > 0 && h('button', { class: 'btn leve', onclick: () => { ui.jornalPais = c.id; ui.jornalFonte = 'todas'; ui.jornalVista = 'noticias'; trocaAba('jornal'); } }, icone('jornal', 19), `${qtdNoticias} ${qtdNoticias === 1 ? 'notícia' : 'notícias'}`)),
+      h('h4', {}, 'Áreas'), areasDoPais(c.niveis, { compacto: true, problemas: c.problemas || [] }),
+      h('h4', {}, 'Vizinhos'), vizinhosDe(c),
+      rotasDe(c),
+      acordos.length > 0 && h('div', {}, h('h4', {}, 'Acordos públicos'), h('ul', { class: 'lista' }, acordos.map(a => cartaoAcordo(a))))));
 }
 
 // Tela à parte: todos os países, para conhecer o seu e estudar os outros.
@@ -94,10 +113,13 @@ function secaoPaises() {
   const porId = J.paises.slice().sort((a, b) => a.id.slice(1) - b.id.slice(1));
   return h('section', { class: 'secao', 'data-aba': 'paises' },
     h('h2', { class: 'titulo' }, 'Os países'),
-    h('p', { class: 'meta explica' }, 'A história, a força e a fraqueza de cada um. Use para conhecer o seu país e pensar em quem procurar.'),
-    h('div', { class: 'dossies' }, porId.map(c => h('details', { class: 'dossie', style: `--cor:${c.cor}`, open: ui.abertos.has(c.id), ontoggle: ev => { if (ev.target.open) ui.abertos.add(c.id); else ui.abertos.delete(c.id); } },
-      h('summary', {}, h('span', { class: 'dossie-cor' }), h('span', { class: 'dossie-nome' }, h('strong', {}, c.nome), h('small', {}, c.perfil)), h('span', { class: 'dossie-pos' }, `${c.pos}º`)),
-      h('div', { class: 'dossie-corpo' }, dossie(c))))));
+    h('p', { class: 'meta explica' }, 'Toque em um país para ler a história, os pontos fortes e fracos, os caminhos possíveis e quem pode interessar.'),
+    guia(),
+    h('div', { class: 'dossies' }, porId.map(c => h('details', { id: `dossie-${c.id}`, class: 'dossie', style: `--cor:${c.cor}`, open: ui.abertos.has(c.id), ontoggle: ev => { if (ev.target.open) ui.abertos.add(c.id); else ui.abertos.delete(c.id); } },
+      h('summary', {}, h('span', { class: 'dossie-nome' }, h('strong', {}, c.nome), h('small', {}, c.perfil)), h('span', { class: 'dossie-pos' }, `${c.pos}º`)),
+      h('div', { class: 'dossie-corpo' }, dossie(c.id),
+        h('h4', {}, 'Áreas'), areasDoPais(c.niveis, { compacto: true, problemas: c.problemas || [] }),
+        h('h4', {}, 'Vizinhos'), vizinhosDe(c), rotasDe(c))))));
 }
 
 function secaoRanking() {
@@ -129,26 +151,20 @@ const rotuloDura = r => (r == null ? 'até o fim' : r === 1 ? 'última rodada' :
 const linhaConta = (x, sinalTxt) => h('div', { class: 'conta' + (x.ruim ? ' ruim' : '') },
   h('span', {}, x.rotulo, x.restantes !== undefined && h('em', { class: 'dura' }, rotuloDura(x.restantes))),
   h('strong', {}, `${sinalTxt}${fmt(Math.abs(x.valor))}`));
+const ABAS_FICHA = [['conta', 'Conta'], ['areas', 'Áreas'], ['acordos', 'Acordos'], ['projetos', 'Projetos'], ['pais', 'Nosso país'], ['guia', 'Como jogar']];
 function fichaPais(f) {
   const area = id => f.areas.find(a => a.id === id);
-  const hs = HISTORIAS[f.id];
-  const acordos = f.acordos.filter(a => a.origem !== 'efeito'), efeitos = f.acordos.filter(a => a.origem === 'efeito');
+  const acordos = f.acordos.filter(a => a.origem === 'acordo'), efeitos = f.acordos.filter(a => a.origem === 'efeito'), emProjeto = f.acordos.filter(a => a.origem === 'projeto');
+  const aba = ui.fichaAba || 'conta';
+  const contagem = { acordos: acordos.length + efeitos.length, projetos: (f.tentativas || []).length };
   const cartaoCompromisso = a => h('li', { class: 'cartao' },
     h('div', { class: 'cartao-topo' }, h('strong', {}, a.titulo),
       h('span', { class: 'etiquetas' }, a.secreto && h('span', { class: 'etiqueta selo-boato' }, 'Secreto'), h('span', { class: 'etiqueta' }, a.ateRodada == null ? 'Até o fim' : a.restantes === 1 ? 'Última rodada' : `Até a rodada ${a.ateRodada}`))),
     a.descricao && h('p', {}, a.descricao),
     h('p', { class: 'meta' }, `${a.comQuem ? `Com ${a.comQuem}. ` : ''}${a.efeito || 'Sem números combinados.'}`));
-  return h('article', { class: 'detalhe ficha', style: `--cor:${f.cor}` },
-    h('header', { class: 'detalhe-topo' },
-      h('div', {}, h('h3', {}, f.nome), h('p', {}, `${f.pos}º lugar · ${f.perfil}`)),
-      h('button', { class: 'btn-sair', onclick: sair }, 'Sair')),
-    h('div', { class: 'detalhe-corpo' },
-      h('div', { class: 'destaques' }, destaque(fmt(f.moedas), 'moedas agora'), destaque(fmt(Math.round(f.pop)), 'mil pessoas'), destaque(`${fmt(f.desemprego)}%`, 'desemprego')),
 
-      h('h4', {}, `Conta da rodada ${f.rodada}`),
-      f.falta > 0
-        ? h('div', { class: 'alerta-conta', role: 'alert' }, h('strong', {}, `Vão faltar ${fmt(f.falta)} moedas`), h('p', {}, `Se nada mudar, o país perde ${f.perdaFome}% das pessoas.`))
-        : h('div', { class: 'previsao' }, h('span', {}, 'Vocês vão terminar com'), h('strong', {}, `${fmt(f.fimDaRodada)} moedas`)),
+  const telas = {
+    conta: () => [
       h('div', { class: 'contas' },
         h('h5', {}, h('span', {}, 'Vai receber'), h('span', { class: 'pos' }, `+${fmt(f.recebe)}`)),
         f.entradas.map(x => linhaConta(x, '+')),
@@ -158,44 +174,58 @@ function fichaPais(f) {
         f.manutencao.linhas.filter(l => l.estado !== 'paga' && l.valor > 0).map(l => h('div', { class: 'conta aviso' }, h('span', {}, l.rotulo), h('strong', {}, l.estado === 'cortada' ? 'cortada' : 'sem dinheiro'))),
         f.saidas.length > 0 && [h('h5', {}, h('span', {}, 'Outros pagamentos'), h('span', {}, `−${fmt(f.saidas.reduce((t, x) => t + x.valor, 0))}`)), f.saidas.map(x => linhaConta(x, '−'))],
         h('h5', { class: 'conta-final' }, h('span', {}, f.sobra < 0 ? 'Falta na rodada' : 'Sobra na rodada'), h('span', { class: f.sobra < 0 ? 'neg' : 'pos' }, sinal(f.sobra)))),
-
       (f.proximas || []).length > 0 && h('div', {},
         h('h4', {}, 'Próximas rodadas, se nada mudar'),
         h('div', { class: 'rola-x' }, h('table', { class: 'tabela' },
           h('thead', {}, h('tr', {}, ['Rodada', 'Sobra', 'Moedas', 'Pessoas', ''].map(t => h('th', { scope: 'col' }, t)))),
           h('tbody', {}, f.proximas.map(x => h('tr', {}, h('td', {}, x.rodada), h('td', { class: x.sobra < 0 ? 'neg' : '' }, sinal(x.sobra)), h('td', {}, fmt(x.moedas)), h('td', {}, fmt(Math.round(x.pop))), h('td', { class: 'neg' }, x.fome ? 'Fome' : ''))))))),
-
-      h('h4', {}, 'Acordos do país'),
-      acordos.length ? h('ul', { class: 'lista' }, acordos.map(cartaoCompromisso)) : h('p', { class: 'vazio-txt' }, 'Nenhum acordo ainda.'),
-      efeitos.length > 0 && h('div', {}, h('h4', {}, 'Efeitos em andamento'), h('ul', { class: 'lista' }, efeitos.map(cartaoCompromisso))),
-
-      h('h4', {}, 'Nosso desafio'),
-      h('p', {}, hs.desafio),
-
-      h('h4', {}, 'Áreas: comprado, efeito real e manutenção'),
+      f.serie.length > 0 && h('div', {}, h('h4', {}, 'Rodadas anteriores'),
+        h('div', { class: 'rola-x' }, h('table', { class: 'tabela' },
+          h('thead', {}, h('tr', {}, ['Rodada', 'Moedas', 'Pessoas', 'Posição'].map(t => h('th', { scope: 'col' }, t)))),
+          h('tbody', {}, f.serie.slice().reverse().map(s => h('tr', {}, h('td', {}, s.r), h('td', {}, fmt(s.moedas)), h('td', {}, fmt(Math.round(s.pop))), h('td', {}, `${s.pos}º`))))))),
+    ],
+    areas: () => [
       h('p', { class: 'meta explica' }, `Comprar sobe o nível. A manutenção é a despesa por rodada: sem pagar, a área entra em crise e, a cada ${f.rodadasParaPerderNivel} rodadas sem pagar, perde um nível. Os níveis 5 e 10 valem em dobro.`),
       areasDoPais(Object.fromEntries(f.areas.map(a => [a.id, a.real])), { comprados: Object.fromEntries(f.areas.map(a => [a.id, a.nivel])), problemas: f.areas.filter(a => a.problema).map(a => a.id), extra: a => {
         const d = area(a.id), semPagar = d.manut.estado !== 'paga';
         return h('div', { class: 'area-ficha' },
           h('p', { class: 'area-agora' }, d.agora),
+          d.real !== d.nivel && h('p', { class: 'area-bonus' }, `Vale nível ${d.real} agora: você comprou ${d.nivel}.`),
           d.bonus.map(b => h('p', { class: 'area-bonus' }, `${b.valor > 0 ? '+' : ''}${b.valor} de ${b.titulo} · ${rotuloDura(b.restantes)}`)),
           semPagar && h('p', { class: 'area-crise' }, d.cortada ? 'Manutenção cortada nesta rodada' : 'Falta dinheiro para a manutenção desta rodada', (d.rodadasSem + 1) % f.rodadasParaPerderNivel === 0 && d.nivel > 1 ? ': vai perder 1 nível' : ''),
           h('div', { class: 'area-extra' },
-            h('span', {}, `Comprado ${d.nivel} · investido ${fmt(d.investido)}`),
-            h('span', {}, `Manutenção ${d.manut.valor}`)),
-          h('div', { class: 'area-extra sem-linha' },
-            h('span', {}, ''),
+            h('span', {}, `Manutenção: ${d.manut.valor} por rodada`),
             h('span', { class: d.proximo != null && d.proximo <= f.moedas ? 'pos' : '' }, d.proximo == null ? 'Nível máximo' : `Subir: ${d.proximo}`)));
       } }),
-
-      h('h4', {}, 'Projetos'),
-      h('p', {}, f.projetos ? `${f.projetos} ${f.projetos === 1 ? 'projeto feito' : 'projetos feitos'}. ` : 'Nenhum projeto ainda. ', `O próximo custa ${f.proximoProjeto} moedas, ou o valor que o professor combinar.`),
-
-      f.serie.length > 0 && h('div', {}, h('h4', {}, 'Rodadas anteriores'),
-        h('div', { class: 'rola-x' }, h('table', { class: 'tabela' },
-          h('thead', {}, h('tr', {}, ['Rodada', 'Moedas', 'Pessoas', 'Posição'].map(t => h('th', { scope: 'col' }, t)))),
-          h('tbody', {}, f.serie.slice().reverse().map(s => h('tr', {}, h('td', {}, s.r), h('td', {}, fmt(s.moedas)), h('td', {}, fmt(Math.round(s.pop))), h('td', {}, `${s.pos}º`))))))),
-      h('p', { class: 'meta dica-grupo' }, 'Decidiram algo? Chamem o professor.')));
+    ],
+    acordos: () => [
+      acordos.length ? h('ul', { class: 'lista' }, acordos.map(cartaoCompromisso)) : h('p', { class: 'vazio-txt' }, 'Nenhum acordo ainda. Veja em "Nosso país" quem pode interessar.'),
+      efeitos.length > 0 && h('div', {}, h('h4', {}, 'O que está afetando vocês'), h('ul', { class: 'lista' }, efeitos.map(cartaoCompromisso))),
+    ],
+    projetos: () => [
+      h('div', { class: 'previsao neutra' }, h('span', {}, 'O próximo projeto custa cerca de'), h('strong', {}, `${f.proximoProjeto} moedas`)),
+      h('p', { class: 'meta explica' }, 'Levem a ideia ao professor: qual problema resolve, como funciona e quem paga a conta. Ele define o custo, a dificuldade e o efeito antes de rolar o dado.'),
+      emProjeto.length > 0 && h('div', {}, h('h4', {}, 'Rendendo agora'), h('ul', { class: 'lista' }, emProjeto.map(cartaoCompromisso))),
+      h('h4', {}, 'Tentativas'),
+      (f.tentativas || []).length ? h('ul', { class: 'lista' }, f.tentativas.map(t => h('li', { class: 'cartao' },
+        h('div', { class: 'cartao-topo' }, h('strong', {}, t.titulo), h('span', { class: 'etiqueta' }, `Rodada ${t.rodada}`)),
+        h('p', {}, `${t.resultado}: tirou ${t.dado} no dado, total ${t.total}.`),
+        h('p', { class: 'meta' }, `${t.efeito || 'Nada mudou.'}${t.custo ? ` Custou ${t.custo} moedas.` : ''}`)))) : h('p', { class: 'vazio-txt' }, 'Nenhuma tentativa ainda.'),
+    ],
+    pais: () => dossie(f.id),
+    guia: () => conteudoGuia(),
+  };
+  return h('article', { class: 'detalhe ficha', style: `--cor:${f.cor}` },
+    h('header', { class: 'detalhe-topo' },
+      h('div', {}, h('h3', {}, f.nome), h('p', {}, `${f.pos}º lugar · ${f.perfil}`)),
+      h('button', { class: 'btn-sair', onclick: sair }, 'Sair')),
+    h('div', { class: 'detalhe-corpo' },
+      h('div', { class: 'destaques' }, destaque(fmt(f.moedas), 'moedas agora'), destaque(fmt(Math.round(f.pop)), 'mil pessoas'), destaque(`${fmt(f.desemprego)}%`, 'desemprego')),
+      f.falta > 0
+        ? h('div', { class: 'alerta-conta', role: 'alert' }, h('strong', {}, `Vão faltar ${fmt(f.falta)} moedas`), h('p', {}, `Se nada mudar, o país perde ${f.perdaFome}% das pessoas.`))
+        : h('div', { class: 'previsao' }, h('span', {}, `Fim da rodada ${f.rodada}`), h('strong', {}, `${fmt(f.fimDaRodada)} moedas`)),
+      h('div', { class: 'ficha-abas', role: 'group', 'aria-label': 'Partes da ficha' }, ABAS_FICHA.map(([id, t]) => h('button', { class: 'ficha-aba' + (aba === id ? ' ativa' : ''), 'aria-pressed': String(aba === id), onclick: () => { ui.fichaAba = id; render(); } }, t, contagem[id] ? h('b', {}, contagem[id]) : null))),
+      h('div', { class: 'ficha-tela' }, telas[aba]())));
 }
 function secaoMeu() {
   return h('section', { class: 'secao', 'data-aba': 'meu' }, ui.ficha ? fichaPais(ui.ficha) : telaCodigo(), regras());
@@ -281,19 +311,37 @@ function ultimaHora() {
   if (!n || ui.aba === 'jornal') return null;
   return h('button', { class: 'ultima-hora', onclick: () => { ui.jornalFonte = 'todas'; ui.jornalPais = ''; ui.jornalVista = 'noticias'; trocaAba('jornal'); } }, h('b', {}, 'Última hora'), h('span', {}, n.titulo));
 }
-function regras() {
-  const passo = (t, d) => h('li', {}, h('strong', {}, t), h('p', { class: 'meta' }, d));
-  return h('details', { class: 'regras' }, h('summary', {}, 'Como funciona o jogo'),
-    h('ol', {},
-      passo('Objetivo', 'Terminar como o país mais rico. Riqueza é o dinheiro mais 5 moedas por mil pessoas.'),
-      passo('Toda rodada', 'O país recebe dinheiro e paga a comida: 1 moeda por mil pessoas.'),
-      passo('Faltou dinheiro para a comida?', 'O país perde 10% das pessoas.'),
-      passo('Suba suas áreas', 'Cada área vai do nível 1 ao 10. Subir custa dinheiro e não tem volta. Os níveis 5 e 10 valem em dobro.'),
-      passo('Mantenha o que comprou', 'Cada nível tem uma despesa de manutenção por rodada. Sem pagar, a área entra em crise, e a cada 2 rodadas sem pagar perde um nível.'),
-      passo('Negocie', 'Acordos podem mudar dinheiro, comida e áreas. Combinem entre vocês e chamem o professor: valem quando ele registra, e a duração aparece na ficha.'),
-      passo('Tenha ideias', 'Projetos podem render dinheiro, baratear comida ou subir áreas. O professor define custo, dificuldade e efeito antes de rolar: quanto maior o número, maior o resultado.'),
-      passo('Ataque, se tiver coragem', 'O dado decide. Quem perde paga 20% do próprio dinheiro para o outro.')));
+// Como jogar: o que acontece em cada rodada e o que pedir ao professor.
+function conteudoGuia() {
+  const item = (t, d) => h('li', {}, h('strong', {}, t), h('p', { class: 'meta' }, d));
+  return [
+    h('h4', {}, 'O objetivo'),
+    h('p', {}, `Terminar como o país mais rico. Riqueza é o dinheiro mais ${J.params.valorPessoa} moedas por mil pessoas, então cuidar da população também conta.`),
+    h('h4', {}, 'O que fazer em cada rodada'),
+    h('ol', { class: 'guia-lista' },
+      item('Leiam a conta', 'Em "Meu país", vejam quanto entra, quanto sai e com quanto vão terminar a rodada.'),
+      item('Leiam o jornal', 'As notícias mostram quem está em crise, quem cresceu e o que está mudando no continente.'),
+      item('Decidam juntos', 'O que vale mais agora: subir uma área, fechar um acordo, tentar um projeto?'),
+      item('Negociem', 'Um representante pode visitar as salas dos outros países e combinar o que quiser.'),
+      item('Chamem o professor', 'Nada vale até ele registrar. Quando decidirem, chamem e digam exatamente o que combinaram.')),
+    h('h4', {}, 'O que dá para pedir ao professor'),
+    h('ul', { class: 'guia-lista' },
+      item('Subir uma área', 'Custa uma vez, e a área passa a render mais. Todo nível aumenta a manutenção.'),
+      item('Cortar uma manutenção', 'Sobra dinheiro agora, mas a área entra em crise na rodada seguinte, e depois perde níveis.'),
+      item('Fazer um acordo', 'Pode ser dinheiro por rodada, comida, apoio em uma área ou o que combinarem. Digam com quem, o quê e por quantas rodadas. Pode ser secreto.'),
+      item('Passar dinheiro', 'Uma transferência única para outro país, para ajudar ou pagar por algo.'),
+      item('Tentar um projeto', 'Expliquem a ideia: qual problema resolve, como funciona e quem paga a conta. Quanto melhor a ideia, maior a chance no dado.'),
+      item('Publicar no jornal', 'Mandem o texto no formato que quiserem. Pode ser verdade, propaganda ou boato.'),
+      item('Atacar', 'O dado decide, e quem perde paga parte do próprio dinheiro ao outro. O militar só vale contra vizinhos e vira notícia; o hacker é secreto.')),
+    h('h4', {}, 'O que pode dar errado'),
+    h('ul', { class: 'guia-lista' },
+      item('Faltar comida', 'Se o dinheiro não cobrir a comida, o país perde 10% das pessoas.'),
+      item('Área em crise', 'Sem manutenção, surgem greves, crime, protestos ou apagões, e cada um custa caro.'),
+      item('Surpresas', 'Crises e eventos podem atingir todos os países. Guardar um pouco de dinheiro ajuda a atravessá-los.')),
+  ];
 }
+function guia() { return h('details', { class: 'regras' }, h('summary', {}, 'Como jogar'), h('div', { class: 'guia' }, conteudoGuia())); }
+const regras = guia;
 
 function navegacao() {
   const novas = Math.max(0, J.noticias.length - ui.noticiasVistas);

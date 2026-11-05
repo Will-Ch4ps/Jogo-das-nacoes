@@ -1,6 +1,7 @@
 // Gera site/js/dados.js: mapa do continente, rotas, histórias e os 12 países. Semente fixa: o mapa não muda sozinho.
 import { writeFileSync } from 'node:fs';
 import { AREAS as AREAS_JOGO } from '../site/js/engine.js';
+import { HISTORIAS } from './historias.mjs';
 
 const LARG = 1000, ALT = 720;
 const P = [
@@ -19,21 +20,6 @@ const P = [
   ['p12', 'Deserto energético', 850, 580, '#e0733a', 90, [3, 2, 1, 4, 2, 2, 1, 1]],
 ];
 const AREAS = ['emp', 'edu', 'sau', 'tec', 'seg', 'mil', 'inf', 'est'];
-
-const HISTORIAS = {
-  p1: { clima: 'Costa de ventos fortes', historia: 'Nasceu em volta de um porto antigo por onde passa quase tudo que o continente compra e vende. Sua gente aprendeu cedo a negociar, e pouca coisa acontece sem que os comerciantes daqui fiquem sabendo.', forte: 'Infraestrutura: os portos deixam a comida mais barata.', fraco: 'Poder militar e Segurança: é rico e mal protegido.', desafio: 'Manter as rotas funcionando sem provocar quem depende delas.' },
-  p2: { clima: 'Montanhas frias e neve', historia: 'Um país de minas cravado nas montanhas do norte. A neve isola as vilas por meses, e essa vida dura criou um povo desconfiado e difícil de invadir. Muita riqueza sai da terra, mas pouca fica por aqui.', forte: 'Poder militar: as montanhas protegem o país.', fraco: 'Educação e Tecnologia: quem pode estudar vai embora.', desafio: 'Transformar minério em conhecimento antes que as minas acabem.' },
-  p3: { clima: 'Vale gelado e fábricas', historia: 'As fábricas se instalaram no vale gelado porque ali havia rios e mão de obra. Hoje dão emprego a quase todo mundo, mas a fumaça fica presa entre as montanhas, e os hospitais vivem cheios.', forte: 'Emprego e Tecnologia: quase todos trabalham nas fábricas.', fraco: 'Saúde: a poluição cobra caro da população.', desafio: 'Crescer sem adoecer quem faz o país funcionar.' },
-  p4: { clima: 'Praias quentes e vulcão', historia: 'As praias atraem visitantes do continente inteiro, e o turismo mantém o povo contente. Só que um vulcão ativo domina a paisagem, e todos aqui sabem que a próxima erupção pode acontecer a qualquer momento.', forte: 'Estabilidade e Saúde: um povo que vive bem e confia no governo.', fraco: 'Poder militar e Tecnologia: nunca precisou deles até hoje.', desafio: 'Se preparar para um desastre que todos preferem esquecer.' },
-  p5: { clima: 'Clima ameno e muita gente', historia: 'A maior cidade do continente cresceu rápido demais. Tem emprego, oportunidades e gente de todo lugar, mas também filas nos hospitais, trânsito e protestos cada vez mais frequentes.', forte: 'Emprego: a cidade nunca para de gerar trabalho.', fraco: 'Saúde e Estabilidade: tanta gente junta vira problema.', desafio: 'Manter a metrópole de pé quando tudo fica caro ao mesmo tempo.' },
-  p6: { clima: 'Temperado, no centro do continente', historia: 'Uma pequena capital que apostou tudo em laboratórios e startups. Inventa o que o resto do continente vai usar amanhã, mas importa quase toda a comida e não saberia se defender sozinha.', forte: 'Tecnologia: lidera a corrida das ideias, e seus projetos custam menos.', fraco: 'Infraestrutura e Poder militar: depende dos vizinhos.', desafio: 'Trocar conhecimento por proteção e comida sem perder a vantagem.' },
-  p7: { clima: 'Planalto de lagos e ar seco', historia: 'As universidades mais antigas do continente ficam neste planalto cheio de lagos. Estudantes vêm de todo lugar, e muitos dos líderes vizinhos estudaram aqui. Pensar é fácil; transformar ideia em emprego, nem tanto.', forte: 'Educação: tem as melhores chances em projetos.', fraco: 'Poder militar e Segurança: um alvo fácil e valioso.', desafio: 'Fazer o conhecimento virar dinheiro antes que os formados partam.' },
-  p8: { clima: 'Serras secas e fronteiras tensas', historia: 'Depois de gerações de disputas, o país se organizou em torno do exército. As fronteiras são vigiadas dia e noite, e os vizinhos pensam duas vezes antes de provocar. A escola, por outro lado, ficou em segundo plano.', forte: 'Poder militar: o exército mais temido do continente.', fraco: 'Educação e Tecnologia: o orçamento foi todo para os quartéis.', desafio: 'Decidir se o exército serve para proteger, ameaçar ou negociar.' },
-  p9: { clima: 'Campos férteis e chuva regular', historia: 'Quase tudo que o continente come passa por estas planícies. Os silos estão sempre cheios e a comida custa pouco, mas os jovens vão embora para as cidades, e uma safra ruim abala o país inteiro.', forte: 'Infraestrutura: alimentar a população custa muito menos.', fraco: 'Educação e Tecnologia: o campo ficou para trás.', desafio: 'Usar a comida como força de negociação, sem depender só da chuva.' },
-  p10: { clima: 'Floresta densa e úmida', historia: 'Uma floresta enorme cobre o país, e o povo aprendeu a viver dela e a protegê-la. As plantas daqui viraram remédio para o continente, mas há pouca indústria, e muita gente de olho nas árvores.', forte: 'Saúde e Estabilidade: população saudável e unida.', fraco: 'Emprego e Tecnologia: pouca gente tem renda fixa.', desafio: 'Lucrar com a floresta sem destruir o que torna o país único.' },
-  p11: { clima: 'Mangues e mar agitado', historia: 'Entre mangues e mar aberto, o país vive da pesca e dos barcos. É um povo acostumado a enchentes, que reconstrói tudo depois de cada tempestade. O mar dá comida e trabalho, mas também leva o que quer.', forte: 'Infraestrutura e Saúde: pesca farta e comida barata.', fraco: 'Educação e Tecnologia: a escola compete com o barco.', desafio: 'Proteger a costa de um mar que sobe e de vizinhos que pescam demais.' },
-  p12: { clima: 'Deserto escaldante', historia: 'O calor do deserto parecia uma maldição até virar energia: hoje os painéis solares abastecem boa parte do continente. Água e comida precisam vir de fora, então cada acordo aqui vale ouro.', forte: 'Tecnologia: a energia sustenta o país e rende negócios.', fraco: 'Infraestrutura e Saúde: água e comida são caras.', desafio: 'Trocar energia por água e comida antes que os vizinhos percebam o quanto precisam um do outro.' },
-};
 
 function rng(seed) { let s = seed >>> 0; return () => { s = (s + 0x6D2B79F5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const hash = str => [...str].reduce((h, c) => (Math.imul(h, 31) + c.charCodeAt(0)) >>> 0, 7);
@@ -264,7 +250,7 @@ const paises = P.map((p, i) => {
   const manutencao = AREAS_JOGO.reduce((t, a) => t + niveis[a.id] * a.manut, 0);
   const renda = comida + manutencao + SOBRA_INICIAL - forca(niveis.emp) * 10;
   const moedas = RIQUEZA_INICIAL - pop * 5;
-  return { id, nome: `País ${i + 1}`, perfil, cor, moedas, pop, renda, niveis, investido: {}, projetos: 0, serie: [], vizinhos: [...viz[i]].sort((a, b) => a.slice(1) - b.slice(1)) };
+  return { id, nome: `País ${i + 1}`, perfil, cor, moedas, pop, renda, niveis, projetos: 0, serie: [], vizinhos: [...viz[i]].sort((a, b) => a.slice(1) - b.slice(1)) };
 });
 const mapa = { largura: LARG, altura: ALT, costa: costa.map(c => c.map(r1)), ilhas, biomas: pontosBioma, rios, lagos, vulcao, monstro, desenhos, paises: paisesMapa };
 const eventos = [

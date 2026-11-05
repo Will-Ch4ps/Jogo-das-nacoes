@@ -38,7 +38,7 @@ Vão do nível 1 ao 10. **Os níveis 5 e 10 valem em dobro.** Cada área tem dua
 | Estabilidade | Imprevistos | +1 no dado de negociações e imprevistos | 1 | Protestos: −10 moedas por rodada e −1 no dado |
 
 ## Os países
-Cada país tem história, clima, ponto forte, ponto fraco e desafio próprios, visíveis para todos na tela **Países**. Todos começam com a mesma riqueza e o mesmo total de níveis, só que distribuídos de um jeito diferente.
+Cada país tem história, clima, ponto forte, ponto fraco, desafio, caminhos possíveis e possíveis parceiros, visíveis para todos na tela **Países**. Todos começam com a mesma riqueza e o mesmo total de níveis, só que distribuídos de um jeito diferente.
 
 ## O que os grupos podem fazer
 Os grupos combinam entre si e chamam o professor, que registra no sistema.

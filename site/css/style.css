@@ -462,3 +462,29 @@ select option { background: #0c1a25; color: var(--texto); }
 .painel-dobra summary h2 { margin: 0; }
 .painel-dobra summary::after { content: "Abrir ou fechar"; margin-left: auto; color: var(--suave); font-size: 13px; }
 .painel-dobra[open] summary { margin-bottom: 8px; }
+
+/* Ficha em abas */
+.ficha-abas { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0; }
+.ficha-aba { min-height: 40px; padding: 4px 12px; background: var(--fundo-2); border: 1px solid var(--linha); border-radius: 20px; color: var(--suave); font-weight: 700; font-size: 14px; }
+.ficha-aba b { margin-left: 5px; color: var(--ouro); }
+.ficha-aba.ativa { background: var(--ouro); border-color: var(--ouro); color: #231803; }
+.ficha-aba.ativa b { color: #231803; }
+.previsao.neutra { background: var(--cartao-2); color: var(--texto); }
+.ficha-tela h4:first-child { margin-top: 4px; }
+
+/* História dos países */
+.historia + .historia { margin-top: 8px; }
+.caminhos { display: grid; gap: 8px; }
+.caminhos li { padding: 10px 12px; background: var(--cartao-2); border-radius: 8px; }
+.caminhos strong { display: block; font: 700 16.5px var(--display); color: var(--ouro); }
+.caminhos p { margin-top: 2px; font-size: 15px; }
+.parceiros { display: grid; gap: 8px; }
+.parceiros li { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 15px; }
+.parceiro { --cor: var(--acento); min-height: 36px; padding: 2px 10px; background: var(--cartao-2); border: 0; border-left: 4px solid var(--cor); border-radius: 6px; font-weight: 700; }
+.comeco { margin-top: 12px; padding: 10px 12px; background: #173a4a; color: #d6f1f7; border-radius: 8px; font-weight: 600; font-size: 15px; }
+.acoes-pais { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.acoes-pais .btn { display: inline-flex; align-items: center; gap: 7px; flex: 1 1 150px; justify-content: center; }
+.guia { padding-bottom: 12px; }
+.guia h4, .ficha-tela .guia-lista + h4 { margin: 16px 0 6px; color: var(--suave); font: 700 13px var(--corpo); letter-spacing: .09em; text-transform: uppercase; }
+.guia-lista { display: grid; gap: 8px; }
+.ficha-tela h4 { color: var(--suave); }

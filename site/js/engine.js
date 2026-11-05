@@ -66,13 +66,13 @@ function aplicarNaHora(c, f) {
   for (const [a, n] of Object.entries(f.niveisPerm || {})) c.niveis[a] = Math.max(0, Math.min(NIVEL_MAX, c.niveis[a] + n));
 }
 // Aplica um efeito a um ou mais países. O que é contínuo vira um compromisso com duração, visível na ficha.
-export function aplicarEfeito(e, ids, ef, { titulo = 'Efeito', descricao = '', duracao = null, secreto = true } = {}) {
+export function aplicarEfeito(e, ids, ef, { titulo = 'Efeito', descricao = '', duracao = null, secreto = true, origem = 'efeito' } = {}) {
   const f = normEf(ef);
   for (const id of ids) {
     const c = paisPorId(e, id);
     if (!c) continue;
     aplicarNaHora(c, f);
-    if (temContinuo(f)) criarAcordo(e, { titulo, descricao, tipo: 'paises', paises: [id], efeitos: { [id]: { moedas: f.moedas, comida: f.comida, areas: f.areas } }, duracao, visibilidade: secreto ? 'oculto' : 'publico', origem: 'efeito' });
+    if (temContinuo(f)) criarAcordo(e, { titulo, descricao, tipo: 'paises', paises: [id], efeitos: { [id]: { moedas: f.moedas, comida: f.comida, areas: f.areas } }, duracao, visibilidade: secreto ? 'oculto' : 'publico', origem });
   }
 }
 
@@ -163,6 +163,12 @@ export function efeitoAgora(c, area, e) {
     est: `${b >= 0 ? '+' : ''}${b} no dado de negociações e imprevistos`,
   };
   return textos[area];
+}
+
+// Compara a área agora e com mais níveis, para mostrar o apoio antes de confirmar.
+export function comoFicaArea(c, area, delta, e) {
+  const real = nivelReal(c, area, e), depois = { ...c, niveis: { ...c.niveis, [area]: c.niveis[area] + delta } };
+  return { de: real, para: nivelReal(depois, area, e), hoje: efeitoAgora(c, area, e), comApoio: efeitoAgora(depois, area, e) };
 }
 
 /* ---------- Contas da rodada ---------- */
@@ -315,7 +321,6 @@ export function subirNivel(e, id, area) {
   if (custo > c.moedas) throw new Error(`${c.nome} precisa de ${custo} moedas e tem ${c.moedas}.`);
   c.moedas -= custo;
   c.niveis[area] = atual + 1;
-  c.investido = { ...(c.investido || {}), [area]: (c.investido?.[area] || 0) + custo };
   return custo;
 }
 export function transferir(e, de, para, valor, nota = '') {
@@ -426,8 +431,9 @@ export function acaoDado(e, d, rola = lancar) {
   const efeito = escalarEfeito(d.efeito, r.mult);
   // Desastre com efeito "para sempre" duraria o jogo todo: limita a 2 rodadas.
   const duracao = r.mult < 0 && d.duracao == null ? 2 : d.duracao ?? null;
-  aplicarEfeito(e, [c.id], efeito, { titulo: d.titulo || 'Ação', duracao, secreto: !!d.secreto });
+  aplicarEfeito(e, [c.id], efeito, { titulo: d.titulo || 'Ação', duracao, secreto: !!d.secreto, origem: 'projeto' });
   if (d.projeto) c.projetos = (c.projetos || 0) + 1;
+  c.tentativas = [...(c.tentativas || []), { titulo: d.titulo || 'Ação', rodada: e.rodada, resultado: r.nome, dado, total: r.total, custo, efeito: textoEfeito(efeito) }];
   return { dado, bonus, lados, custo, duracao, ...r, efeito, textoEfeito: textoEfeito(efeito) };
 }
 // Ataque: militar (aberto, Poder militar dos dois lados) ou hacker (secreto, Tecnologia contra Segurança). Empate: defensor vence.
@@ -501,9 +507,9 @@ export function visaoDoPais(c, e) {
     comida, entradas, saidas, recebe, paga, sobra, fimDaRodada: Math.max(0, fim), falta: fim < 0 ? -fim : 0, perdaFome: p.perdaFome,
     areas: AREAS.map(a => ({
       id: a.id, nivel: c.niveis[a.id], real: nivelReal(c, a.id, e), bonus: bonusDaArea(c, a.id, e), agora: efeitoAgora(c, a.id, e),
-      investido: c.investido?.[a.id] || 0, problema: problema(c, a.id), rodadasSem: c.semManutencao?.[a.id] || 0, cortada: !!c.cortadas?.[a.id], manut: manutencao.linhas.find(l => l.area === a.id), proximo: c.niveis[a.id] >= NIVEL_MAX ? null : custoSubir(c.niveis[a.id], p),
+      problema: problema(c, a.id), rodadasSem: c.semManutencao?.[a.id] || 0, cortada: !!c.cortadas?.[a.id], manut: manutencao.linhas.find(l => l.area === a.id), proximo: c.niveis[a.id] >= NIVEL_MAX ? null : custoSubir(c.niveis[a.id], p),
     })),
-    projetos: c.projetos || 0, proximoProjeto: custoDoProjeto(c, e), acordos, serie: (c.serie || []).slice(-6), proximas: [],
+    projetos: c.projetos || 0, proximoProjeto: custoDoProjeto(c, e), tentativas: (c.tentativas || []).slice().reverse(), acordos, serie: (c.serie || []).slice(-6), proximas: [],
   };
 }
 // Simula as próximas rodadas, se ninguém fizer mais nada: mostra quando os acordos acabam e o mínimo sobe.

@@ -120,6 +120,44 @@ test('sugestão de destaque só para quem chegou lá jogando', () => {
   assert.equal(G.sugestoesDeNoticias(s)[0].tipo, 'crise');
 });
 
+test('área sem manutenção entra em crise e vira sugestão na rodada seguinte', () => {
+  let s = comManut(modelo({ moedas: 500, renda: 300 }));
+  assert.equal(G.sugestoesDeNoticias(s).filter(x => x.tipo === 'crise').length, 0);
+  G.cortarManutencao(s, 'm', 'est', true);
+  s = G.fecharRodada(s);
+  const sug = G.sugestoesDeNoticias(s).filter(x => x.tipo === 'crise');
+  assert.equal(sug.length, 1);
+  assert.match(sug[0].titulo, /Protestos/);
+  assert.deepEqual(G.partePublica(s).paises[0].problemas, ['est']);
+  G.resolverSugestao(s, sug[0], { publicar: false });
+  s = G.fecharRodada(s);
+  assert.equal(G.sugestoesDeNoticias(s).filter(x => x.tipo === 'crise').length, 0); // a mesma crise não repete
+});
+
+test('apoio em uma área sobe o nível, sem mexer no dinheiro se for de graça', () => {
+  const s = com(modelo({ moedas: 100 }), outro({ moedas: 100 }));
+  const antes = G.calcular(s.paises[1], s).sobra;
+  G.registrarAcordo(s, { titulo: 'Apoio', tipo: 'paises', paises: ['m', 'o'], efeitos: { m: {}, o: { areas: { edu: 2 } } }, duracao: 2 });
+  assert.equal(G.nivelReal(s.paises[1], 'edu', s), 4);
+  assert.equal(s.paises[1].niveis.edu, 2);
+  assert.equal(G.calcular(s.paises[1], s).sobra, antes); // Educação não dá dinheiro
+  assert.equal(G.efetivo(s.paises[1], 'edu', s), 4);
+  const f = G.comoFicaArea(s.paises[1], 'emp', 3, s);
+  assert.deepEqual([f.de, f.para], [2, 5]);
+  assert.match(f.hoje, /20 moedas/);
+  assert.match(f.comApoio, /60 moedas/);
+});
+
+test('ação com dado fica registrada na ficha do país', () => {
+  const s = com(modelo({ moedas: 100, codigo: 'AAAAAA' }));
+  G.acaoDado(s, { paisId: 'm', titulo: 'Fazenda', lados: 20, dificuldade: 5, custo: 10, efeito: { moedas: 10 }, duracao: 2, projeto: true }, () => 9);
+  const v = G.visaoDoPais(s.paises[0], s);
+  assert.equal(v.tentativas[0].titulo, 'Fazenda');
+  assert.equal(v.tentativas[0].resultado, 'Sucesso');
+  assert.equal(v.acordos[0].origem, 'projeto');
+  assert.equal(G.partePublica(s).acordos.length, 0);
+});
+
 test('notícia com efeito aplica uma vez só', () => {
   const s = com(modelo({ moedas: 100 }));
   const n = G.novaNoticia(s, { titulo: 'Escândalo', paisId: 'm', efeito: { moedasAgora: -10 } });
@@ -137,12 +175,11 @@ test('fome: dinheiro zera, perde 10% das pessoas e vira rascunho de notícia', (
   assert.equal(e.noticias[0].estado, 'rascunho');
 });
 
-test('subir nível: custa nível seguinte x 10, soma no investido e tem limite', () => {
+test('subir nível: custa nível seguinte x 10 e tem limite', () => {
   const s = com(modelo({ moedas: 50 }));
   assert.equal(G.subirNivel(s, 'm', 'emp'), 30);
   assert.equal(s.paises[0].moedas, 20);
   assert.equal(s.paises[0].niveis.emp, 3);
-  assert.equal(s.paises[0].investido.emp, 30);
   assert.throws(() => G.subirNivel(s, 'm', 'emp'), /precisa de 40/);
   s.paises[0].moedas = 999; s.paises[0].niveis.sau = 10;
   assert.throws(() => G.subirNivel(s, 'm', 'sau'), /máximo/);
@@ -209,7 +246,7 @@ test('ação com dado: cobra o custo definido e aplica o efeito sozinho', () => 
   assert.equal(ef.entra, 120);
   assert.equal(ef.comida, 100 - 15 - 20); // Infraestrutura real 3
   assert.equal(s.acordos[0].restantes, 3);
-  assert.equal(s.acordos[0].origem, 'efeito');
+  assert.equal(s.acordos[0].origem, 'projeto');
   assert.equal(G.partePublica(s).acordos.length, 0);
 });
 
@@ -392,7 +429,6 @@ test('ficha do país: contas fecham, mostra o que paga, prejuízos e o investido
   assert.equal(v.comida.total, 90);
   assert.ok(v.saidas.some(x => x.rotulo === 'Protestos' && x.ruim));
   assert.equal(v.areas.find(a => a.id === 'est').problema, 1);
-  assert.equal(v.areas.find(a => a.id === 'emp').investido, 30);
   assert.equal(v.areas.find(a => a.id === 'emp').proximo, 40);
   assert.equal(v.acordos.find(a => a.titulo === 'Recebe').secreto, true);
   assert.equal(v.fimDaRodada, 70 + ef.sobra);
@@ -423,7 +459,18 @@ test('12 países justos: mesma riqueza, mesma sobra depois da manutenção, nív
 test('todo país tem história completa e rotas válidas', () => {
   for (const c of PAISES_INICIAIS) {
     const h = HISTORIAS[c.id];
-    for (const k of ['historia', 'forte', 'fraco', 'desafio', 'clima']) assert.ok(h?.[k]?.length > 5, `${c.id} ${k}`);
+    for (const k of ['historia', 'forte', 'fraco', 'desafio', 'clima', 'comeco']) assert.ok(h?.[k]?.length > 5, `${c.id} ${k}`);
+    assert.ok(h.historia.includes('\n\n'), `${c.id} tem dois parágrafos`);
+    assert.equal(h.caminhos.length, 3, c.id);
+    assert.ok(h.parceiros.length >= 2, c.id);
+    for (const x of h.parceiros) { assert.ok(PAISES_INICIAIS.some(o => o.id === x.pais), `${c.id}: ${x.pais}`); assert.notEqual(x.pais, c.id); }
+    const textos = [h.historia, h.comeco, ...h.caminhos.map(x => x.texto), ...h.parceiros.map(x => x.texto)].join(' ');
+    for (const [, id] of textos.matchAll(/\{(p\d+)\}/g)) assert.ok(PAISES_INICIAIS.some(o => o.id === id), `${c.id}: {${id}}`);
+    // O que a história promete tem de bater com os níveis iniciais.
+    for (const [, nome, nivel] of `${h.forte} ${h.fraco}`.matchAll(/(Emprego|Educação|Saúde|Tecnologia|Segurança|Poder militar|Infraestrutura|Estabilidade) nível (\d+)/g)) {
+      const a = G.AREAS.find(x => x.nome === nome);
+      assert.equal(c.niveis[a.id], Number(nivel), `${c.id}: ${nome}`);
+    }
     assert.ok(ROTAS.some(r => r.de === c.id || r.para === c.id), `${c.id} sem rota`);
   }
   const ids = new Set(PAISES_INICIAIS.map(c => c.id));

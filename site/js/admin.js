@@ -6,7 +6,7 @@ import * as G from './engine.js';
 
 const app = document.getElementById('app');
 const ABAS = [['rodada', 'Rodada'], ['dinheiro', 'Níveis e dinheiro'], ['acordos', 'Acordos'], ['noticias', 'Notícias'], ['dado', 'Dado'], ['eventos', 'Eventos e impactos'], ['paises', 'Países'], ['ajustes', 'Ajustes']];
-const ui = { aba: 'rodada', msg: null, modoDado: 'acao', f: {}, previa: null, animar: null, sugAberto: false, editando: null, confirmar: null, resultado: null, paisNivel: null };
+const ui = { aba: 'rodada', msg: null, modoDado: 'acao', f: {}, previa: null, animar: null, sugAberto: true, editando: null, confirmar: null, resultado: null, paisNivel: null };
 let senha = null, versao = 0, E = null;
 
 const estadoNovo = () => G.estadoNovo(PAISES_INICIAIS, EVENTOS_INICIAIS);
@@ -98,6 +98,12 @@ function topo() {
 }
 
 /* ---------- abas ---------- */
+function fecharERelatar() {
+  commit(e => G.fecharComHistorico(e));
+  const crises = G.sugestoesDeNoticias(E).filter(x => x.tipo === 'crise').length;
+  ui.msg = { tipo: 'ok', texto: crises ? `Rodada fechada. ${crises} ${crises === 1 ? 'área em crise pede' : 'áreas em crise pedem'} atenção: veja as sugestões em Notícias.` : 'Rodada fechada.' };
+  render();
+}
 function abaRodada() {
   const prev = G.fecharRodada(E);
   const pos = Object.fromEntries(G.ranking(prev).map(r => [r.id, r]));
@@ -114,7 +120,7 @@ function abaRodada() {
           h('td', { class: i.fome ? 'neg' : '' }, `${fmt(i.popDe)} → ${fmt(i.popPara)}${i.fome ? ' (fome)' : ''}`),
           h('td', {}, fmt(pos[i.id].riqueza)), h('td', {}, `${pos[i.id].pos}º`), h('td', {}, [i.semPagar.length ? `${i.semPagar.length} sem manutenção` : '', i.perdeuNivel.length ? `perde ${i.perdeuNivel.length} nível` : ''].filter(Boolean).join(', '))))))),
       h('div', { class: 'linha-acoes' },
-        botaoConfirma('fechar', 'Fechar rodada', `Confirmar: fechar a rodada ${E.rodada}`, () => commit(e => G.fecharComHistorico(e), { msg: 'Rodada fechada.' }), ''),
+        botaoConfirma('fechar', 'Fechar rodada', `Confirmar: fechar a rodada ${E.rodada}`, () => fecharERelatar(), ''),
         (E.historico || []).length > 0 && botaoConfirma('desfazer', 'Desfazer último fechamento', 'Confirmar: desfazer', () => commit(e => G.desfazerFechamento(e), { msg: 'Fechamento desfeito.' })),
         botaoConfirma('fim', E.encerrado ? 'Reabrir o jogo' : 'Encerrar o jogo', 'Confirmar', () => commit(e => { e.encerrado = !e.encerrado; })))),
   ];
@@ -203,7 +209,7 @@ function abaDinheiro() {
 
 /* ---------- acordos ---------- */
 const VALORES = { pagamento: [5, 10, 20], comida: [10, 20, 40] };
-const novoAcordo = () => ({ modelo: 'pagamento', a: E.paises[0]?.id, b: E.paises[1]?.id, tam: 1, valor: '', unica: '', qtdComida: 1, preco: 'igual', area: 'emp', niveis: 1, precoApoio: 10, titulo: '', desc: '', dur: 3, secreto: false, todos: false, paises: {}, efeitos: {} });
+const novoAcordo = () => ({ modelo: 'pagamento', a: E.paises[0]?.id, b: E.paises[1]?.id, tam: 1, valor: '', unica: '', qtdComida: 1, preco: 'igual', area: 'emp', niveis: 1, precoApoio: 0, titulo: '', desc: '', dur: 3, secreto: false, todos: false, paises: {}, efeitos: {} });
 const n0 = v => Number(v || 0);
 // Transforma o que foi escolhido na tela no acordo que o jogo registra.
 function montarAcordo(F) {
@@ -225,7 +231,7 @@ function montarAcordo(F) {
     return { ...base, ...par, titulo: F.titulo.trim() || `Comida de ${A} para ${B}`, efeitos: { [F.a]: { moedas: p }, [F.b]: { moedas: -p, comida: -q } } };
   }
   const p = n0(F.precoApoio), nomeA = G.AREAS.find(x => x.id === F.area).nome;
-  return { ...base, ...par, titulo: F.titulo.trim() || `${A} apoia ${nomeA} de ${B}`, efeitos: { [F.a]: p ? { moedas: p } : {}, [F.b]: { areas: { [F.area]: Number(F.niveis) }, ...(p ? { moedas: -p } : {}) } } };
+  return { ...base, descricao: base.descricao || `${A} apoia ${nomeA} de ${B}: +${F.niveis} ${Number(F.niveis) === 1 ? 'nível' : 'níveis'} enquanto durar.`, ...par, titulo: F.titulo.trim() || `${A} apoia ${nomeA} de ${B}`, efeitos: { [F.a]: p ? { moedas: p } : {}, [F.b]: { areas: { [F.area]: Number(F.niveis) }, ...(p ? { moedas: -p } : {}) } } };
 }
 function abaAcordos() {
   const F = form('acordo', novoAcordo);
@@ -248,8 +254,8 @@ function abaAcordos() {
   } else if (F.modelo === 'apoio') {
     corpo = [
       h('div', { class: 'frase' }, selPais(F, 'a'), 'ajuda', selPais(F, 'b'), 'em', selArea(F, 'area')),
-      bloco('Quanto a área melhora enquanto durar?', pilulas([1, 2, 3].map(v => ({ v, t: `+${v} ${v === 1 ? 'nível' : 'níveis'}` })), F.niveis, v => { F.niveis = v; })),
-      bloco('Quanto quem recebe paga por rodada?', pilulas([0, 5, 10, 20].map(v => ({ v, t: v ? `${v} moedas` : 'De graça' })), F.precoApoio, v => { F.precoApoio = v; })),
+      bloco('Quanto a área sobe enquanto durar?', pilulas([1, 2, 3].map(v => ({ v, t: `+${v} ${v === 1 ? 'nível' : 'níveis'}` })), F.niveis, v => { F.niveis = v; })),
+      bloco('Quem recebe paga algo por isso? (opcional)', pilulas([0, 5, 10, 20].map(v => ({ v, t: v ? `${v} por rodada` : 'De graça' })), F.precoApoio, v => { F.precoApoio = v; })),
     ];
   } else {
     const ativos = E.paises.filter(c => F.paises[c.id]);
@@ -265,7 +271,12 @@ function abaAcordos() {
     const linhas = d.tipo === 'global' ? [['Todos', d.efeitos['*']]] : d.paises.map(id => [nomeDe(id), d.efeitos[id]]);
     if (!linhas.length) return [h('p', { class: 'vazio' }, 'Escolha os países para ver como fica.')];
     const tempo = d.duracao == null ? 'até o fim do jogo' : d.duracao === 1 ? 'por 1 rodada' : `por ${d.duracao} rodadas`;
-    return [...linhas.map(([n, ef]) => h('p', {}, h('b', {}, `${n}: `), G.textoEfeito(ef) || 'nada muda nos números')), h('p', { class: 'meta' }, `Vale ${tempo}, a partir desta rodada.`)];
+    const apoio = F.modelo === 'apoio' && duoOk && E.paises.find(c => c.id === F.b);
+    const fica = apoio && G.comoFicaArea(apoio, F.area, Number(F.niveis), E);
+    return [
+      fica && h('p', {}, h('b', {}, `${G.AREAS.find(a => a.id === F.area).nome} de ${apoio.nome}: nível ${fica.de} → ${fica.para}. `), `Hoje: ${fica.hoje}. Com o apoio: ${fica.comApoio}.`),
+      ...linhas.map(([n, ef]) => h('p', {}, h('b', {}, `${n}: `), G.textoEfeito(ef) || (F.modelo === 'apoio' ? 'dá o apoio, sem mudar as próprias contas' : 'nada muda nos números'))),
+      h('p', { class: 'meta' }, `Vale ${tempo}, a partir desta rodada.`)].filter(Boolean);
   });
   const cartaoEf = (a, id) => G.textoEfeito(a.tipo === 'global' ? a.efeitos['*'] : a.efeitos[id]) || 'só combinado, sem número';
   const cartao = a => h('li', { class: 'cartao' },
@@ -304,11 +315,11 @@ function abaAcordos() {
 
 /* ---------- notícias ---------- */
 function painelSugestoes() {
-  const todas = G.sugestoesDeNoticias(E), filtro = ui.sugPais || '';
+  const todas = G.sugestoesDeNoticias(E), filtro = ui.sugPais || '', crises = todas.filter(x => x.tipo === 'crise').length;
   const filtradas = filtro ? todas.filter(s => s.paisId === filtro) : todas;
   const lista = ui.sugTodas ? filtradas : filtradas.slice(0, 4);
   return h('details', { class: 'painel painel-dobra', open: ui.sugAberto, ontoggle: ev => { ui.sugAberto = ev.target.open; } },
-    h('summary', {}, h('h2', {}, `Sugestões do sistema (${todas.length})`)),
+    h('summary', {}, h('h2', {}, `Sugestões do sistema (${todas.length}${crises ? `, ${crises} de crise` : ''})`)),
     h('p', { class: 'meta', style: 'margin-bottom:8px' }, 'Manchetes prontas para quando uma área entra em crise ou um país chega aos níveis 5 e 10. Use se ajudar.'),
     todas.length > 4 && h('div', { class: 'form', style: 'margin-bottom:10px' }, campo('Ver só de um país', h('select', { onchange: ev => { ui.sugPais = ev.target.value; render(); } }, h('option', { value: '' }, 'Todos'), opcoesPaises(filtro))),
       filtradas.length > 4 && h('button', { class: 'btn peq leve', onclick: () => { ui.sugTodas = !ui.sugTodas; render(); } }, ui.sugTodas ? 'Mostrar menos' : `Mostrar todas (${filtradas.length})`)),
@@ -616,7 +627,7 @@ const ABA_RENDER = { rodada: abaRodada, dinheiro: abaDinheiro, acordos: abaAcord
 function render() {
   const y = window.scrollY;
   ui.previa = null;
-  const guardadas = E.noticias.filter(n => n.estado !== 'publicada').length;
+  const guardadas = E.noticias.filter(n => n.estado !== 'publicada').length + G.sugestoesDeNoticias(E).length;
   app.replaceChildren(
     topo(),
     h('nav', { class: 'adm-nav', 'aria-label': 'Seções do admin' }, ABAS.map(([id, t]) => h('button', { class: ui.aba === id ? 'ativo' : '', onclick: () => { ui.aba = id; ui.msg = null; ui.confirmar = null; render(); window.scrollTo(0, 0); } },
