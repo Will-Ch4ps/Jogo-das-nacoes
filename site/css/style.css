@@ -624,3 +624,16 @@ body.com-artigo { overflow: hidden; }
 .peso-acordo { display: grid; gap: 8px; margin: 8px 0 2px; padding: 10px 12px; background: var(--fundo-2); border: 1px solid var(--linha); border-radius: var(--raio-p); }
 .peso-lista { margin: 4px 0 0; padding-left: 18px; color: var(--suave); font-size: 14px; }
 .peso-lista li + li { margin-top: 3px; }
+
+/* Subir áreas: escolhe com + e −, e vê um total só */
+.lista-pedir li.escolhida strong { color: var(--ouro); }
+.contador { display: inline-flex; flex: none; align-items: center; gap: 6px; }
+.contador b { min-width: 20px; text-align: center; font-size: 17px; }
+.btn-conta { width: 42px; height: 42px; background: var(--cartao-2); color: var(--texto); border: 1px solid #3a5667; border-radius: var(--raio-p); font: inherit; font-size: 22px; font-weight: 700; line-height: 1; cursor: pointer; }
+.btn-conta:disabled { opacity: .35; cursor: not-allowed; }
+.subir-total { position: sticky; bottom: 72px; z-index: 2; display: grid; gap: 6px; margin-top: 10px; padding: 10px 12px; background: var(--cartao-2); border: 1px solid var(--ouro); border-radius: var(--raio-p); }
+.subir-total-linha { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.subir-total-linha strong { font-size: 20px; color: var(--ouro); }
+.subir-total .btn { width: 100%; }
+.resumo-corte { margin: 5px 0; border: 0; border-top: 1px solid var(--linha); }
+.detalhe.ficha, .ficha .detalhe-corpo, .ficha-tela { overflow: clip; }

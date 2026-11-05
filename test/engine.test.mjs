@@ -216,7 +216,7 @@ test('comprar acima do 10 não rende mais, custa manutenção e permite empresta
   G.registrarAcordoDoForm(s, { modelo: 'apoio', a: 'm', b: 'o', area: 'emp', niveis: 2, precoApoio: 15, dur: 2 });
   assert.equal(G.nivelReal(s.paises[0], 'emp', s), 10, 'emprestou o que sobrava');
   assert.equal(G.calcular(s.paises[0], s).entra >= noDez.entra + 15, true);
-  assert.match(G.pesoDoAcordo(s, s.acordos.at(-1)).join(' '), /Emprego de Modelo continua no nível 10/);
+  assert.match(G.pesoDoAcordo(s, s.acordos.at(-1)).join(' '), /Emprego de Modelo: continua no 10/);
   s.paises[0].niveis.emp = 15;
   assert.throws(() => G.subirNivel(s, 'm', 'emp'), /máximo/);
   assert.equal(G.visaoDoPais(s.paises[0], s).areas.find(a => a.id === 'emp').proximo, null);
@@ -962,7 +962,7 @@ test('conta dos pedidos: soma tudo na ordem, sem mudar o jogo, e acusa o que nã
   assert.equal(r.depois.moedas, 30);
   assert.equal(s.paises[0].moedas, 100, 'o jogo de verdade não mudou');
   assert.equal(s.paises[0].niveis.emp, 2);
-  assert.equal(r.itens[1].detalhe[0].startsWith('Nível 3 para 4'), true, 'o detalhe já considera o pedido anterior');
+  assert.equal(r.itens[1].detalhe[0].startsWith('Nível 3 → 4'), true, 'o detalhe já considera o pedido anterior');
 });
 
 test('conta dos pedidos: acordo muda a sobra por rodada, e o aviso de fome aparece', () => {
@@ -1084,13 +1084,9 @@ test('peso do acordo: a prévia mostra custo, ganho e fim, para os dois lados', 
   s.paises[1].niveis.mil = 1;
   const r = G.simularPedidos(s, 'm', [ped('acordo', apoioForm({ area: 'mil', niveis: 3, precoApoio: 20 }), { para: 'o' })]);
   const t = r.itens[0].peso.join(' ');
-  assert.match(t, /Poder militar de Outro: nível 1 para 4/);
-  assert.match(t, /Poder militar de Modelo: nível 4 para 1/);
-  assert.match(t, /Outro paga 20 por rodada a Modelo/);
-  assert.match(t, /Modelo continua pagando a manutenção normal/);
-  assert.match(t, /os níveis voltam/);
-  assert.ok(r.itens[0].linhas.some(l => /pagamento recebido/.test(l.rotulo) && l.valor === 20));
-  assert.ok(!r.itens[0].linhas.some(l => /manutenção/i.test(l.rotulo)), 'sem custo extra de manutenção');
+  assert.match(t, /Poder militar de Outro: 1 → 4/);
+  assert.match(t, /Poder militar de Modelo: 4 → 1/);
+  assert.deepEqual(r.itens[0].linhas, [{ rotulo: 'Pagamento', valor: 20 }]);
 });
 
 test('peso de acordo já ativo fala do nível sem o próprio acordo, e a ficha mostra', () => {
@@ -1100,7 +1096,7 @@ test('peso de acordo já ativo fala do nível sem o próprio acordo, e a ficha m
   G.registrarAcordoDoForm(s, apoioForm());
   const f = G.visaoDoPais(s.paises[1], s);
   const t = f.acordos.find(a => a.origem === 'acordo').peso.join(' ');
-  assert.match(t, /Emprego de Outro: nível 2 para 4/);
+  assert.match(t, /Emprego de Outro: 2 → 4/);
 });
 
 test('efeito oculto de notícia não vira explicação na ficha', () => {
@@ -1120,5 +1116,34 @@ test('a conta do pedido é igual no celular e no admin, inclusive linha a linha'
   ];
   const a = G.simularPedidos(e, 'p1', pedidos), b = G.simularPedidos(mini, 'p1', pedidos);
   assert.deepEqual(b.itens.map(i => i.linhas), a.itens.map(i => i.linhas));
-  assert.ok(a.itens[1].linhas.some(l => /desconto/.test(l.rotulo)));
+  assert.ok(a.itens[1].linhas.some(l => /desconto/i.test(l.rotulo)));
+});
+
+test('vários níveis na mesma área são um pedido só, com o preço somado, e não ficam pela metade', () => {
+  const s = jogoPedidos();
+  s.paises[0].moedas = 100;
+  s.paises[0].niveis.emp = 2;
+  const p = ped('subir', { area: 'emp', niveis: 2 });
+  assert.equal(G.custoSubirVarios(2, 2, s.params), 70);
+  assert.match(G.frasePedido(p, id => id), /Subir Emprego em 2 níveis/);
+  assert.match(G.detalhePedido(s, p)[0], /Nível 2 → 4 · custa 70 · fica com 30/);
+  assert.equal(G.acoesUsadas([p], 'm', 1), 1, 'gasta uma ação');
+  const caro = G.checarPedido(s, ped('subir', { area: 'emp', niveis: 3 }));
+  assert.equal(caro.ok, false);
+  assert.match(caro.erro, /precisa de 120/);
+  assert.equal(s.paises[0].niveis.emp, 2);
+  assert.throws(() => G.subirNiveis(s, 'm', 'emp', 3), /precisa de 120/);
+  assert.equal(s.paises[0].niveis.emp, 2, 'não subiu nada');
+  assert.equal(s.paises[0].moedas, 100, 'não cobrou nada');
+  for (const ruim of [0, -1, 1.5, 'x']) assert.equal(G.checarPedido(s, ped('subir', { area: 'emp', niveis: ruim })).ok, false, String(ruim));
+  assert.equal(G.checarPedido(s, ped('subir', { area: 'emp', niveis: 99 })).ok, false);
+  G.aplicarPedido(s, p);
+  assert.deepEqual([s.paises[0].niveis.emp, s.paises[0].moedas], [4, 30]);
+  assert.equal(G.checarPedido(s, ped('subir', { area: 'sau' })).ok, true, 'pedido antigo, sem número de níveis, sobe 1');
+});
+
+test('as frases dos acordos ficam curtas', () => {
+  const nome = id => id;
+  assert.equal(G.fraseAcordo({ modelo: 'apoio', a: 'A', b: 'B', area: 'mil', niveis: 2, precoApoio: 5, dur: 2 }, nome), 'A empresta 2 níveis de Poder militar a B, por 5 moedas por rodada. Vale por 2 rodadas.');
+  assert.equal(G.fraseAcordo({ modelo: 'comida', a: 'A', b: 'B', qtdComida: 1, preco: 'gratis', dur: 1 }, nome), 'A dá 20 de comida por rodada a B, de graça. Vale por 1 rodada.');
 });

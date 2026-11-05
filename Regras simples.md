@@ -20,7 +20,7 @@ O código abre a ficha do país e a aba **Pedidos**, que é por onde o grupo man
 O professor abre e fecha duas janelas: a de **ações** e a do **jornal**. Com a janela aberta, o grupo manda o pedido pelo celular.
 
 - **Cada país tem 5 ações por rodada.** O professor pode mudar para 3 ou 8, e dar ou tirar ações de um país ou de todos naquela rodada.
-- **Usam 1 ação:** subir uma área, cortar ou retomar a manutenção, mandar dinheiro e propor um acordo.
+- **Usam 1 ação:** subir uma área (vários níveis na mesma área, no mesmo pedido, contam como 1), cortar ou retomar a manutenção, mandar dinheiro e propor um acordo.
 - **Acordo:** só o país que montou gasta a ação. O outro país aceita ou recusa, sem gastar nada, e só depois o pedido chega ao professor.
 - **Jornal:** não usa ação. O texto só sai se o professor aprovar.
 - **Recusado ou cancelado:** a ação volta para o grupo.

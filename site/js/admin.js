@@ -351,7 +351,7 @@ function abrirEdicao(p) {
   ui.recusando = null; render();
 }
 function camposEdicao(p, d) {
-  if (p.tipo === 'subir') return campo('Área', selArea(d, 'area'));
+  if (p.tipo === 'subir') return [campo('Área', selArea(d, 'area')), bloco('Quantos níveis?', pilulas([1, 2, 3, 4, 5].map(v => ({ v, t: String(v) })), d.niveis || 1, v => { d.niveis = v; }))];
   if (p.tipo === 'manutencao') return [campo('Área', selArea(d, 'area')), bloco('O que fazer', pilulas([{ v: true, t: 'Cortar' }, { v: false, t: 'Voltar a pagar' }], !!d.cortar, v => { d.cortar = v; }))];
   if (p.tipo === 'dinheiro') return [campo('Para', selPais(d, 'para')), campo('Moedas', texto(d, 'valor', { type: 'number', min: 1 }))];
   if (p.tipo === 'acordo') return camposAcordo(d);
@@ -371,7 +371,7 @@ function cartaoPedido(p, item) {
     (item?.detalhe || G.detalhePedido(E, p)).map(t => h('p', { class: 'meta pedido-detalhe' }, t)),
     p.tipo === 'acordo' && p.dados.modelo === 'livre' && !ed && h('p', { class: 'meta' }, 'Combinado livre, sem números. Se quiser que mude algo no jogo, use Ajustar.'),
     !teste.ok && h('p', { class: 'pedido-erro' }, teste.erro),
-    item?.ok && p.tipo === 'acordo' && item.linhas.length > 0 && h('div', { class: 'peso-acordo' }, h('p', { class: 'resumo-titulo' }, `Na conta de ${nomeDe(p.pais)}, por rodada`), item.linhas.map(l => h('div', { class: 'resumo-linha' }, h('span', {}, l.rotulo), h('strong', {}, `${l.valor > 0 ? '+' : ''}${fmt(l.valor)}`)))),
+    item?.ok && p.tipo === 'acordo' && item.linhas.length > 0 && h('div', { class: 'peso-acordo' }, h('p', { class: 'resumo-titulo' }, 'Por rodada'), item.linhas.map(l => h('div', { class: 'resumo-linha' }, h('span', {}, l.rotulo), h('strong', {}, `${l.valor > 0 ? '+' : ''}${fmt(l.valor)}`)))),
     teste.ok && item && !item.ok && h('p', { class: 'pedido-erro' }, `Sozinho cabe, mas não junto com os pedidos acima: ${item.erro}`),
     ed
       ? h('div', { class: 'form pedido-edicao' }, camposEdicao(p, ed.d),
