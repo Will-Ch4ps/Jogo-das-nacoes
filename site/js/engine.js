@@ -457,6 +457,77 @@ export function registrarDado(e, d) {
   return e.dado;
 }
 
+/* ---------- Missões secretas: só o grupo e o professor veem ---------- */
+export const comNomesPaises = (t, e) => t.replace(/\{(p\d+)\}/g, (_, id) => paisPorId(e, id)?.nome || 'um rival');
+function checar(cond, c, e) {
+  const [tipo, v] = Object.entries(cond)[0], ef = () => calcular(c, e), acs = () => acordosDoPais(e, c.id).filter(a => (a.origem || 'acordo') === 'acordo');
+  const nomeA = a => AREAS.find(x => x.id === a)?.nome;
+  if (tipo === 'nivel') { const r = nivelReal(c, v.area, e); return { ok: r >= v.n, texto: `${nomeA(v.area)}: nível ${r} de ${v.n}` }; }
+  if (tipo === 'apoio') { const r = nivelReal(c, v.area, e) - c.niveis[v.area]; return { ok: r >= v.n, texto: `${nomeA(v.area)}: ${r} de ${v.n} níveis de apoio` }; }
+  if (tipo === 'parceiros') { const r = new Set(acs().filter(a => a.tipo !== 'global').flatMap(a => a.paises).filter(id => id !== c.id)).size; return { ok: r >= v.n, texto: `${r} de ${v.n} países com acordo` }; }
+  if (tipo === 'recebe') { const r = acs().reduce((t, a) => t + Math.max(0, moedasDoAcordo(a, c.id)), 0); return { ok: r >= v.n, texto: `${r} de ${v.n} moedas por rodada` }; }
+  if (tipo === 'fornece') {
+    const r = new Set(acs().filter(a => a.tipo !== 'global').flatMap(a => a.paises.filter(id => id !== c.id && Number(efeitoDe(a, id).comida || 0) < 0))).size;
+    return { ok: r >= v.n, texto: `${r} de ${v.n} países alimentados` };
+  }
+  if (tipo === 'comida') { const r = ef().comida; return { ok: r <= v.n, texto: `Conta de comida: ${r} (máximo ${v.n})` }; }
+  if (tipo === 'moedas') return { ok: c.moedas >= v.n, texto: `${Math.round(c.moedas)} de ${v.n} moedas` };
+  if (tipo === 'pop') return { ok: c.pop >= v.n, texto: `${Math.round(c.pop)} de ${v.n} mil pessoas` };
+  if (tipo === 'sobra') { const r = ef().sobra; return { ok: r >= v.n, texto: `Sobra de ${r} (precisa de ${v.n})` }; }
+  if (tipo === 'posicao') { const r = ranking(e).find(x => x.id === c.id).pos; return { ok: r <= v.n, texto: `${r}º lugar` }; }
+  if (tipo === 'projetos') { const r = c.projetos || 0; return { ok: r >= v.n, texto: `${r} de ${v.n} projetos` }; }
+  if (tipo === 'sucessos') { const r = (c.tentativas || []).filter(t => t.resultado === 'Sucesso' || t.resultado === 'Crítico').length; return { ok: r >= v.n, texto: `${r} de ${v.n} sucessos` }; }
+  if (tipo === 'semCrise') { const r = AREAS.filter(a => problema(c, a.id)).length; return { ok: r === 0, texto: r ? `${r} ${r === 1 ? 'área' : 'áreas'} em crise` : 'Nenhuma área em crise' }; }
+  if (tipo === 'acimaDe') { const pos = id => ranking(e).find(x => x.id === id)?.pos; const a = pos(c.id), b = pos(v.pais); return { ok: b !== undefined && a < b, texto: b === undefined ? 'Rival fora do jogo' : `Vocês ${a}º, rival ${b}º` }; }
+  return { ok: false, texto: '' };
+}
+// Como a missão está agora. Sem condição, só o professor decide.
+export function progressoMissao(m, c, e) {
+  if (m.concluida) return { estado: 'concluida', texto: `Concluída na rodada ${m.rodadaConcluida}` };
+  if (m.prazo && e.rodada > m.prazo) return { estado: 'perdida', texto: `O prazo acabou na rodada ${m.prazo}` };
+  const aviso = m.prazo ? `Até a rodada ${m.prazo}. ` : '';
+  if (!m.cond) return { estado: 'manual', texto: `${aviso}Só o professor pode confirmar.` };
+  const r = (Array.isArray(m.cond) ? m.cond : [m.cond]).map(x => checar(x, c, e));
+  const cedo = m.aPartir && e.rodada < m.aPartir;
+  const ok = r.every(x => x.ok) && !cedo;
+  return { estado: ok ? 'cumprida' : 'andamento', texto: `${aviso}${cedo ? `Vale a partir da rodada ${m.aPartir}. ` : ''}${r.map(x => x.texto).join(' · ')}` };
+}
+// Coloca as missões nos países que ainda não têm. Não mexe no que já existe.
+export function garantirMissoes(e, modelo) {
+  if (!modelo) return e;
+  for (const c of e.paises) {
+    if (c.missoes?.length || !modelo[c.id]) continue;
+    c.missoes = modelo[c.id].map((m, i) => ({ id: `${c.id}-m${i + 1}`, ...m, concluida: false }));
+  }
+  return e;
+}
+export function concluirMissao(e, paisId, missaoId, premio) {
+  const c = paisPorId(e, paisId), m = c?.missoes?.find(x => x.id === missaoId);
+  if (!m) throw new Error('Missão não encontrada.');
+  if (m.concluida) throw new Error('Esta missão já foi paga.');
+  const v = Math.round(Number(premio ?? m.premio));
+  c.moedas += v;
+  Object.assign(m, { concluida: true, rodadaConcluida: e.rodada, premioPago: v });
+  return v;
+}
+export function desfazerMissao(e, paisId, missaoId) {
+  const c = paisPorId(e, paisId), m = c?.missoes?.find(x => x.id === missaoId);
+  if (!m?.concluida) throw new Error('Esta missão não foi concluída.');
+  c.moedas = Math.max(0, c.moedas - (m.premioPago || 0));
+  Object.assign(m, { concluida: false, rodadaConcluida: null, premioPago: 0 });
+}
+export function criarMissao(e, ids, { titulo, texto, premio }) {
+  if (!titulo?.trim()) throw new Error('Dê um nome ao desafio.');
+  for (const id of ids) {
+    const c = paisPorId(e, id);
+    if (!c) continue;
+    c.missoes = [...(c.missoes || []), { id: novoId('m'), dificuldade: 'Do professor', titulo: titulo.trim(), texto: (texto || '').trim(), premio: Number(premio) || 0, cond: null, concluida: false }];
+  }
+}
+export function missoesParaConfirmar(e) {
+  return e.paises.flatMap(c => (c.missoes || []).filter(m => progressoMissao(m, c, e).estado === 'cumprida').map(m => ({ pais: c, missao: m })));
+}
+
 /* ---------- O que cada um vê ---------- */
 // O que todos podem ver. Dinheiro, pessoas, contas e tudo que é oculto ficam de fora.
 export function partePublica(e) {
@@ -509,7 +580,8 @@ export function visaoDoPais(c, e) {
       id: a.id, nivel: c.niveis[a.id], real: nivelReal(c, a.id, e), bonus: bonusDaArea(c, a.id, e), agora: efeitoAgora(c, a.id, e),
       problema: problema(c, a.id), rodadasSem: c.semManutencao?.[a.id] || 0, cortada: !!c.cortadas?.[a.id], manut: manutencao.linhas.find(l => l.area === a.id), proximo: c.niveis[a.id] >= NIVEL_MAX ? null : custoSubir(c.niveis[a.id], p),
     })),
-    projetos: c.projetos || 0, proximoProjeto: custoDoProjeto(c, e), tentativas: (c.tentativas || []).slice().reverse(), acordos, serie: (c.serie || []).slice(-6), proximas: [],
+    projetos: c.projetos || 0, proximoProjeto: custoDoProjeto(c, e), tentativas: (c.tentativas || []).slice().reverse(), acordos,
+    missoes: (c.missoes || []).map(m => { const pr = progressoMissao(m, c, e); return { id: m.id, titulo: m.titulo, dificuldade: m.dificuldade, premio: m.premio, texto: comNomesPaises(m.texto, e), estado: pr.estado, progresso: pr.texto }; }), serie: (c.serie || []).slice(-6), proximas: [],
   };
 }
 // Simula as próximas rodadas, se ninguém fizer mais nada: mostra quando os acordos acabam e o mínimo sobe.
@@ -545,8 +617,8 @@ export function garantirCodigos(e) {
   return e;
 }
 
-export const estadoNovo = (paises, eventos) => garantirCodigos({
+export const estadoNovo = (paises, eventos, missoes) => garantirMissoes(garantirCodigos({
   rodada: 1, aviso: '', encerrado: false, timer: { rodando: false, fimEm: null, restanteMs: PARAMS_INICIAIS.duracaoMin * 60000 },
   params: { ...PARAMS_INICIAIS }, paises: structuredClone(paises).map(c => ({ ...c, niveisIniciais: { ...c.niveis } })), acordos: [], trocas: [], noticias: [], acoes: [], marcas: [], sugestoesFeitas: [],
   eventos: structuredClone(eventos), dado: null, resumo: null, posAnterior: null, historico: [], mudanca: 0,
-});
+}), missoes);

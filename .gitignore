@@ -3,3 +3,5 @@ node_modules/
 .vercel/
 .vscode/
 .claude/
+# Missões secretas: ficam só neste computador e na área protegida do banco.
+tools/missoes.privado.mjs

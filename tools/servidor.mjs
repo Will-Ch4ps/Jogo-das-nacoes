@@ -14,6 +14,14 @@ const abrir = () => { if (!process.argv.includes('--sem-abrir')) exec(`start "" 
 
 const servidor = createServer(async (req, res) => {
   const caminho = decodeURIComponent(new URL(req.url, ENDERECO).pathname);
+  // Só na tela de teste, neste computador: as missões nunca fazem parte do site publicado.
+  if (caminho === '/missoes') {
+    try {
+      const { MISSOES } = await import('./missoes.privado.mjs');
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }).end(JSON.stringify(MISSOES));
+    } catch { res.writeHead(200, { 'Content-Type': 'application/json' }).end('{}'); }
+    return;
+  }
   const arquivo = caminho === '/teste' ? TESTE : join(RAIZ, normalize(caminho === '/' ? '/index.html' : caminho));
   if (arquivo !== TESTE && !arquivo.startsWith(RAIZ)) { res.writeHead(403).end(); return; }
   try {

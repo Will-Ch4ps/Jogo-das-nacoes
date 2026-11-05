@@ -2,6 +2,7 @@
 // Uso: npm run db:setup (lê o .env). Pode rodar de novo: não apaga a partida.
 import { readFileSync } from 'node:fs';
 import pg from 'pg';
+import { MISSOES } from './missoes.privado.mjs';
 
 const { DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD, SENHA_ADMIN } = process.env;
 if (!DB_PASSWORD) { console.error('Falta DB_PASSWORD no .env.'); process.exit(1); }
@@ -33,6 +34,8 @@ try {
      values (1, extensions.crypt($1, extensions.gen_salt('bf', 10)))
      on conflict (id) do update set senha_hash = excluded.senha_hash`, [SENHA_ADMIN]);
   OK('senha do admin definida');
+  await db.query('update jogo_das_nacoes.estado_privado set missoes = $1 where id = 1', [JSON.stringify(MISSOES)]);
+  OK('missões secretas guardadas na área protegida');
 
   // Conferências, agindo como um visitante anônimo do site.
   await db.query('begin; set local role anon;');
@@ -41,6 +44,8 @@ try {
   await db.query('rollback');
   confere(pub.rowCount === 1, 'visitante lê a tela pública');
   confere(ver.rows[0].r && 'versao' in ver.rows[0].r, 'senha certa abre o admin');
+  confere(Object.keys(ver.rows[0].r.missoes || {}).length === Object.keys(MISSOES).length, 'admin recebe as missões');
+  confere(!JSON.stringify(pub.rows[0]).includes(MISSOES.p1[0].titulo), 'missões fora da tela pública');
   confere(await recusado('select * from jogo_das_nacoes.estado_privado'), 'visitante não lê os dados secretos');
   confere(await recusado("update jogo_das_nacoes.estado_publico set dados = '{}'"), 'visitante não altera a tela pública');
   confere(await recusado('select public.jn_admin_carregar($1)', ['senha-errada']), 'senha errada é recusada');

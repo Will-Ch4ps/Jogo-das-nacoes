@@ -61,7 +61,8 @@
       document.querySelectorAll('iframe[data-admin]').forEach(f => f.contentWindow.location.reload());
       if (trocouCodigos) monta();
     }
-    const novo = () => G.estadoNovo(PAISES_INICIAIS, EVENTOS_INICIAIS);
+    const MISSOES = await fetch('/missoes').then(r => r.json()).catch(() => ({}));
+    const novo = () => G.estadoNovo(PAISES_INICIAIS, EVENTOS_INICIAIS, MISSOES);
 
     function exemplo() {
       let e = novo();

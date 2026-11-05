@@ -488,3 +488,27 @@ select option { background: #0c1a25; color: var(--texto); }
 .guia h4, .ficha-tela .guia-lista + h4 { margin: 16px 0 6px; color: var(--suave); font: 700 13px var(--corpo); letter-spacing: .09em; text-transform: uppercase; }
 .guia-lista { display: grid; gap: 8px; }
 .ficha-tela h4 { color: var(--suave); }
+
+/* Lore do continente */
+.lore { margin-bottom: 14px; padding: 14px; background: linear-gradient(160deg, #173a4a, var(--cartao)); border: 1px solid var(--linha); border-top: 3px solid var(--ouro); border-radius: var(--raio); }
+.lore summary { display: grid; gap: 1px; cursor: pointer; list-style: none; }
+.lore summary::-webkit-details-marker { display: none; }
+.lore-rot { color: var(--suave); font-size: 12px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; }
+.lore summary strong { font: 800 27px/1.1 var(--display); }
+.lore p { margin-top: 10px; font-size: 15.5px; }
+.lore-regra { padding-top: 10px; border-top: 1px solid var(--linha); color: var(--ouro); font-weight: 700; }
+
+/* Dicas e missões */
+.dicas { display: grid; gap: 8px; }
+.dicas li { padding: 10px 12px; background: var(--cartao-2); border-radius: 8px; font-size: 15px; font-style: italic; }
+.missoes-sigilo { margin-bottom: 12px; padding: 10px 12px; background: #0c1a25; border: 1px dashed #4a6a7a; border-radius: 8px; font-size: 14.5px; }
+.missao { border-left: 3px solid var(--linha); }
+.missao.cumprida { border-left-color: var(--ouro); }
+.missao.concluida { border-left-color: var(--ok); opacity: .8; }
+.missao.perdida { opacity: .55; }
+.missao-rodape { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-top: 8px; }
+.missao-rodape b { flex: none; color: var(--ouro); }
+.missao-pronta { margin-top: 6px; color: var(--ouro); font-weight: 700; }
+.grupo-missao + .grupo-missao { margin-top: 14px; }
+.grupo-missao h3 { font-size: 16px; margin-bottom: 6px; }
+.missao-admin.cumprida { border-color: var(--ouro); }

@@ -25,6 +25,10 @@ O site é estático: não tem build nem servidor próprio. Cada envio para a bra
 
 Nunca coloque `DB_PASSWORD`, `SENHA_ADMIN` ou a chave `service_role` no Vercel, no `config.js` ou em qualquer arquivo do Git.
 
+## Missões secretas
+
+Ficam em `tools/missoes.privado.mjs`, que não vai para o Git nem para o site, porque os dois são públicos. Guarde uma cópia desse arquivo. Depois de editar, rode `npm run db:setup`: as missões vão para a área protegida do banco, e só o admin as recebe. As partidas já criadas continuam com as missões que tinham; use **Começar novo jogo** para pegar as novas.
+
 ## Comandos
 
 | Comando | O que faz |

@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as G from '../site/js/engine.js';
-import { PAISES_INICIAIS, EVENTOS_INICIAIS, MAPA, HISTORIAS, ROTAS } from '../site/js/dados.js';
+import { readFileSync } from 'node:fs';
+import { PAISES_INICIAIS, EVENTOS_INICIAIS, MAPA, HISTORIAS, CONTINENTE, ROTAS } from '../site/js/dados.js';
+import { MISSOES } from '../tools/missoes.privado.mjs';
 
 const novo = () => G.estadoNovo(PAISES_INICIAIS, EVENTOS_INICIAIS);
 const niveis = (n = 2) => Object.fromEntries(G.AREAS.map(a => [a.id, n]));
@@ -459,13 +461,11 @@ test('12 países justos: mesma riqueza, mesma sobra depois da manutenção, nív
 test('todo país tem história completa e rotas válidas', () => {
   for (const c of PAISES_INICIAIS) {
     const h = HISTORIAS[c.id];
-    for (const k of ['historia', 'forte', 'fraco', 'desafio', 'clima', 'comeco']) assert.ok(h?.[k]?.length > 5, `${c.id} ${k}`);
-    assert.ok(h.historia.includes('\n\n'), `${c.id} tem dois parágrafos`);
-    assert.equal(h.caminhos.length, 3, c.id);
-    assert.ok(h.parceiros.length >= 2, c.id);
-    for (const x of h.parceiros) { assert.ok(PAISES_INICIAIS.some(o => o.id === x.pais), `${c.id}: ${x.pais}`); assert.notEqual(x.pais, c.id); }
-    const textos = [h.historia, h.comeco, ...h.caminhos.map(x => x.texto), ...h.parceiros.map(x => x.texto)].join(' ');
-    for (const [, id] of textos.matchAll(/\{(p\d+)\}/g)) assert.ok(PAISES_INICIAIS.some(o => o.id === id), `${c.id}: {${id}}`);
+    for (const k of ['historia', 'forte', 'fraco', 'desafio', 'clima']) assert.ok(h?.[k]?.length > 5, `${c.id} ${k}`);
+    assert.ok(h.historia.split('\n\n').length >= 3, `${c.id} tem três parágrafos`);
+    assert.equal(h.dicas.length, 3, c.id);
+    assert.equal(h.parceiros, undefined, `${c.id}: a história não diz quem procurar`);
+    assert.ok(!JSON.stringify(h).includes('{p'), `${c.id}: a história não cita outros países`);
     // O que a história promete tem de bater com os níveis iniciais.
     for (const [, nome, nivel] of `${h.forte} ${h.fraco}`.matchAll(/(Emprego|Educação|Saúde|Tecnologia|Segurança|Poder militar|Infraestrutura|Estabilidade) nível (\d+)/g)) {
       const a = G.AREAS.find(x => x.nome === nome);
@@ -475,6 +475,96 @@ test('todo país tem história completa e rotas válidas', () => {
   }
   const ids = new Set(PAISES_INICIAIS.map(c => c.id));
   for (const r of ROTAS) assert.ok(ids.has(r.de) && ids.has(r.para) && r.nome && r.d, r.id);
+});
+
+test('lore do continente existe e sustenta o objetivo', () => {
+  assert.equal(CONTINENTE.nome, 'Meridia');
+  assert.ok(CONTINENTE.historia.length >= 3);
+});
+
+const comMissoes = () => G.estadoNovo(PAISES_INICIAIS, EVENTOS_INICIAIS, MISSOES);
+test('todo país tem 4 missões válidas', () => {
+  const s = comMissoes();
+  const areas = new Set(G.AREAS.map(a => a.id)), ids = new Set(PAISES_INICIAIS.map(c => c.id));
+  for (const c of s.paises) {
+    assert.equal(c.missoes.length, 4, c.id);
+    assert.deepEqual(c.missoes.map(m => m.dificuldade), ['Média', 'Difícil', 'Muito difícil', 'Rivalidade'], c.id);
+    for (const m of c.missoes) {
+      assert.ok(m.titulo && m.texto.length > 20 && m.premio > 0, m.id);
+      for (const [, id] of m.texto.matchAll(/\{(p\d+)\}/g)) { assert.ok(ids.has(id), m.id); assert.notEqual(id, c.id, m.id); }
+      const lista = m.cond ? (Array.isArray(m.cond) ? m.cond : [m.cond]) : [];
+      for (const x of lista) { const v = Object.values(x)[0]; if (v?.area) assert.ok(areas.has(v.area), m.id); if (v?.pais) assert.ok(ids.has(v.pais), m.id); }
+      assert.ok(G.progressoMissao(m, c, s).texto.length > 3, m.id);
+    }
+    // Nenhuma missão pode começar cumprida.
+    assert.ok(!c.missoes.some(m => G.progressoMissao(m, c, s).estado === 'cumprida'), c.id);
+  }
+});
+
+test('missões nunca vão para o site público', () => {
+  const s = comMissoes(), pub = JSON.stringify(G.partePublica(s));
+  const dados = readFileSync(new URL('../site/js/dados.js', import.meta.url), 'utf8');
+  for (const c of s.paises) for (const m of c.missoes) {
+    assert.ok(!pub.includes(m.titulo), m.titulo);
+    assert.ok(!dados.includes(m.titulo), `dados.js: ${m.titulo}`);
+  }
+  assert.ok(readFileSync(new URL('../.gitignore', import.meta.url), 'utf8').includes('tools/missoes.privado.mjs'));
+});
+
+test('cada país vê só as próprias missões, com o nome atual do rival', () => {
+  const s = comMissoes();
+  s.paises.find(c => c.id === 'p9').nome = 'Terra Dourada';
+  const v = G.todasAsVisoes(s), p1 = v[s.paises[0].codigo];
+  assert.equal(p1.missoes.length, 4);
+  assert.match(p1.missoes[3].texto, /Terra Dourada/);
+  assert.ok(!JSON.stringify(v[s.paises[1].codigo].missoes).includes(p1.missoes[0].titulo));
+  assert.equal(p1.missoes[0].cond, undefined); // a condição técnica não vai para a ficha
+});
+
+test('missão: percebe cumprida, paga uma vez e pode desfazer', () => {
+  const s = comMissoes(), c = s.paises.find(x => x.id === 'p1'), m = c.missoes[0], outros = ['p2', 'p3', 'p4'];
+  assert.equal(G.progressoMissao(m, c, s).estado, 'andamento');
+  for (const o of outros) G.registrarAcordo(s, { titulo: `com ${o}`, tipo: 'paises', paises: ['p1', o], efeitos: {}, duracao: 3 });
+  assert.equal(G.progressoMissao(m, c, s).estado, 'cumprida');
+  assert.deepEqual(G.missoesParaConfirmar(s).map(x => x.missao.id), [m.id]);
+  const antes = c.moedas;
+  assert.equal(G.concluirMissao(s, 'p1', m.id), 40);
+  assert.equal(c.moedas, antes + 40);
+  assert.throws(() => G.concluirMissao(s, 'p1', m.id), /já foi paga/);
+  assert.equal(G.missoesParaConfirmar(s).length, 0);
+  G.desfazerMissao(s, 'p1', m.id);
+  assert.equal(c.moedas, antes);
+});
+
+test('missão: prazo, a partir de uma rodada, e rivalidade', () => {
+  const s = comMissoes(), c2 = s.paises.find(x => x.id === 'p2');
+  const escola = c2.missoes[0];
+  c2.niveis.edu = 4;
+  assert.equal(G.progressoMissao(escola, c2, s).estado, 'cumprida');
+  s.rodada = 7;
+  assert.equal(G.progressoMissao(escola, c2, s).estado, 'perdida');
+  const rival = c2.missoes[3];
+  s.rodada = 5;
+  c2.moedas = 9999;
+  assert.equal(G.progressoMissao(rival, c2, s).estado, 'andamento'); // ainda não é o ano 9
+  s.rodada = 9;
+  assert.equal(G.progressoMissao(rival, c2, s).estado, 'cumprida');
+});
+
+test('missões manuais dependem do professor; desafio novo aparece só para quem recebeu', () => {
+  const s = comMissoes(), c = s.paises.find(x => x.id === 'p2');
+  assert.equal(G.progressoMissao(c.missoes[2], c, s).estado, 'manual');
+  G.criarMissao(s, ['p2'], { titulo: 'Desafio do dia', texto: 'Faça algo', premio: 50 });
+  assert.equal(c.missoes.length, 5);
+  assert.equal(s.paises.find(x => x.id === 'p3').missoes.length, 4);
+  assert.throws(() => G.criarMissao(s, ['p2'], { titulo: '' }));
+});
+
+test('quem fornece comida é reconhecido nas missões', () => {
+  const s = comMissoes(), c = s.paises.find(x => x.id === 'p9');
+  G.fornecimentoDeComida(s, { de: 'p9', para: 'p5', quantidade: 20, preco: 10, duracao: 3 });
+  G.fornecimentoDeComida(s, { de: 'p9', para: 'p6', quantidade: 20, preco: 10, duracao: 3 });
+  assert.equal(G.progressoMissao(c.missoes[0], c, s).estado, 'cumprida');
 });
 
 test('eventos aplicam e o aviso público não mostra números', () => {

@@ -19,6 +19,9 @@ create table if not exists jogo_das_nacoes.estado_privado (
   senha_hash text not null
 );
 
+-- Modelo das missões secretas: só o admin lê, e o site nunca as recebe sem a senha.
+alter table jogo_das_nacoes.estado_privado add column if not exists missoes jsonb not null default '{}'::jsonb;
+
 -- Ficha privada de cada país, guardada pelo código.
 alter table jogo_das_nacoes.estado_privado add column if not exists visoes jsonb not null default '{}'::jsonb;
 
@@ -37,11 +40,11 @@ create or replace function jogo_das_nacoes.admin_carregar(p_senha text)
 returns jsonb language plpgsql security definer set search_path = '' as $$
 declare r record;
 begin
-  select versao, dados, senha_hash into r from jogo_das_nacoes.estado_privado where id = 1;
+  select versao, dados, senha_hash, missoes into r from jogo_das_nacoes.estado_privado where id = 1;
   if r.senha_hash is null or r.senha_hash <> extensions.crypt(p_senha, r.senha_hash) then
     raise exception 'senha_incorreta';
   end if;
-  return jsonb_build_object('versao', r.versao, 'dados', r.dados);
+  return jsonb_build_object('versao', r.versao, 'dados', r.dados, 'missoes', r.missoes);
 end $$;
 
 drop function if exists jogo_das_nacoes.admin_salvar(text, bigint, jsonb, jsonb);

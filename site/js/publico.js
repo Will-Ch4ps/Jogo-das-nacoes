@@ -3,7 +3,7 @@
 import { lerPublico, assinar, verPais, DEMO } from './backend.js';
 import { h, fmt, sinal, textoTimer, timerAcabando, fracaoTimer, areasDoPais, mapaSVG, icone, nomeMarca, animarDado } from './ui.js';
 import { textoEfeito } from './engine.js';
-import { HISTORIAS, ROTAS } from './dados.js';
+import { HISTORIAS, CONTINENTE, ROTAS } from './dados.js';
 
 const app = document.getElementById('app');
 const url = new URLSearchParams(location.search);
@@ -57,26 +57,24 @@ function colunaMapa() {
 
 const destaque = (v, r, cls) => h('div', { class: 'destaque' }, h('strong', { class: cls || '' }, v), h('span', {}, r));
 
-// Troca {p1} pelo nome que o grupo escolheu para o país.
-const comNomes = t => t.replace(/\{(p\d+)\}/g, (_, id) => (paisDe(id) ? nomeDe(id) : 'um vizinho'));
-
-// História, forças, fraquezas e caminhos. É público: cada grupo estuda o seu e os outros.
+// A história é pública. Quem pode ajudar, cada grupo descobre investigando.
 function dossie(id) {
   const hs = HISTORIAS[id];
   return [
     h('p', { class: 'clima' }, hs.clima),
-    hs.historia.split('\n\n').map(par => h('p', { class: 'historia' }, comNomes(par))),
+    hs.historia.split('\n\n').map(par => h('p', { class: 'historia' }, par)),
     h('dl', { class: 'tracos' },
       h('div', { class: 'forte' }, h('dt', {}, 'Ponto forte'), h('dd', {}, hs.forte)),
       h('div', { class: 'fraco' }, h('dt', {}, 'Ponto fraco'), h('dd', {}, hs.fraco)),
       h('div', { class: 'desafio' }, h('dt', {}, 'Desafio'), h('dd', {}, hs.desafio))),
-    h('h4', {}, 'Caminhos possíveis'),
-    h('ul', { class: 'caminhos' }, hs.caminhos.map(c => h('li', {}, h('strong', {}, c.titulo), h('p', {}, comNomes(c.texto))))),
-    h('h4', {}, 'Quem pode interessar'),
-    h('ul', { class: 'parceiros' }, hs.parceiros.filter(x => paisDe(x.pais)).map(x => h('li', {},
-      h('button', { class: 'parceiro', style: `--cor:${paisDe(x.pais).cor}`, onclick: () => abrirDossie(x.pais) }, nomeDe(x.pais)), h('span', {}, comNomes(x.texto))))),
-    h('p', { class: 'comeco' }, comNomes(hs.comeco)),
   ];
+}
+// A lore do continente: o que está em jogo para todos.
+function loreContinente() {
+  return h('details', { class: 'lore', open: ui.loreAberta ?? true, ontoggle: ev => { ui.loreAberta = ev.target.open; } },
+    h('summary', {}, h('span', { class: 'lore-rot' }, 'O continente'), h('strong', {}, CONTINENTE.nome)),
+    CONTINENTE.historia.map(par => h('p', {}, par)),
+    h('p', { class: 'lore-regra' }, CONTINENTE.regra));
 }
 function abrirDossie(id) {
   ui.abertos.add(id); ui.aba = 'paises'; render();
@@ -100,7 +98,7 @@ function cartaoPublico(c) {
     h('div', { class: 'detalhe-corpo' },
       h('div', { class: 'destaques dois' }, destaque(`${c.pos}º`, 'posição'), destaque(fmt(c.riqueza), 'riqueza')),
       h('div', { class: 'acoes-pais' },
-        h('button', { class: 'btn leve', onclick: () => abrirDossie(c.id) }, icone('globo', 19), 'História e caminhos'),
+        h('button', { class: 'btn leve', onclick: () => abrirDossie(c.id) }, icone('globo', 19), 'Ler a história'),
         qtdNoticias > 0 && h('button', { class: 'btn leve', onclick: () => { ui.jornalPais = c.id; ui.jornalFonte = 'todas'; ui.jornalVista = 'noticias'; trocaAba('jornal'); } }, icone('jornal', 19), `${qtdNoticias} ${qtdNoticias === 1 ? 'notícia' : 'notícias'}`)),
       h('h4', {}, 'Áreas'), areasDoPais(c.niveis, { compacto: true, problemas: c.problemas || [] }),
       h('h4', {}, 'Vizinhos'), vizinhosDe(c),
@@ -113,8 +111,8 @@ function secaoPaises() {
   const porId = J.paises.slice().sort((a, b) => a.id.slice(1) - b.id.slice(1));
   return h('section', { class: 'secao', 'data-aba': 'paises' },
     h('h2', { class: 'titulo' }, 'Os países'),
-    h('p', { class: 'meta explica' }, 'Toque em um país para ler a história, os pontos fortes e fracos, os caminhos possíveis e quem pode interessar.'),
-    guia(),
+    loreContinente(),
+    h('p', { class: 'meta explica' }, 'Toque em um país para ler a história, a força e a fraqueza dele. Quem pode ajudar, e quem pode atrapalhar, vocês descobrem.'),
     h('div', { class: 'dossies' }, porId.map(c => h('details', { id: `dossie-${c.id}`, class: 'dossie', style: `--cor:${c.cor}`, open: ui.abertos.has(c.id), ontoggle: ev => { if (ev.target.open) ui.abertos.add(c.id); else ui.abertos.delete(c.id); } },
       h('summary', {}, h('span', { class: 'dossie-nome' }, h('strong', {}, c.nome), h('small', {}, c.perfil)), h('span', { class: 'dossie-pos' }, `${c.pos}º`)),
       h('div', { class: 'dossie-corpo' }, dossie(c.id),
@@ -151,12 +149,12 @@ const rotuloDura = r => (r == null ? 'até o fim' : r === 1 ? 'última rodada' :
 const linhaConta = (x, sinalTxt) => h('div', { class: 'conta' + (x.ruim ? ' ruim' : '') },
   h('span', {}, x.rotulo, x.restantes !== undefined && h('em', { class: 'dura' }, rotuloDura(x.restantes))),
   h('strong', {}, `${sinalTxt}${fmt(Math.abs(x.valor))}`));
-const ABAS_FICHA = [['conta', 'Conta'], ['areas', 'Áreas'], ['acordos', 'Acordos'], ['projetos', 'Projetos'], ['pais', 'Nosso país'], ['guia', 'Como jogar']];
+const ABAS_FICHA = [['conta', 'Conta'], ['areas', 'Áreas'], ['acordos', 'Acordos'], ['projetos', 'Projetos'], ['missoes', 'Missões'], ['pais', 'Nosso país'], ['guia', 'Como jogar']];
 function fichaPais(f) {
   const area = id => f.areas.find(a => a.id === id);
   const acordos = f.acordos.filter(a => a.origem === 'acordo'), efeitos = f.acordos.filter(a => a.origem === 'efeito'), emProjeto = f.acordos.filter(a => a.origem === 'projeto');
   const aba = ui.fichaAba || 'conta';
-  const contagem = { acordos: acordos.length + efeitos.length, projetos: (f.tentativas || []).length };
+  const contagem = { acordos: acordos.length + efeitos.length, projetos: (f.tentativas || []).length, missoes: (f.missoes || []).filter(m => m.estado === 'cumprida').length };
   const cartaoCompromisso = a => h('li', { class: 'cartao' },
     h('div', { class: 'cartao-topo' }, h('strong', {}, a.titulo),
       h('span', { class: 'etiquetas' }, a.secreto && h('span', { class: 'etiqueta selo-boato' }, 'Secreto'), h('span', { class: 'etiqueta' }, a.ateRodada == null ? 'Até o fim' : a.restantes === 1 ? 'Última rodada' : `Até a rodada ${a.ateRodada}`))),
@@ -199,7 +197,7 @@ function fichaPais(f) {
       } }),
     ],
     acordos: () => [
-      acordos.length ? h('ul', { class: 'lista' }, acordos.map(cartaoCompromisso)) : h('p', { class: 'vazio-txt' }, 'Nenhum acordo ainda. Veja em "Nosso país" quem pode interessar.'),
+      acordos.length ? h('ul', { class: 'lista' }, acordos.map(cartaoCompromisso)) : h('p', { class: 'vazio-txt' }, 'Nenhum acordo ainda.'),
       efeitos.length > 0 && h('div', {}, h('h4', {}, 'O que está afetando vocês'), h('ul', { class: 'lista' }, efeitos.map(cartaoCompromisso))),
     ],
     projetos: () => [
@@ -212,7 +210,19 @@ function fichaPais(f) {
         h('p', {}, `${t.resultado}: tirou ${t.dado} no dado, total ${t.total}.`),
         h('p', { class: 'meta' }, `${t.efeito || 'Nada mudou.'}${t.custo ? ` Custou ${t.custo} moedas.` : ''}`)))) : h('p', { class: 'vazio-txt' }, 'Nenhuma tentativa ainda.'),
     ],
-    pais: () => dossie(f.id),
+    missoes: () => [
+      h('p', { class: 'missoes-sigilo' }, h('strong', {}, 'Só o seu grupo vê isto.'), ' Cumpra e chame o professor: ele confirma e paga o prêmio. Os outros países têm as próprias missões, e não sabem das suas.'),
+      (f.missoes || []).length ? h('ul', { class: 'lista' }, f.missoes.map(m => h('li', { class: `cartao missao ${m.estado}` },
+        h('div', { class: 'cartao-topo' }, h('strong', {}, m.titulo), h('span', { class: 'etiqueta' }, m.dificuldade)),
+        h('p', {}, m.texto),
+        h('div', { class: 'missao-rodape' }, h('span', { class: 'meta' }, m.progresso), h('b', {}, m.estado === 'concluida' ? 'Paga' : `${m.premio} moedas`)),
+        m.estado === 'cumprida' && h('p', { class: 'missao-pronta' }, 'Parece cumprida. Chamem o professor!')))) : h('p', { class: 'vazio-txt' }, 'Nenhuma missão por enquanto.'),
+    ],
+    pais: () => [
+      dossie(f.id),
+      h('h4', {}, 'Para pensar'),
+      h('ul', { class: 'dicas' }, HISTORIAS[f.id].dicas.map(d => h('li', {}, d))),
+    ],
     guia: () => conteudoGuia(),
   };
   return h('article', { class: 'detalhe ficha', style: `--cor:${f.cor}` },
@@ -291,7 +301,7 @@ function secaoJornal() {
   // Agrupa por rodada, da mais nova para a mais antiga.
   const porRodada = [...new Set(resto.map(n => n.rodada))].map(r => [r, resto.filter(n => n.rodada === r)]);
   return h('section', { class: 'secao jornal', 'data-aba': 'jornal' },
-    h('header', { class: 'jornal-capa' }, h('p', { class: 'jornal-linha' }, `Rodada ${J.rodada}`), h('h2', {}, 'A Voz do Continente'), h('p', { class: 'jornal-linha' }, 'Notícias, boatos e a imprensa de cada país')),
+    h('header', { class: 'jornal-capa' }, h('p', { class: 'jornal-linha' }, `Rodada ${J.rodada}`), h('h2', {}, `A Voz de ${CONTINENTE.nome}`), h('p', { class: 'jornal-linha' }, 'Notícias, boatos e a imprensa de cada país')),
     h('div', { class: 'jornal-abas' }, aba('noticias', `Notícias (${J.noticias.length})`), aba('acordos', `Acordos (${J.acordos.length})`)),
     vista === 'acordos'
       ? (J.acordos.length ? h('ul', { class: 'lista' }, J.acordos.map(cartaoAcordo)) : h('p', { class: 'vazio-txt' }, 'Nenhum acordo público ativo.'))
@@ -316,7 +326,7 @@ function conteudoGuia() {
   const item = (t, d) => h('li', {}, h('strong', {}, t), h('p', { class: 'meta' }, d));
   return [
     h('h4', {}, 'O objetivo'),
-    h('p', {}, `Terminar como o país mais rico. Riqueza é o dinheiro mais ${J.params.valorPessoa} moedas por mil pessoas, então cuidar da população também conta.`),
+    h('p', {}, `Quando o Tratado vencer, a nação mais rica presidirá o Conselho de ${CONTINENTE.nome}. Riqueza é o dinheiro mais ${J.params.valorPessoa} moedas por mil pessoas, então cuidar da população também conta.`),
     h('h4', {}, 'O que fazer em cada rodada'),
     h('ol', { class: 'guia-lista' },
       item('Leiam a conta', 'Em "Meu país", vejam quanto entra, quanto sai e com quanto vão terminar a rodada.'),
@@ -332,6 +342,7 @@ function conteudoGuia() {
       item('Passar dinheiro', 'Uma transferência única para outro país, para ajudar ou pagar por algo.'),
       item('Tentar um projeto', 'Expliquem a ideia: qual problema resolve, como funciona e quem paga a conta. Quanto melhor a ideia, maior a chance no dado.'),
       item('Publicar no jornal', 'Mandem o texto no formato que quiserem. Pode ser verdade, propaganda ou boato.'),
+      item('Confirmar uma missão', 'Cada país tem missões secretas, com prêmio em moedas. Quando cumprirem uma, chamem o professor.'),
       item('Atacar', 'O dado decide, e quem perde paga parte do próprio dinheiro ao outro. O militar só vale contra vizinhos e vira notícia; o hacker é secreto.')),
     h('h4', {}, 'O que pode dar errado'),
     h('ul', { class: 'guia-lista' },

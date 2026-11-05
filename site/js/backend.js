@@ -45,7 +45,10 @@ export async function assinar(aoMudar) {
 export async function adminCarregar(senha) {
   if (DEMO) {
     if (!senha) throw new Error('senha_incorreta');
-    return JSON.parse(localStorage.getItem(K_PRIV) || '{"versao":0,"dados":{}}');
+    const salvo = JSON.parse(localStorage.getItem(K_PRIV) || '{"versao":0,"dados":{}}');
+    let missoes = {};
+    try { missoes = await (await fetch('/missoes')).json(); } catch { /* sem servidor de teste: sem missões */ }
+    return { ...salvo, missoes };
   }
   const c = await db();
   const { data, error } = await c.rpc('jn_admin_carregar', { p_senha: senha });

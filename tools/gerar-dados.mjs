@@ -1,7 +1,7 @@
 // Gera site/js/dados.js: mapa do continente, rotas, histórias e os 12 países. Semente fixa: o mapa não muda sozinho.
 import { writeFileSync } from 'node:fs';
 import { AREAS as AREAS_JOGO } from '../site/js/engine.js';
-import { HISTORIAS } from './historias.mjs';
+import { HISTORIAS, CONTINENTE } from './historias.mjs';
 
 const LARG = 1000, ALT = 720;
 const P = [
@@ -262,7 +262,7 @@ const eventos = [
   { id: 'e6', nome: 'Greve geral', detalhe: 'Todos perdem 1 nível real de Emprego por 2 rodadas', aviso: 'Trabalhadores cruzam os braços pelo continente', efeito: { areas: { emp: -1 } }, duracao: 2 },
   { id: 'e7', nome: 'Apagão continental', detalhe: 'Todos perdem 1 nível real de Infraestrutura por 2 rodadas', aviso: 'Falhas de energia atingem o continente', efeito: { areas: { inf: -1 } }, duracao: 2 },
 ];
-const saida = `// Arquivo gerado por tools/gerar-dados.mjs\nexport const MAPA = ${JSON.stringify(mapa)};\nexport const ROTAS = ${JSON.stringify(ROTAS)};\nexport const HISTORIAS = ${JSON.stringify(HISTORIAS, null, 1)};\nexport const PAISES_INICIAIS = ${JSON.stringify(paises, null, 1)};\nexport const EVENTOS_INICIAIS = ${JSON.stringify(eventos, null, 1)};\n`;
+const saida = `// Arquivo gerado por tools/gerar-dados.mjs\nexport const MAPA = ${JSON.stringify(mapa)};\nexport const ROTAS = ${JSON.stringify(ROTAS)};\nexport const CONTINENTE = ${JSON.stringify(CONTINENTE, null, 1)};\nexport const HISTORIAS = ${JSON.stringify(HISTORIAS, null, 1)};\nexport const PAISES_INICIAIS = ${JSON.stringify(paises, null, 1)};\nexport const EVENTOS_INICIAIS = ${JSON.stringify(eventos, null, 1)};\n`;
 writeFileSync(new URL('../site/js/dados.js', import.meta.url), saida);
 console.log(`dados.js: ${Math.round(saida.length / 1024)} KB`);
 for (const c of paises) console.log(c.id.padEnd(4), c.perfil.padEnd(24), 'pessoas', String(c.pop).padEnd(4), 'dinheiro', String(c.moedas).padEnd(4), 'renda', String(c.renda).padEnd(4), 'viz', c.vizinhos.join(','));

@@ -4,9 +4,15 @@ Cada grupo governa um país. **Vence o país mais rico no fim da última rodada.
 
 **Riqueza = dinheiro + 5 moedas para cada mil pessoas.** Todos começam com a mesma riqueza: 600.
 
+## A história
+O continente de Meridia foi um império até a Grande Fome, há quarenta anos. Doze países assinaram o Tratado das Doze Bandeiras, que vence em dez anos. Cada rodada é um ano, e a nação mais rica vai presidir o novo Conselho.
+
+## Missões secretas
+Cada país tem 4 missões, com prêmio em moedas, que só o próprio grupo vê em **Meu país**: uma média, uma difícil, uma muito difícil e uma de rivalidade contra outro país. O sistema avisa o professor quando uma parece cumprida, e ele confirma e paga. O professor também pode criar novos desafios durante o jogo.
+
 ## O que cada um vê
 - **Todos:** mapa, histórias dos países, ranking com a riqueza, níveis das áreas, jornal e acordos públicos.
-- **Só o grupo, com o código do país:** dinheiro, pessoas, a conta da rodada linha por linha com a duração de cada item, a previsão das próximas rodadas, o nível comprado e o real de cada área, projetos e acordos, inclusive os secretos.
+- **Só o grupo, com o código do país:** dinheiro, pessoas, a conta da rodada linha por linha com a duração de cada item, a previsão das próximas rodadas, o nível comprado e o real de cada área, projetos, acordos, inclusive os secretos, dicas e missões.
 
 O código só libera a visualização. O grupo decide e um representante leva a decisão ao professor.
 
@@ -38,7 +44,7 @@ Vão do nível 1 ao 10. **Os níveis 5 e 10 valem em dobro.** Cada área tem dua
 | Estabilidade | Imprevistos | +1 no dado de negociações e imprevistos | 1 | Protestos: −10 moedas por rodada e −1 no dado |
 
 ## Os países
-Cada país tem história, clima, ponto forte, ponto fraco, desafio, caminhos possíveis e possíveis parceiros, visíveis para todos na tela **Países**. Todos começam com a mesma riqueza e o mesmo total de níveis, só que distribuídos de um jeito diferente.
+Cada país tem história, clima, ponto forte, ponto fraco e desafio, visíveis para todos na tela **Países**. Quem pode ajudar, cada grupo descobre investigando. As dicas e as missões ficam só na ficha do próprio país. Todos começam com a mesma riqueza e o mesmo total de níveis, só que distribuídos de um jeito diferente.
 
 ## O que os grupos podem fazer
 Os grupos combinam entre si e chamam o professor, que registra no sistema.

@@ -5,11 +5,12 @@ import { PAISES_INICIAIS, EVENTOS_INICIAIS } from './dados.js';
 import * as G from './engine.js';
 
 const app = document.getElementById('app');
-const ABAS = [['rodada', 'Rodada'], ['dinheiro', 'Níveis e dinheiro'], ['acordos', 'Acordos'], ['noticias', 'Notícias'], ['dado', 'Dado'], ['eventos', 'Eventos e impactos'], ['paises', 'Países'], ['ajustes', 'Ajustes']];
+const ABAS = [['rodada', 'Rodada'], ['dinheiro', 'Níveis e dinheiro'], ['acordos', 'Acordos'], ['noticias', 'Notícias'], ['dado', 'Dado'], ['missoes', 'Missões'], ['eventos', 'Eventos e impactos'], ['paises', 'Países'], ['ajustes', 'Ajustes']];
 const ui = { aba: 'rodada', msg: null, modoDado: 'acao', f: {}, previa: null, animar: null, sugAberto: true, editando: null, confirmar: null, resultado: null, paisNivel: null };
 let senha = null, versao = 0, E = null;
 
-const estadoNovo = () => G.estadoNovo(PAISES_INICIAIS, EVENTOS_INICIAIS);
+let MISSOES = null;
+const estadoNovo = () => G.estadoNovo(PAISES_INICIAIS, EVENTOS_INICIAIS, MISSOES);
 
 /* ---------- salvar ---------- */
 const save = { sujo: false, rodando: false, status: 'Salvo', erro: false, travado: false };
@@ -525,6 +526,44 @@ function abaDado() {
 }
 
 /* ---------- eventos e impactos ---------- */
+/* ---------- missões secretas ---------- */
+function abaMissoes() {
+  const F = form('missao', () => ({ alvo: '', titulo: '', texto: '', premio: 50, pais: '' }));
+  const paraConfirmar = G.missoesParaConfirmar(E);
+  const etiqueta = { concluida: 'Paga', perdida: 'Prazo acabou', manual: 'Você decide', cumprida: 'Parece cumprida', andamento: 'Em andamento' };
+  const cartao = (c, m) => {
+    const p = G.progressoMissao(m, c, E);
+    return h('li', { class: 'cartao missao-admin' + (p.estado === 'cumprida' ? ' cumprida' : '') },
+      h('div', { class: 'cartao-topo' }, h('strong', {}, m.titulo), h('span', { class: 'etiquetas' }, h('span', { class: 'etiqueta' }, m.dificuldade), h('span', { class: `etiqueta ${p.estado === 'cumprida' ? 'selo-oficial' : ''}` }, etiqueta[p.estado]))),
+      h('p', {}, G.comNomesPaises(m.texto, E)),
+      h('p', { class: 'meta' }, p.texto),
+      h('div', { class: 'linha-acoes' },
+        m.concluida
+          ? botaoConfirma('dm' + m.id, `Desfazer (devolve ${m.premioPago})`, 'Confirmar', () => commit(e => G.desfazerMissao(e, c.id, m.id), { msg: 'Missão desfeita.' }))
+          : botaoConfirma('cm' + m.id, `Concluir e pagar ${m.premio} moedas`, `Confirmar: ${c.nome} recebe ${m.premio}`, () => commit(e => { G.concluirMissao(e, c.id, m.id); }, { msg: `${c.nome} concluiu "${m.titulo}" e recebeu ${m.premio} moedas.` }), '')));
+  };
+  const paises = F.pais ? E.paises.filter(c => c.id === F.pais) : E.paises;
+  const criar = () => {
+    const ok = commit(e => G.criarMissao(e, F.alvo ? [F.alvo] : e.paises.map(c => c.id), { titulo: F.titulo, texto: F.texto, premio: F.premio }), { msg: 'Desafio entregue na ficha.' });
+    if (ok) { ui.f.missao = { ...F, titulo: '', texto: '' }; render(); }
+  };
+  return [
+    painel('Missões secretas', h('p', { class: 'meta' }, 'Cada país vê as próprias missões em Meu país. O sistema avisa quando uma parece cumprida, mas só o dinheiro que você liberar é pago. Sem esta tela aberta, nada é pago sozinho.')),
+    paraConfirmar.length > 0 && painel(`Parecem cumpridas (${paraConfirmar.length})`, h('ul', { class: 'lista' }, paraConfirmar.map(x => h('div', { class: 'grupo-missao' }, h('h3', {}, x.pais.nome), cartao(x.pais, x.missao))))),
+    painel('Todas as missões',
+      h('div', { class: 'frase', style: 'margin-bottom:10px' }, 'Ver:', selecao(F, 'pais', [h('option', { value: '' }, 'Todos os países'), opcoesPaises(F.pais)])),
+      !Object.keys(MISSOES || {}).length && !E.paises.some(c => c.missoes?.length) && h('p', { class: 'vazio-txt' }, 'Nenhuma missão carregada. Rode npm run db:setup no seu computador.'),
+      paises.map(c => (c.missoes || []).length > 0 && h('div', { class: 'grupo-missao' }, h('h3', {}, c.nome), h('ul', { class: 'lista' }, c.missoes.map(m => cartao(c, m)))))),
+    painel('Criar um desafio', h('p', { class: 'meta', style: 'margin-bottom:10px' }, 'Um desafio novo aparece na hora, só na ficha de quem recebeu.'),
+      h('div', { class: 'form' },
+        h('div', { class: 'frase' }, 'Para:', selecao(F, 'alvo', [h('option', { value: '' }, 'Todos os países'), opcoesPaises(F.alvo)])),
+        campo('Nome', texto(F, 'titulo', { maxlength: 60 }), 'largo'),
+        campo('O que precisa fazer', textoLongo(F, 'texto', { maxlength: 300 }), 'largo'),
+        bloco('Prêmio', pilulas([25, 50, 100, 150].map(v => ({ v, t: `${v} moedas` })), F.premio, v => { F.premio = v; })),
+        h('button', { type: 'button', class: 'btn', onclick: criar }, 'Entregar desafio'))),
+  ].filter(Boolean);
+}
+
 function abaEventos() {
   const F = form('evento', () => ({ alvo: '', nome: '', aviso: '', efeitos: [novoEfeito('perdeAgora')], dur: 2 }));
   const previa = caixaPrevia(() => {
@@ -623,15 +662,16 @@ function abaAjustes() {
   ];
 }
 
-const ABA_RENDER = { rodada: abaRodada, dinheiro: abaDinheiro, acordos: abaAcordos, noticias: abaNoticias, dado: abaDado, eventos: abaEventos, paises: abaPaises, ajustes: abaAjustes };
+const ABA_RENDER = { missoes: abaMissoes, rodada: abaRodada, dinheiro: abaDinheiro, acordos: abaAcordos, noticias: abaNoticias, dado: abaDado, eventos: abaEventos, paises: abaPaises, ajustes: abaAjustes };
 function render() {
   const y = window.scrollY;
   ui.previa = null;
   const guardadas = E.noticias.filter(n => n.estado !== 'publicada').length + G.sugestoesDeNoticias(E).length;
+  const paraConfirmar = G.missoesParaConfirmar(E).length;
   app.replaceChildren(
     topo(),
     h('nav', { class: 'adm-nav', 'aria-label': 'Seções do admin' }, ABAS.map(([id, t]) => h('button', { class: ui.aba === id ? 'ativo' : '', onclick: () => { ui.aba = id; ui.msg = null; ui.confirmar = null; render(); window.scrollTo(0, 0); } },
-      id === 'noticias' && guardadas ? `${t} (${guardadas})` : t))),
+      id === 'noticias' && guardadas ? `${t} (${guardadas})` : id === 'missoes' && paraConfirmar ? `${t} (${paraConfirmar})` : t))),
     h('main', { class: 'adm-corpo' }, ui.msg && h('div', { class: `mensagem ${ui.msg.tipo}`, role: 'status' }, ui.msg.texto), ABA_RENDER[ui.aba]()));
   window.scrollTo(0, y);
   if (ui.animar) { animarDado(ui.animar); ui.animar = null; }
@@ -645,7 +685,7 @@ function telaLogin(erro) {
     b.disabled = true; b.textContent = 'Entrando…';
     try {
       const r = await adminCarregar(s);
-      senha = s; versao = r.versao;
+      senha = s; versao = r.versao; MISSOES = r.missoes;
       sessionStorage.setItem('jn_s', s);
       iniciar(r.dados);
     } catch (err) {
@@ -662,7 +702,8 @@ function telaLogin(erro) {
 function iniciar(dados) {
   const vazio = !dados || !dados.paises;
   E = vazio ? estadoNovo() : dados;
-  const semCodigo = !vazio && E.paises.some(c => !c.codigo);
+  const semCodigo = !vazio && E.paises.some(c => !c.codigo || (!c.missoes?.length && MISSOES?.[c.id]));
+  G.garantirMissoes(E, MISSOES);
   // Partida salva por uma versão anterior: completa os valores novos e troca a lista de eventos.
   E.params = { ...G.PARAMS_INICIAIS, ...E.params };
   if (!vazio && E.eventos.some(ev => !ev.efeito)) E.eventos = structuredClone(EVENTOS_INICIAIS);
@@ -677,5 +718,5 @@ setInterval(() => {
 
 const guardada = sessionStorage.getItem('jn_s');
 if (guardada) {
-  adminCarregar(guardada).then(r => { senha = guardada; versao = r.versao; iniciar(r.dados); }).catch(() => { sessionStorage.removeItem('jn_s'); telaLogin(); });
+  adminCarregar(guardada).then(r => { senha = guardada; versao = r.versao; MISSOES = r.missoes; iniciar(r.dados); }).catch(() => { sessionStorage.removeItem('jn_s'); telaLogin(); });
 } else telaLogin();
