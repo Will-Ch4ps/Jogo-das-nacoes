@@ -369,7 +369,8 @@ function abaNoticias() {
     if (n) { F = ui.f.noticia = { ...novaNoticiaForm(), id: n.id, titulo: n.titulo, texto: n.texto, pais: n.paisId || '', marca: n.marca || '', chapeu: n.chapeu || '', tipo: n.tipo || 'noticia', de: n.de || 'prof', para: n.para || '', privada: !!n.privada, mostrarEfeito: !!n.mostrarEfeito, fonte: n.fontePais ? `pais:${n.fontePais}` : n.selo === 'Boato' ? 'Boato' : 'Oficial' }; }
   }
   const mensagem = F.tipo === 'mensagem';
-  const efeitoDaAntiga = F.id ? E.noticias.find(n => n.id === F.id)?.efeito : null;
+  const noticiaAntiga = F.id ? E.noticias.find(n => n.id === F.id) : null;
+  const efeitoDaAntiga = noticiaAntiga?.efeito, aplicadaEm = noticiaAntiga?.efeitoAplicado ? noticiaAntiga.efeitoPara ?? noticiaAntiga.paisId : undefined;
   const salvar = estado => {
     const { titulo, texto: corpo } = separarTexto(F);
     if (!titulo) { ui.msg = { tipo: 'erro', texto: 'Cole o texto ou escreva a manchete.' }; render(); return; }
@@ -428,10 +429,16 @@ function abaNoticias() {
         campo('Cole aqui o texto, do jeito que mandaram', textoLongo(F, 'texto', { rows: 7, maxlength: 5000, class: 'campo-noticia', placeholder: 'A primeira linha vira a manchete. O resto aparece quando o aluno abrir a matéria.' }), 'largo'),
         campo('Manchete (opcional, se quiser trocar a primeira linha)', texto(F, 'titulo', { maxlength: 140 }), 'largo'),
         bloco('Etiqueta da matéria (opcional)', pilulas([{ v: '', t: 'Nenhuma' }, ...[...new Set([...CHAPEUS, F.chapeu].filter(Boolean))].map(c => ({ v: c, t: c }))], F.chapeu, v => { F.chapeu = v; })),
-        !mensagem && campo('Sobre qual país', selecao(F, 'pais', [h('option', { value: '' }, 'Geral'), opcoesPaises(F.pais)])),
+        !mensagem && campo('Sobre qual país', h('select', { onchange: ev => {
+          const novo = ev.target.value;
+          // O texto acompanha o país escolhido.
+          if (F.pais && novo) { const de = nomeDe(F.pais), para = nomeDe(novo); F.titulo = G.trocarNome(F.titulo, de, para); F.texto = G.trocarNome(F.texto, de, para); }
+          F.pais = novo; render();
+        } }, h('option', { value: '' }, 'Geral'), opcoesPaises(F.pais))),
         campo('Marcar no mapa', selecao(F, 'marca', [h('option', { value: '' }, 'Não marcar'), G.TIPOS_MARCA.map(t => h('option', { value: t.id, selected: F.marca === t.id }, t.nome))])),
         efeitoDaAntiga && h('div', { class: 'bloco-efeito' },
           h('p', { class: 'meta' }, `Esta notícia já tem efeito: ${G.textoEfeito(efeitoDaAntiga)}.`),
+          aplicadaEm !== undefined && h('p', { class: 'meta' }, `Já foi aplicado em ${aplicadaEm ? nomeDe(aplicadaEm) : 'todos os países'}. Trocar o país aqui muda só o texto.`),
           marcar(F, 'mostrarEfeito', 'Mostrar o efeito aos alunos na matéria')),
         !efeitoDaAntiga && marcar(F, 'temEfeito', 'Isto também muda algo no jogo'),
         F.temEfeito && h('div', { class: 'bloco-efeito' }, bloco('O que muda?', blocoEfeitos(F.efeitos)),
@@ -677,7 +684,7 @@ function abaPaises() {
       h('div', { class: 'rola-x' }, h('table', { class: 'tab-edit' },
         h('thead', {}, h('tr', {}, ['Nome', 'Código', 'Dinheiro', 'Pessoas', 'Renda', ...G.AREAS.map(a => a.nome), ''].map(t => h('th', {}, t)))),
         h('tbody', {}, E.paises.map(c => h('tr', {},
-          h('td', {}, h('input', { class: 'nome', value: c.nome, maxlength: 18, 'aria-label': 'Nome do país', title: c.perfil, onchange: ev => { const n = ev.target.value.trim(); if (n) commit(() => { c.nome = n; }, { render: false }); else ev.target.value = c.nome; } })),
+          h('td', {}, h('input', { class: 'nome', value: c.nome, maxlength: 18, 'aria-label': 'Nome do país', title: c.perfil, onchange: ev => { const n = ev.target.value.trim(); if (n) commit(e => { G.renomearPais(e, c.id, n); }, { render: false }); else ev.target.value = c.nome; } })),
           h('td', {}, h('code', { class: 'codigo' }, c.codigo)),
           h('td', {}, num(c.moedas, v => () => { c.moedas = Math.max(0, v); }, `Dinheiro de ${c.nome}`)),
           h('td', {}, num(c.pop, v => () => { c.pop = Math.max(0, v); }, `Pessoas de ${c.nome}`)),
@@ -759,7 +766,8 @@ function iniciar(dados) {
   for (const c of E.paises) if (c.niveis.alim == null) { c.niveis.alim = c.niveis.inf ?? 2; c.niveis.inf = 2; }
   if (!vazio && E.eventos.some(ev => !ev.efeito)) E.eventos = structuredClone(EVENTOS_INICIAIS);
   G.garantirCodigos(E);
-  if (vazio || semCodigo) { save.sujo = true; loopSalvar(); }
+  const nomesCorrigidos = !vazio && G.corrigirNomesPadrao(E);
+  if (vazio || semCodigo || nomesCorrigidos) { save.sujo = true; loopSalvar(); }
   render();
 }
 setInterval(() => {

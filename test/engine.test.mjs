@@ -335,6 +335,39 @@ test('para agitar com efeito por tempo: aplica pelo tempo combinado, e no líder
   assert.match(G.partePublica(s).noticias.at(-1).consequencia, /por 2 rodadas|por 3 rodadas/);
 });
 
+test('renomear o país atualiza notícias, acordos e marcas, só na palavra inteira', () => {
+  const s = com(modelo({ id: 'p1', nome: 'País 1' }), modelo({ id: 'p11', nome: 'País 11' }));
+  s.noticias.push(G.novaNoticia(s, { titulo: 'Turista perde a carteira em País 1', texto: 'País 11 riu de País 1. (País 1!)', estado: 'publicada' }));
+  G.registrarAcordo(s, { titulo: 'Pacto de País 1', descricao: 'com País 11', tipo: 'paises', paises: ['p1', 'p11'], efeitos: {}, duracao: 2 });
+  G.adicionarMarca(s, 'p1', G.TIPOS_MARCA[0].id, 'Festa em País 1');
+  G.renomearPais(s, 'p1', 'Chaprovíncia');
+  assert.equal(s.paises[0].nome, 'Chaprovíncia');
+  assert.equal(s.noticias[0].titulo, 'Turista perde a carteira em Chaprovíncia');
+  assert.equal(s.noticias[0].texto, 'País 11 riu de Chaprovíncia. (Chaprovíncia!)');
+  assert.equal(s.acordos[0].titulo, 'Pacto de Chaprovíncia');
+  assert.equal(s.acordos[0].descricao, 'com País 11');
+  assert.equal(s.marcas[0].titulo, 'Festa em Chaprovíncia');
+  assert.equal(G.partePublica(s).noticias[0].titulo, 'Turista perde a carteira em Chaprovíncia');
+});
+
+test('partida antiga: "País 11" que ficou preso no texto vira o nome atual', () => {
+  const s = com(modelo({ id: 'p1', nome: 'Aurora' }), modelo({ id: 'p11', nome: 'Chaprovíncia' }));
+  s.noticias.push(G.novaNoticia(s, { titulo: 'Carteira perdida em País 11', texto: 'País 1 viu. País 99 não existe.', estado: 'publicada' }));
+  assert.equal(G.corrigirNomesPadrao(s), true);
+  assert.equal(s.noticias[0].titulo, 'Carteira perdida em Chaprovíncia');
+  assert.equal(s.noticias[0].texto, 'Aurora viu. País 99 não existe.');
+  assert.equal(G.corrigirNomesPadrao(s), false); // da segunda vez, nada a fazer
+});
+
+test('o efeito visível continua citando quem recebeu, mesmo se a notícia mudar de país', () => {
+  const s = com(modelo(), outro());
+  const n = G.novaNoticia(s, { titulo: 'x', paisId: 'm', efeito: { moedasAgora: 15 }, mostrarEfeito: true });
+  s.noticias.push(n);
+  G.publicarNoticia(s, n);
+  n.paisId = 'o';
+  assert.match(G.partePublica(s).noticias[0].consequencia, /^Modelo:/);
+});
+
 test('notícia com efeito aplica uma vez só', () => {
   const s = com(modelo({ moedas: 100 }));
   const n = G.novaNoticia(s, { titulo: 'Escândalo', paisId: 'm', efeito: { moedasAgora: -10 } });

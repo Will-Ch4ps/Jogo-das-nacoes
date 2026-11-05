@@ -244,10 +244,43 @@ export function publicarNoticia(e, n) {
     const alvos = n.paisId ? [n.paisId] : e.paises.map(c => c.id);
     aplicarEfeito(e, alvos, n.efeito, { titulo: n.titulo, duracao: n.duracao ?? null, secreto: true });
     n.efeitoAplicado = true;
+    n.efeitoPara = n.paisId || null;
   }
   if (n.marca && !n.marcaAplicada && n.paisId) { adicionarMarca(e, n.paisId, n.marca, n.titulo); n.marcaAplicada = true; }
   return n;
 }
+// Troca o nome de um país em um texto. Só a palavra inteira: "País 1" não mexe em "País 11".
+export function trocarNome(t, de, para) {
+  if (!t || !de || de === para) return t;
+  const esc = de.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return t.replace(new RegExp(`(^|[^\\p{L}\\p{N}])${esc}(?![\\p{L}\\p{N}])`, 'gu'), (_, antes) => antes + para);
+}
+// Onde o nome de um país fica escrito no jogo.
+function textosComNome(e, fn) {
+  for (const n of e.noticias) { n.titulo = fn(n.titulo); n.texto = fn(n.texto); }
+  for (const a of e.acordos) { a.titulo = fn(a.titulo); a.descricao = fn(a.descricao); }
+  for (const m of e.marcas || []) m.titulo = fn(m.titulo);
+}
+// Renomeia o país e leva o nome novo para as notícias, os acordos e as marcas do mapa.
+export function renomearPais(e, id, novo) {
+  const c = paisPorId(e, id);
+  if (!c) throw new Error('País não encontrado.');
+  const velho = c.nome;
+  c.nome = novo;
+  textosComNome(e, t => trocarNome(t, velho, novo));
+}
+// Partida antiga: notícias escritas com "País 11" antes de o grupo escolher o nome. Devolve se mudou algo.
+export function corrigirNomesPadrao(e) {
+  let mudou = false;
+  textosComNome(e, t => {
+    if (!t) return t;
+    const novo = t.replace(/País (\d+)(?![\p{L}\p{N}])/gu, (tudo, n) => paisPorId(e, `p${n}`)?.nome ?? tudo);
+    if (novo !== t) mudou = true;
+    return novo;
+  });
+  return mudou;
+}
+
 // Sorteio estável: a mesma chave dá sempre o mesmo resultado, então a sugestão não muda a cada atualização da tela.
 const sorteio = (chave, n) => { let h = 7; for (const ch of chave) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return h % n; };
 const preenche = (t, v) => t.replace(/\[(País|A|B|Area|Titulo)\]/g, (_, k) => v[k] ?? '');
@@ -390,7 +423,8 @@ function noticiaParaLeitor(n, e) {
   const { id, titulo, texto, paisId, rodada, selo, fontePais, publicadaEm, chapeu, tipo, de, para, privada } = n;
   const out = { id, titulo, texto, paisId, rodada, selo, fontePais, publicadaEm, chapeu, tipo, de, para, privada };
   if (n.mostrarEfeito && n.efeito && textoEfeito(n.efeito)) {
-    const quem = n.paisId ? paisPorId(e, n.paisId)?.nome : 'Todos os países';
+    const alvo = n.efeitoAplicado && 'efeitoPara' in n ? n.efeitoPara : n.paisId;
+    const quem = alvo ? paisPorId(e, alvo)?.nome : 'Todos os países';
     const dura = temContinuo(normEf(n.efeito)) ? (n.duracao == null ? ', até o fim do jogo' : `, por ${n.duracao} ${n.duracao === 1 ? 'rodada' : 'rodadas'}`) : '';
     out.consequencia = `${quem}: ${textoEfeito(n.efeito)}${dura}.`;
   }
