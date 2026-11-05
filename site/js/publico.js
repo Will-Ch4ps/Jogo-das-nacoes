@@ -280,7 +280,9 @@ function formSubir(f, ctx) {
     })),
     h('div', { class: 'subir-total' },
       h('div', { class: 'subir-total-linha' }, h('span', {}, carrinho.length ? `${carrinho.length} ${carrinho.length === 1 ? 'ação' : 'ações'}` : 'Nada escolhido'), h('strong', {}, `${fmt(total)} moedas`)),
-      carrinho.length > 0 && h('p', { class: 'meta' }, `Ficam com ${fmt(r.depois.moedas)} · por rodada ${sinal(porRodada)}`),
+      // A sobra mostra antes e depois: só a diferença ("-2") parecia que a rodada ia ficar negativa.
+      carrinho.length > 0 && h('p', { class: 'meta' }, `Ficam com ${fmt(r.depois.moedas)} moedas`),
+      carrinho.length > 0 && porRodada !== 0 && h('p', { class: 'meta' }, `Sobra a cada rodada: ${sinal(ctx.sim.depois.sobra)} → ${sinal(r.depois.sobra)}`),
       erro && h('p', { class: 'pedido-erro' }, erro),
       h('button', { class: 'btn', disabled: !carrinho.length || !!erro || ui.enviando, onclick: () => mandarSubidas(carrinho) }, 'Pedir')));
 }
