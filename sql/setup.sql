@@ -122,7 +122,7 @@ create table if not exists jogo_das_nacoes.pedidos (
   rodada int not null,
   pais text not null,
   para text,
-  tipo text not null check (tipo in ('subir', 'manutencao', 'dinheiro', 'acordo', 'noticia')),
+  tipo text not null check (tipo in ('subir', 'manutencao', 'dinheiro', 'acordo', 'noticia', 'projeto')),
   dados jsonb not null default '{}'::jsonb,
   estado text not null check (estado in ('aguardando', 'fila', 'aprovado', 'recusado', 'cancelado')),
   resposta text,
@@ -130,6 +130,9 @@ create table if not exists jogo_das_nacoes.pedidos (
   criado_em timestamptz not null default now(),
   decidido_em timestamptz
 );
+-- Tabela criada por uma versão anterior: libera o tipo novo sem apagar nada.
+alter table jogo_das_nacoes.pedidos drop constraint if exists pedidos_tipo_check;
+alter table jogo_das_nacoes.pedidos add constraint pedidos_tipo_check check (tipo in ('subir', 'manutencao', 'dinheiro', 'acordo', 'noticia', 'projeto'));
 create index if not exists pedidos_pais_rodada on jogo_das_nacoes.pedidos (pais, rodada);
 alter table jogo_das_nacoes.pedidos enable row level security;
 revoke all on jogo_das_nacoes.pedidos from anon, authenticated, public;
@@ -163,7 +166,7 @@ declare v_id text; d jsonb; v_rodada int; v_novo bigint;
 begin
   select visoes -> upper(trim(p_codigo)) ->> 'id', dados into v_id, d from jogo_das_nacoes.estado_privado where id = 1;
   if v_id is null then raise exception 'codigo_invalido'; end if;
-  if p_tipo is null or p_tipo not in ('subir', 'manutencao', 'dinheiro', 'acordo', 'noticia') then raise exception 'pedido_invalido'; end if;
+  if p_tipo is null or p_tipo not in ('subir', 'manutencao', 'dinheiro', 'acordo', 'noticia', 'projeto') then raise exception 'pedido_invalido'; end if;
   if jsonb_typeof(p_dados) is distinct from 'object' or length(p_dados::text) > 8000 then raise exception 'pedido_invalido'; end if;
   if coalesce((d ->> 'encerrado')::boolean, false) then raise exception 'jogo_encerrado'; end if;
   perform pg_advisory_xact_lock(hashtext('jn_pedido_' || v_id));

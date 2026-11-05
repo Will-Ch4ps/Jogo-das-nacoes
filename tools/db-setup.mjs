@@ -84,6 +84,8 @@ try {
   confere(!!(await pedir('AAAAAA', 'subir', { area: 'emp' })).r, 'segunda ação entra');
   confere(/sem_acoes/.test((await pedir('AAAAAA', 'subir', { area: 'emp' })).erro), 'acima do limite é recusado');
   confere(/pedido_invalido/.test((await pedir('BBBBBB', 'hackear', {})).erro), 'tipo desconhecido é recusado');
+  confere(!!(await pedir('BBBBBB', 'projeto', { nome: 'Teste', ideia: 'x', ganho: 'ganhaRodada' })).r, 'país manda projeto');
+  confere((await visto('BBBBBB')).usadas === 1, 'projeto gasta a ação');
   confere(/pedido_invalido/.test((await pedir('BBBBBB', 'dinheiro', { texto: 'x'.repeat(9000) })).erro), 'pedido gigante é recusado');
   confere(!!(await tenta('select * from jogo_das_nacoes.pedidos')).erro, 'visitante não lê a lista direto');
   confere(!!(await tenta(`select public.jn_admin_pedidos('senha-errada')`)).erro, 'senha errada não vê os pedidos');
@@ -91,7 +93,7 @@ try {
   confere(!!(await tenta(`select public.jn_admin_limpar_pedidos('senha-errada')`)).erro, 'senha errada não apaga');
   confere(!!(await tenta(`select jogo_das_nacoes.conferir_senha('x')`)).erro, 'visitante não testa senha direto');
   const fila = (await db.query('select public.jn_admin_pedidos($1) as r', [SENHA_ADMIN])).rows[0].r;
-  confere(fila.filter(p => p.estado === 'fila').length === 2, 'professor vê a fila');
+  confere(fila.filter(p => p.estado === 'fila').length === 3, 'professor vê a fila');
   const decidiu = await tenta('select public.jn_admin_decidir($1, $2, $3, $4) as ok', [SENHA_ADMIN, idAcordo, 'recusado', 'Refaçam']);
   confere(decidiu.r?.rows[0].ok === true && (await visto('AAAAAA')).usadas === 1, 'recusa devolve a ação');
   await db.query('rollback');

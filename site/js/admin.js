@@ -292,7 +292,7 @@ function abaAcordos() {
 
 /* ---------- pedidos dos grupos: você só aprova, ajusta ou recusa ---------- */
 let PED = [], assinaturaPed = '';
-const NOME_PEDIDO = { subir: 'Investimento', manutencao: 'Manutenção', dinheiro: 'Dinheiro', acordo: 'Acordo', noticia: 'Jornal' };
+const NOME_PEDIDO = { subir: 'Investimento', manutencao: 'Manutenção', dinheiro: 'Dinheiro', acordo: 'Acordo', noticia: 'Jornal', projeto: 'Projeto' };
 const MOTIVOS = ['Falta dinheiro', 'Refaçam o pedido', 'Agora não'];
 const naFila = () => PED.filter(p => p.estado === 'fila');
 const digitando = () => ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName);
@@ -313,7 +313,7 @@ async function buscarPedidos() {
 }
 
 async function aprovarPedido(p, dados = p.dados, editado = !!p.editado) {
-  if (ui.decidindo.has(p.id)) return false;
+  if (ui.decidindo.has(p.id) || p.tipo === 'projeto') return false;
   const alvo = { ...p, dados, editado }, teste = G.checarPedido(E, alvo);
   if (!teste.ok) { ui.msg = { tipo: 'erro', texto: teste.erro }; render(); return false; }
   ui.decidindo.add(p.id); render();
@@ -345,6 +345,55 @@ async function aprovarTodos(filtro) {
   ui.msg = { tipo: feitos === lista.length ? 'ok' : 'erro', texto: `${feitos} de ${lista.length} aprovados.${feitos === lista.length ? '' : ' Os outros continuam na fila, com o motivo no cartão.'}` };
   render();
 }
+// Projeto: já chega preenchido com o que o grupo pediu. Falta o professor julgar a ideia e rolar.
+function dadoDoProjeto(p) {
+  ui.fProjeto ||= {};
+  if (!ui.fProjeto[p.id]) {
+    const F = modeloDado('projeto', p.pais), ef = G.efeitoDoProjeto(p.dados);
+    ui.fProjeto[p.id] = { ...F, titulo: String(p.dados.nome || 'Projeto').slice(0, 60), efeitos: [novoEfeito(ef.tipo, { area: ef.area })], dur: 3 };
+  }
+  return ui.fProjeto[p.id];
+}
+async function rolarProjeto(p, F) {
+  if (ui.decidindo.has(p.id)) return;
+  // O número sai antes: assim a resposta ao grupo e o efeito no jogo usam a mesma rolagem.
+  const n = 1 + Math.floor(Math.random() * (Number(F.lados) || 20)), rola = () => n;
+  let r;
+  try { r = G.acaoDado(structuredClone({ ...E, historico: [] }), paramsDaAcao(F), rola); } catch (err) { ui.msg = { tipo: 'erro', texto: err.message }; render(); return; }
+  const resposta = `${r.nome}: tirou ${r.dado}, total ${r.total}. ${r.textoEfeito ? `${r.textoEfeito}.` : 'Nada mudou.'}${r.custo ? ` Custou ${r.custo} moedas.` : ''}`;
+  ui.decidindo.add(p.id); render();
+  try {
+    const reservou = await adminDecidir(senha, p.id, 'aprovado', resposta, p.dados, false);
+    if (!reservou) { ui.msg = { tipo: 'erro', texto: 'Esse pedido não está mais na fila: o grupo pode ter cancelado.' }; return; }
+    const aplicou = commit(e => { rolarAcao(e, F, rola); }, { msg: `${nomeDe(p.pais)}, ${F.titulo}. ${resposta}`, render: false });
+    if (!aplicou) { await adminDecidir(senha, p.id, 'recusado', ui.msg?.texto || 'Não deu para aplicar.'); return; }
+    delete ui.fProjeto[p.id];
+  } catch { ui.msg = { tipo: 'erro', texto: 'Sem conexão: o projeto continua na fila, e nada foi rolado.' }; } finally {
+    ui.decidindo.delete(p.id); await buscarPedidos(); render();
+  }
+}
+function cartaoProjeto(p, item) {
+  const F = dadoDoProjeto(p), ocupado = ui.decidindo.has(p.id), preco = G.custoDoProjeto(E.paises.find(c => c.id === p.pais), E);
+  return h('li', { class: 'cartao pedido' },
+    h('div', { class: 'cartao-topo' }, h('strong', {}, p.dados.nome), h('span', { class: 'etiqueta' }, 'Projeto')),
+    (item?.detalhe || []).map(t => h('p', { class: 'meta pedido-detalhe' }, t)),
+    ui.recusando === p.id
+      ? h('div', { class: 'linha-acoes' }, h('span', { class: 'meta' }, 'Motivo:'),
+        ['Ideia fraca', 'Refaçam o pedido', 'Agora não'].map(m => h('button', { class: 'btn peq leve', disabled: ocupado, onclick: () => recusarPedido(p, m) }, m)),
+        h('button', { class: 'btn peq leve', disabled: ocupado, onclick: () => recusarPedido(p, null) }, 'Sem motivo'),
+        h('button', { class: 'btn peq leve', onclick: () => { ui.recusando = null; render(); } }, 'Voltar'))
+      : h('div', { class: 'form pedido-edicao' },
+        bloco('A ideia', pilulas([{ v: 0, t: 'Fraca', d: '+0' }, { v: 2, t: 'Boa', d: '+2' }, { v: 4, t: 'Ótima', d: '+4' }], F.ideia, v => { F.ideia = v; })),
+        bloco('Dificuldade', pilulas(DIFICULDADES.map(d => ({ ...d, d: `${d.v}` })), F.dif, v => { F.dif = v; })),
+        bloco('Se der certo', blocoEfeitos(F.efeitos)),
+        G.escolhasTemDuracao(F.efeitos) && blocoDuracao(F, 'Dura quanto?'),
+        bloco('Custo', pilulas([{ v: preco, t: `${preco} moedas`, d: 'preço do projeto' }, { v: 0, t: 'Sem custo' }], F.custo, v => { F.custo = v; })),
+        caixaPrevia(() => previaDado(F)),
+        h('div', { class: 'frase' }, marcar(F, 'exibir', 'Rolar na tela de todos'), marcar(F, 'noticia', 'Publicar no jornal')),
+        h('div', { class: 'linha-acoes', style: 'width:100%;margin:0' },
+          h('button', { type: 'button', class: 'btn btn-rolar', disabled: ocupado, onclick: () => rolarProjeto(p, F) }, icone('dado', 20), ocupado ? 'Rolando…' : 'Rolar'),
+          h('button', { type: 'button', class: 'btn leve', disabled: ocupado, onclick: () => { ui.recusando = p.id; render(); } }, 'Recusar'))));
+}
 function abrirEdicao(p) {
   const d = structuredClone(p.dados);
   ui.edPedido = { id: p.id, d: p.tipo === 'acordo' ? structuredClone(G.acordoDoPedido(p)) : d };
@@ -362,6 +411,7 @@ function camposEdicao(p, d) {
   ];
 }
 function cartaoPedido(p, item) {
+  if (p.tipo === 'projeto') return cartaoProjeto(p, item);
   const nomes = id => nomeDe(id), teste = G.checarPedido(E, p), ocupado = ui.decidindo.has(p.id), ed = ui.edPedido?.id === p.id ? ui.edPedido : null;
   let frase;
   try { frase = G.frasePedido(p, nomes); } catch { frase = 'Pedido com dados inválidos'; }
@@ -391,15 +441,16 @@ function cartaoPedido(p, item) {
 // Tudo o que um país pediu, com a conta final: dá para aprovar de uma vez.
 function pacotePedidos(id, fila) {
   const doPais = fila.filter(p => p.pais === id), sim = G.simularPedidos(E, id, fila.filter(p => p.pais === id || p.para === id));
-  const itemDe = p => sim.itens.find(i => i.p.id === p.id), tudoCabe = doPais.every(p => itemDe(p)?.ok), { antes, depois } = sim;
+  const aprovaveis = doPais.filter(p => p.tipo !== 'projeto');
+  const itemDe = p => sim.itens.find(i => i.p.id === p.id), tudoCabe = aprovaveis.every(p => itemDe(p)?.ok), { antes, depois } = sim;
   const dinheiro = doPais.some(p => p.tipo !== 'noticia');
   return h('section', { class: 'pacote' },
     h('div', { class: 'pacote-topo' }, h('strong', {}, nomeDe(id)), h('span', { class: 'etiqueta' }, `${doPais.length} ${doPais.length === 1 ? 'pedido' : 'pedidos'}`)),
     dinheiro && h('p', { class: 'pacote-conta' }, `Moedas ${fmt(antes.moedas)} → ${fmt(depois.moedas)} · Sobra por rodada ${antes.sobra > 0 ? '+' : ''}${fmt(antes.sobra)} → ${depois.sobra > 0 ? '+' : ''}${fmt(depois.sobra)} · Fim da rodada: ${depois.falta ? `faltam ${fmt(depois.falta)}` : fmt(depois.fim)}`),
     dinheiro && depois.falta > 0 && h('p', { class: 'pedido-erro' }, `Se aprovar tudo, ${nomeDe(id)} passa fome nesta rodada.`),
     dinheiro && depois.semManutencao.length > 0 && h('p', { class: 'pedido-erro' }, `Falta dinheiro para a manutenção de ${depois.semManutencao.join(', ')}.`),
-    doPais.length > 1 && h('div', { class: 'linha-acoes', style: 'margin:6px 0 8px' },
-      h('button', { class: 'btn peq', disabled: !tudoCabe, onclick: () => aprovarTodos(p => p.pais === id) }, `Aprovar tudo (${doPais.length})`),
+    aprovaveis.length > 1 && h('div', { class: 'linha-acoes', style: 'margin:6px 0 8px' },
+      h('button', { class: 'btn peq', disabled: !tudoCabe, onclick: () => aprovarTodos(p => p.pais === id && p.tipo !== 'projeto') }, `Aprovar tudo (${aprovaveis.length})`),
       !tudoCabe && h('span', { class: 'meta' }, 'Nem tudo cabe: aprove um por um ou recuse algum.')),
     h('ul', { class: 'lista' }, doPais.map(p => cartaoPedido(p, itemDe(p)))));
 }
@@ -621,6 +672,21 @@ function previaDado(F) {
     h('p', { class: custo > (c?.moedas ?? 0) ? 'neg' : 'meta' }, custo ? `Custa ${custo} moedas, mesmo se der errado. ${c?.nome} tem ${fmt(c?.moedas ?? 0)}.` : 'Sem custo.'),
   ];
 }
+const paramsDaAcao = F => ({ paisId: F.pais, titulo: (F.titulo || '').trim() || 'Ação', lados: Number(F.lados), area: F.area, bonusExtra: F.ideia, dificuldade: Number(F.dif), custo: Number(F.custo), efeito: G.efeitoDeEscolhas(F.efeitos), duracao: lerDur(F), escalar: !!F.escalar, secreto: !!F.secreto, projeto: F.modelo === 'projeto' });
+// Rola, aplica o efeito e mostra na tela. "rola" permite usar um número já sorteado.
+function rolarAcao(e, F, rola) {
+  const c = e.paises.find(x => x.id === F.pais), { titulo, lados } = paramsDaAcao(F);
+  const r = G.acaoDado(e, paramsDaAcao(F), rola);
+  const txt = `${c.nome}, ${titulo}: tirou ${r.dado} (total ${r.total}). ${r.nome}${r.textoEfeito ? `: ${r.textoEfeito}.` : '.'}`;
+  ui.resultado = txt;
+  registrarAcao({ tipo: titulo, autor: F.pais, rolagens: [r.dado], resultado: `${r.nome} (×${r.mult})`, efeito: r.textoEfeito, nota: F.nota });
+  if (F.noticia && r.mult !== 0) e.noticias.push(G.novaNoticia(e, { titulo: `${c.nome}: ${titulo.toLowerCase()} ${r.mult > 0 ? 'dá certo' : 'termina em desastre'}`, chapeu: r.mult > 0 ? 'Exclusivo' : 'Urgente', texto: r.mult > 0 ? `O governo de ${c.nome} apresentou os resultados com orgulho e vários gráficos. Ninguém entendeu os gráficos, mas os aplausos foram sinceros.` : `O governo de ${c.nome} afirma que a ideia era ótima e que a realidade é que não colaborou. Uma comissão foi criada para descobrir de quem foi a culpa, e já tem um favorito.`, paisId: F.pais, origem: 'acao', estado: 'publicada', publicadaEm: Date.now() }));
+  const dado = G.registrarDado(e, { exibir: !!F.exibir, lados, dados: [r.dado], bonus: r.bonus, total: r.total, nomes: [c.nome], titulo, resultado: r.nome, mult: r.mult, texto: txt });
+  if (!F.exibir) e.dado = null;
+  ui.animar = dado;
+  if (F.modelo === 'projeto') F.custo = G.custoDoProjeto(c, e);
+  return txt;
+}
 function abaDado() {
   const modos = [{ v: 'acao', t: 'Ação ou projeto' }, { v: 'ataque', t: 'Ataque' }];
   const registro = E.acoes.length > 0 && painel('Registro (só você vê)', h('div', { class: 'rola-x' }, h('table', { class: 'tabela' },
@@ -661,18 +727,7 @@ function abaDado() {
 
   const F = form('dado', () => modeloDado('projeto'));
   const previa = caixaPrevia(() => previaDado(F));
-  const rolar = () => commit(e => {
-    const c = e.paises.find(x => x.id === F.pais), titulo = (F.titulo || '').trim() || 'Ação', lados = Number(F.lados);
-    const r = G.acaoDado(e, { paisId: F.pais, titulo, lados, area: F.area, bonusExtra: F.ideia, dificuldade: Number(F.dif), custo: Number(F.custo), efeito: G.efeitoDeEscolhas(F.efeitos), duracao: lerDur(F), escalar: !!F.escalar, secreto: !!F.secreto, projeto: F.modelo === 'projeto' });
-    const txt = `${c.nome}, ${titulo}: tirou ${r.dado} (total ${r.total}). ${r.nome}${r.textoEfeito ? `: ${r.textoEfeito}.` : '.'}`;
-    ui.resultado = txt;
-    registrarAcao({ tipo: titulo, autor: F.pais, rolagens: [r.dado], resultado: `${r.nome} (×${r.mult})`, efeito: r.textoEfeito, nota: F.nota });
-    if (F.noticia && r.mult !== 0) e.noticias.push(G.novaNoticia(e, { titulo: `${c.nome}: ${titulo.toLowerCase()} ${r.mult > 0 ? 'dá certo' : 'termina em desastre'}`, chapeu: r.mult > 0 ? 'Exclusivo' : 'Urgente', texto: r.mult > 0 ? `O governo de ${c.nome} apresentou os resultados com orgulho e vários gráficos. Ninguém entendeu os gráficos, mas os aplausos foram sinceros.` : `O governo de ${c.nome} afirma que a ideia era ótima e que a realidade é que não colaborou. Uma comissão foi criada para descobrir de quem foi a culpa, e já tem um favorito.`, paisId: F.pais, origem: 'acao', estado: 'publicada', publicadaEm: Date.now() }));
-    const dado = G.registrarDado(e, { exibir: !!F.exibir, lados, dados: [r.dado], bonus: r.bonus, total: r.total, nomes: [c.nome], titulo, resultado: r.nome, mult: r.mult, texto: txt });
-    if (!F.exibir) e.dado = null;
-    ui.animar = dado;
-    if (F.modelo === 'projeto') F.custo = G.custoDoProjeto(c, e);
-  });
+  const rolar = () => commit(e => { rolarAcao(e, F); });
   const custoOpcoes = [{ v: 0, t: 'Sem custo' }, { v: 20, t: 'Baixo', d: '20 moedas' }, { v: 40, t: 'Médio', d: '40 moedas' }, { v: 80, t: 'Alto', d: '80 moedas' }];
   const paisObj = E.paises.find(x => x.id === F.pais) || E.paises[0];
   if (F.modelo === 'projeto') custoOpcoes.unshift({ v: G.custoDoProjeto(paisObj, E), t: 'Preço do projeto', d: `${G.custoDoProjeto(paisObj, E)} moedas` });

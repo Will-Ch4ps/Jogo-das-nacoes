@@ -572,7 +572,6 @@ body.com-artigo { overflow: hidden; }
 .btn-pedir.ativo { background: var(--ouro); border-color: var(--ouro); color: #231803; }
 .btn-pedir.ativo small { color: #5a4310; }
 .btn-pedir:disabled { opacity: .45; cursor: not-allowed; }
-.btn-pedir:last-child:nth-child(odd) { grid-column: 1 / -1; }
 .pedido-form { margin-top: 10px; padding: 12px; background: var(--fundo-2); border: 1px solid var(--linha); border-radius: var(--raio-p); }
 .form-pedido { display: flex; flex-direction: column; gap: 11px; }
 .form-pedido label:not(.check) { display: flex; flex-direction: column; gap: 4px; font-weight: 600; }

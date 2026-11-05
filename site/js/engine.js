@@ -977,6 +977,12 @@ function noticiaDoPedido(e, p) {
   if (mensagem) return novaNoticia(e, { ...base, tipo: 'mensagem', selo: 'Mensagem', de: p.pais, para, privada: !!para && !!d.privada, paisId: para });
   return novaNoticia(e, { ...base, tipo: 'noticia', selo: 'Imprensa', fontePais: p.pais });
 }
+// O que o grupo espera ganhar com um projeto. O professor recebe o efeito já escolhido, e só ajusta o tamanho.
+export const GANHOS_PROJETO = [
+  { v: 'ganhaRodada', t: 'Dinheiro por rodada' }, { v: 'ganhaAgora', t: 'Dinheiro de uma vez' }, { v: 'areaMelhora', t: 'Melhorar uma área', area: true },
+  { v: 'comidaBarata', t: 'Comida mais barata' }, { v: 'popCresce', t: 'Mais gente' },
+];
+const ganhoDoProjeto = d => GANHOS_PROJETO.find(g => g.v === d.ganho) || GANHOS_PROJETO[0];
 const areaDoPedido = d => { if (!AREAS.some(a => a.id === d.area)) throw new Error('Escolha uma área.'); return d.area; };
 export function aplicarPedido(e, p) {
   const d = p.dados || {};
@@ -985,18 +991,28 @@ export function aplicarPedido(e, p) {
   if (p.tipo === 'dinheiro') return transferir(e, p.pais, d.para, d.valor, 'Pedido do grupo');
   if (p.tipo === 'acordo') return registrarAcordoDoForm(e, acordoDoPedido(p));
   if (p.tipo === 'noticia') { const n = noticiaDoPedido(e, p); e.noticias.push(n); return publicarNoticia(e, n); }
+  if (p.tipo === 'projeto') {
+    // Só para a conta do que está na fila: reserva o preço. O projeto de verdade passa pelo dado, em acaoDado.
+    const c = paisPorId(e, p.pais), custo = custoDoProjeto(c, e);
+    if (!String(d.nome || '').trim()) throw new Error('O projeto precisa de um nome.');
+    if (custo > c.moedas) throw new Error(`${c.nome} precisa de ${custo} moedas e tem ${c.moedas}.`);
+    c.moedas -= custo; c.projetos = (c.projetos || 0) + 1;
+    return null;
+  }
   throw new Error('Pedido desconhecido.');
 }
 // Testa em uma cópia: o cartão já avisa se não vai dar certo.
 export function checarPedido(e, p) {
   try { aplicarPedido(structuredClone({ ...e, historico: [] }), p); return { ok: true }; } catch (err) { return { ok: false, erro: err.message }; }
 }
+export const efeitoDoProjeto = d => { const g = ganhoDoProjeto(d); return { tipo: g.v, area: AREAS.some(a => a.id === d.area) ? d.area : 'emp' }; };
 export function frasePedido(p, nomeDe) {
   const d = p.dados || {};
   if (p.tipo === 'subir') return Number(d.niveis) > 1 ? `Subir ${nomeArea(d.area)} em ${d.niveis} níveis` : `Subir ${nomeArea(d.area)}`;
   if (p.tipo === 'manutencao') return d.cortar ? `Cortar a manutenção de ${nomeArea(d.area)}` : `Voltar a pagar a manutenção de ${nomeArea(d.area)}`;
   if (p.tipo === 'dinheiro') return `Mandar ${d.valor} moedas para ${nomeDe(d.para)}`;
   if (p.tipo === 'acordo') return fraseAcordo({ ...d }, nomeDe);
+  if (p.tipo === 'projeto') return `Projeto: ${d.nome}`;
   if (d.tipo === 'mensagem') return `Mensagem ${d.para ? `para ${nomeDe(d.para)}${d.privada ? ' (privada)' : ''}` : 'aberta a todos'}: ${d.titulo}`;
   return `Notícia: ${d.titulo}`;
 }
@@ -1021,6 +1037,7 @@ export function detalhePedido(e, p) {
     } catch { return []; }
   }
   if (p.tipo === 'noticia') return d.texto ? [d.texto] : [];
+  if (p.tipo === 'projeto') { const g = ganhoDoProjeto(d); return [...(d.ideia ? [d.ideia] : []), `Quer: ${g.t}${g.area && AREAS.some(a => a.id === d.area) ? ` (${nomeArea(d.area)})` : ''}`]; }
   return [];
 }
 

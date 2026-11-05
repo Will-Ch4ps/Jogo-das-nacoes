@@ -1147,3 +1147,37 @@ test('as frases dos acordos ficam curtas', () => {
   assert.equal(G.fraseAcordo({ modelo: 'apoio', a: 'A', b: 'B', area: 'mil', niveis: 2, precoApoio: 5, dur: 2 }, nome), 'A empresta 2 níveis de Poder militar a B, por 5 moedas por rodada. Vale por 2 rodadas.');
   assert.equal(G.fraseAcordo({ modelo: 'comida', a: 'A', b: 'B', qtdComida: 1, preco: 'gratis', dur: 1 }, nome), 'A dá 20 de comida por rodada a B, de graça. Vale por 1 rodada.');
 });
+
+test('projeto na fila: reserva o preço na conta, gasta ação e não muda o jogo', () => {
+  const s = jogoPedidos();
+  s.paises[0].moedas = 100;
+  const p = ped('projeto', { nome: 'Chip nacional', ideia: 'Fazer chips.', ganho: 'areaMelhora', area: 'tec' });
+  const preco = G.custoDoProjeto(s.paises[0], s);
+  assert.equal(G.frasePedido(p, id => id), 'Projeto: Chip nacional');
+  assert.deepEqual(G.detalhePedido(s, p), ['Fazer chips.', 'Quer: Melhorar uma área (Tecnologia)']);
+  assert.equal(G.acoesUsadas([p], 'm', 1), 1);
+  const r = G.simularPedidos(s, 'm', [p, ped('projeto', { nome: 'Outro' }, { id: 2 })]);
+  assert.equal(r.itens[0].moedas, -preco);
+  assert.ok(-r.itens[1].moedas > preco, 'o segundo projeto custa mais');
+  assert.equal(s.paises[0].moedas, 100);
+  assert.equal(s.paises[0].projetos || 0, 0);
+  assert.equal(G.checarPedido(s, ped('projeto', { nome: '  ' })).ok, false, 'sem nome');
+  s.paises[0].moedas = 0;
+  assert.match(G.checarPedido(s, p).erro, /precisa de/);
+});
+
+test('o ganho do projeto vira o efeito pré-preenchido, e valor estranho cai no padrão', () => {
+  assert.deepEqual(G.efeitoDoProjeto({ ganho: 'areaMelhora', area: 'tec' }), { tipo: 'areaMelhora', area: 'tec' });
+  assert.deepEqual(G.efeitoDoProjeto({ ganho: 'nivelInventado', area: 'xxx' }), { tipo: 'ganhaRodada', area: 'emp' });
+  for (const g of G.GANHOS_PROJETO) assert.ok(G.tipoEfeito(g.v), g.v);
+});
+
+test('projeto de verdade: a rolagem decidida antes dá o mesmo resultado na prévia e no jogo', () => {
+  const s = jogoPedidos();
+  const d = { paisId: 'm', titulo: 'Chip', lados: 20, area: 'edu', bonusExtra: 2, dificuldade: 11, custo: 30, efeito: { moedas: 10 }, projeto: true, duracao: 3 };
+  const rola = () => 15;
+  const previa = G.acaoDado(structuredClone(s), d, rola), real = G.acaoDado(s, d, rola);
+  assert.deepEqual([previa.nome, previa.total, previa.textoEfeito], [real.nome, real.total, real.textoEfeito]);
+  assert.equal(s.paises[0].projetos, 1);
+  assert.equal(s.paises[0].moedas, 170);
+});

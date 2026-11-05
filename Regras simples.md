@@ -20,14 +20,15 @@ O código abre a ficha do país e a aba **Pedidos**, que é por onde o grupo man
 O professor abre e fecha duas janelas: a de **ações** e a do **jornal**. Com a janela aberta, o grupo manda o pedido pelo celular.
 
 - **Cada país tem 5 ações por rodada.** O professor pode mudar para 3 ou 8, e dar ou tirar ações de um país ou de todos naquela rodada.
-- **Usam 1 ação:** subir uma área (vários níveis na mesma área, no mesmo pedido, contam como 1), cortar ou retomar a manutenção, mandar dinheiro e propor um acordo.
+- **Usam 1 ação:** subir uma área (vários níveis na mesma área, no mesmo pedido, contam como 1), cortar ou retomar a manutenção, mandar dinheiro, propor um acordo e propor um projeto.
 - **Acordo:** só o país que montou gasta a ação. O outro país aceita ou recusa, sem gastar nada, e só depois o pedido chega ao professor.
 - **Jornal:** não usa ação. O texto só sai se o professor aprovar.
 - **Recusado ou cancelado:** a ação volta para o grupo.
 - **Peso do acordo:** antes de mandar ou aceitar, o grupo vê linha a linha o que muda na conta (pagamento, desconto, o que ganha e o que perde) e o que acontece com cada lado. Depois de aprovado, isso continua na aba Acordos, e a conta da rodada mostra a ajuda em linhas próprias.
 - **Conta antes de enviar:** a aba mostra quanto cada pedido custa, somado ao que já foi pedido, e com quanto o país fica. O que não cabe não pode ser enviado.
 - **O professor** vê os pedidos de cada país juntos, com a conta final, e pode aprovar tudo de uma vez. Ele também aprova, ajusta ou recusa cada pedido. Se ajustar um acordo, os dois países veem a versão final.
-- **Continuam na conversa com o professor:** projetos, ataques e missões cumpridas.
+- **Projeto:** o grupo manda o nome, a ideia e o que espera ganhar. O professor julga a ideia, define a dificuldade e o tamanho do efeito, e rola o dado ali mesmo. Se recusar, a ação volta.
+- **Continuam na conversa com o professor:** ataques e missões cumpridas.
 
 ## Toda rodada
 1. O país recebe o dinheiro de **Entra**.
@@ -73,7 +74,7 @@ Os grupos combinam entre si e mandam o pedido na aba Pedidos, ou chamam o profes
 - **Emprestar níveis a outro país:** quem empresta perde a força daqueles níveis enquanto durar e continua pagando a manutenção normal. Quem recebe ganha a força e não paga manutenção por ela, só o preço combinado. Não dá para emprestar mais do que o país comprou nem o que já está emprestado. Exemplo: com Poder militar 12, emprestar 2 deixa o país no 10.
 - **Fornecer comida:** quem recebe deixa de pagar essa parte da conta de comida e paga o preço combinado a quem fornece.
 - **Publicar uma notícia:** o grupo manda o texto no formato que quiser e o professor publica no jornal com a fonte "Imprensa de [país]". Vale tudo, inclusive boato, com a moderação do professor. Também vale mandar uma mensagem a outro país, aberta no jornal ou só para quem recebe. Se a notícia mudar algo no jogo, o professor decide se os alunos veem o efeito.
-- **Tentar um projeto ou ação arriscada:** o grupo explica a ideia e o professor define, antes de rolar, o custo, a dificuldade e o efeito.
+- **Tentar um projeto ou ação arriscada:** o grupo manda a ideia na aba Pedidos, e o professor define, antes de rolar, o custo, a dificuldade e o efeito.
 - **Atacar outro país:** quem perde paga parte do próprio dinheiro ao outro (20%, se o professor não definir outro valor). Empate é do defensor.
   - **Militar:** só contra vizinhos e vira notícia. Dado + Poder militar de cada lado.
   - **Hacker:** contra qualquer país e fica em segredo. Dado + Tecnologia contra dado + Segurança.
