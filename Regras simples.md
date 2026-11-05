@@ -14,7 +14,18 @@ Cada país tem 4 missões, com prêmio em moedas, que só o próprio grupo vê e
 - **Todos:** mapa, histórias dos países, ranking com a riqueza, níveis das áreas, jornal e acordos públicos.
 - **Só o grupo, com o código do país:** dinheiro, pessoas, a conta da rodada linha por linha com a duração de cada item, a previsão das próximas rodadas, o nível comprado e o real de cada área, projetos, acordos, inclusive os secretos, dicas e missões.
 
-O código só libera a visualização. O grupo decide e um representante leva a decisão ao professor.
+O código abre a ficha do país e a aba **Pedidos**, que é por onde o grupo manda o que decidiu. Nada vale até o professor aprovar.
+
+## Pedidos e ações
+O professor abre e fecha duas janelas: a de **ações** e a do **jornal**. Com a janela aberta, o grupo manda o pedido pelo celular.
+
+- **Cada país tem 5 ações por rodada.** O professor pode mudar para 3 ou 8, e dar ou tirar ações de um país ou de todos naquela rodada.
+- **Usam 1 ação:** subir uma área, cortar ou retomar a manutenção, mandar dinheiro e propor um acordo.
+- **Acordo:** só o país que montou gasta a ação. O outro país aceita ou recusa, sem gastar nada, e só depois o pedido chega ao professor.
+- **Jornal:** não usa ação. O texto só sai se o professor aprovar.
+- **Recusado ou cancelado:** a ação volta para o grupo.
+- **O professor** aprova, ajusta ou recusa cada pedido. Se ajustar um acordo, os dois países veem a versão final.
+- **Continuam na conversa com o professor:** projetos, ataques e missões cumpridas.
 
 ## Toda rodada
 1. O país recebe o dinheiro de **Entra**.
@@ -51,7 +62,7 @@ A conta de comida é 1 moeda por mil pessoas: quanto mais gente, mais cara. Alim
 Cada país tem história, clima, ponto forte, ponto fraco e desafio, visíveis para todos na tela **Países**. Quem pode ajudar, cada grupo descobre investigando. As dicas e as missões ficam só na ficha do próprio país. Todos começam com a mesma riqueza e o mesmo total de níveis, só que distribuídos de um jeito diferente.
 
 ## O que os grupos podem fazer
-Os grupos combinam entre si e chamam o professor, que registra no sistema.
+Os grupos combinam entre si e mandam o pedido na aba Pedidos, ou chamam o professor nos casos que continuam na conversa.
 
 - **Subir um nível** de uma área. Isso é o nível **comprado**.
 - **Cortar ou retomar a manutenção** de uma área, para sobrar dinheiro por um tempo.

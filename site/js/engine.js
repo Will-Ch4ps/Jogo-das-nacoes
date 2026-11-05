@@ -25,7 +25,7 @@ const nomeArea = id => AREAS.find(a => a.id === id)?.nome || id;
 
 export const PARAMS_INICIAIS = {
   duracaoMin: 15, valorPessoa: 5, moedasPorEmprego: 10, crescimentoPorSaude: 1, economiaAlimentacao: 10, moedasPorAcordo: 3, maxAcordosInfra: 3, descontoTecnologia: 5, perdaFome: 10,
-  precoNivel: 10, custoProjeto: 30, premioAtaque: 20, manutencaoPct: 100, rodadasParaPerderNivel: 2,
+  acoesPorRodada: 5, precoNivel: 10, custoProjeto: 30, premioAtaque: 20, manutencaoPct: 100, rodadasParaPerderNivel: 2,
   multaEssencial: 20, multaImportante: 10, perdaSaude: 2, multaTecnologia: 10, crimePct: 5,
 };
 
@@ -476,6 +476,7 @@ export function fecharRodada(original) {
   e.resumo = { rodada: e.rodada, itens };
   e.rodada += 1;
   e.timer = { rodando: false, fimEm: null, restanteMs: p.duracaoMin * 60000 };
+  e.acoesExtra = {}; // Ações a mais ou a menos valem só para a rodada em que foram dadas.
   return e;
 }
 
@@ -722,6 +723,7 @@ export function partePublica(e) {
   const r = ranking(e);
   return {
     rodada: e.rodada, aviso: e.aviso, timer: e.timer, encerrado: !!e.encerrado, mudanca: e.mudanca || 0,
+    janelas: { acoes: !!e.janelas?.acoes, noticias: !!e.janelas?.noticias },
     params: { duracaoMin: e.params.duracaoMin, valorPessoa: e.params.valorPessoa },
     paises: e.paises.map(c => {
       const it = r.find(x => x.id === c.id), ant = e.posAnterior?.[c.id];
@@ -792,6 +794,144 @@ export function todasAsVisoes(e) {
   }));
 }
 
+/* ---------- Acordos de formulário: os mesmos no admin e na aba Pedidos ---------- */
+export const VALORES_ACORDO = { pagamento: [5, 10, 20], comida: [10, 20, 40] };
+const n0 = v => Number(v || 0);
+const duracaoDoForm = F => (F.dur === '' || F.dur == null ? null : Number(F.dur));
+const pagamentoDoForm = F => (F.tam === 'x' ? n0(F.valor) : VALORES_ACORDO.pagamento[F.tam] ?? 0);
+function comidaDoForm(F) {
+  const q = VALORES_ACORDO.comida[F.qtdComida] ?? 0;
+  return { q, p: { gratis: 0, metade: Math.round(q / 2), igual: q, lucro: Math.round(q * 1.5) }[F.preco] ?? q };
+}
+// Na prévia, um apoio impossível não pode travar a tela: o erro só aparece ao registrar.
+function efeitosApoioPrevia(e, F) {
+  try { return efeitosDoApoio(e, { de: F.a, para: F.b, area: F.area, niveis: F.niveis, preco: n0(F.precoApoio) }); } catch { return { [F.a]: {}, [F.b]: { areas: { [F.area]: Number(F.niveis) } } }; }
+}
+// Transforma o que foi escolhido na tela no acordo que o jogo registra.
+export function montarAcordo(e, F) {
+  const nome = id => paisPorId(e, id)?.nome || 'removido', A = nome(F.a), B = nome(F.b), titulo = String(F.titulo || '').trim();
+  const base = { descricao: String(F.desc || '').trim(), duracao: duracaoDoForm(F), visibilidade: F.secreto ? 'oculto' : 'publico' };
+  if (F.modelo === 'livre') {
+    if (F.todos) return { ...base, titulo, tipo: 'global', paises: [], efeitos: { '*': efeitoDeEscolhas(F.efeitos?.['*'] || []) } };
+    const ids = e.paises.filter(c => F.paises?.[c.id]).map(c => c.id);
+    return { ...base, titulo: titulo || (ids.length ? `Acordo entre ${ids.map(nome).join(' e ')}` : ''), tipo: 'paises', paises: ids, efeitos: Object.fromEntries(ids.map(id => [id, efeitoDeEscolhas(F.efeitos?.[id] || [])])) };
+  }
+  const par = { tipo: 'paises', paises: [F.a, F.b] };
+  if (F.modelo === 'pagamento') {
+    const v = pagamentoDoForm(F), u = n0(F.unica);
+    const ef = (s, m) => ({ ...(m ? { moedas: s * m } : {}), ...(u ? { moedasAgora: s * u } : {}) });
+    return { ...base, ...par, titulo: titulo || `Pagamento de ${A} para ${B}`, efeitos: { [F.a]: ef(-1, v), [F.b]: ef(1, v) } };
+  }
+  if (F.modelo === 'comida') {
+    const { q, p } = comidaDoForm(F);
+    return { ...base, ...par, titulo: titulo || `Comida de ${A} para ${B}`, efeitos: { [F.a]: { moedas: p }, [F.b]: { moedas: -p, comida: -q } } };
+  }
+  const nomeA = nomeArea(F.area);
+  return { ...base, descricao: base.descricao || `${A} apoia ${nomeA} de ${B}: +${F.niveis} ${Number(F.niveis) === 1 ? 'nível' : 'níveis'} enquanto durar.`, ...par, titulo: titulo || `${A} apoia ${nomeA} de ${B}`, efeitos: efeitosApoioPrevia(e, F) };
+}
+// Confere e registra. Um erro aqui não deixa nada pela metade: quem chama desfaz a mudança.
+export function registrarAcordoDoForm(e, F) {
+  if (F.modelo !== 'livre' && (!F.a || !F.b || F.a === F.b)) throw new Error('Escolha dois países diferentes.');
+  if (F.modelo === 'apoio') efeitosDoApoio(e, { de: F.a, para: F.b, area: F.area, niveis: F.niveis, preco: n0(F.precoApoio) });
+  const d = montarAcordo(e, F);
+  if (F.modelo === 'livre' && !F.todos && d.paises.length < 2) throw new Error('Escolha pelo menos dois países.');
+  if (!d.titulo) throw new Error('Dê um nome ao acordo.');
+  const a = registrarAcordo(e, d);
+  if (a.tipo === 'global' && a.visibilidade === 'publico') e.noticias.push(novaNoticia(e, { titulo: `Acordo global: ${a.titulo}`, origem: 'acordo', estado: 'publicada', publicadaEm: Date.now() }));
+  return a;
+}
+export function fraseAcordo(F, nomeDe) {
+  const A = nomeDe(F.a), B = nomeDe(F.b);
+  let t = '';
+  if (F.modelo === 'pagamento') {
+    const v = pagamentoDoForm(F), u = n0(F.unica);
+    t = `${A} paga a ${B} ${[u ? `${u} moedas na hora` : '', v ? `${v} moedas por rodada` : ''].filter(Boolean).join(' e ') || 'um valor a combinar'}`;
+  } else if (F.modelo === 'comida') {
+    const { q, p } = comidaDoForm(F);
+    t = `${A} fornece comida a ${B}: a conta de ${B} cai ${q} moedas por rodada, ${p ? `e ${B} paga ${p} moedas por rodada` : 'de graça'}`;
+  } else if (F.modelo === 'apoio') {
+    const n = Number(F.niveis), v = n0(F.precoApoio);
+    t = `${A} ajuda ${B} em ${nomeArea(F.area)}: +${n} ${n === 1 ? 'nível' : 'níveis'}${v ? `, e ${B} paga ${v} moedas por rodada` : ', de graça'}`;
+  } else t = String(F.desc || '').trim() || 'Combinado livre';
+  const d = duracaoDoForm(F), tempo = d == null ? 'Vale até o fim do jogo' : d === 1 ? 'Vale por 1 rodada' : `Vale por ${d} rodadas`;
+  return `${t.replace(/[.!?]$/, '')}. ${tempo}.${F.secreto ? ' Acordo secreto.' : ''}`;
+}
+
+/* ---------- Pedidos dos grupos: nada muda no jogo até o professor aprovar ---------- */
+export const limiteAcoes = (e, id) => Math.max(0, Number(e.params.acoesPorRodada ?? 5) + Number(e.acoesExtra?.[id] || 0));
+// Recusado e cancelado devolvem a ação. Notícia não gasta. No acordo, só quem montou gasta.
+export const acoesUsadas = (pedidos, id, rodada) => pedidos.filter(p => p.pais === id && p.rodada === rodada && p.tipo !== 'noticia' && ['aguardando', 'fila', 'aprovado'].includes(p.estado)).length;
+
+// O formulário do acordo vem do celular do grupo: confere tudo antes de usar.
+export function acordoDoPedido(p) {
+  const F = { modelo: 'livre', tam: 1, valor: '', unica: '', qtdComida: 1, preco: 'igual', area: 'emp', niveis: 1, precoApoio: 0, titulo: '', desc: '', dur: 3, secreto: false, todos: false, ...p.dados };
+  if (!p.editado) {
+    const parOk = F.a !== F.b && [F.a, F.b].includes(p.pais) && [F.a, F.b].includes(p.para);
+    const numOk = [F.valor, F.unica, F.precoApoio].every(v => Number.isFinite(n0(v)) && n0(v) >= 0);
+    const durOk = F.dur === '' || F.dur == null || (Number.isInteger(Number(F.dur)) && Number(F.dur) > 0);
+    if (!parOk || !numOk || !durOk || !['pagamento', 'comida', 'apoio', 'livre'].includes(F.modelo) || !AREAS.some(a => a.id === F.area) || ![1, 2, 3].includes(Number(F.niveis)) || ![0, 1, 2, 'x'].includes(F.tam) || ![0, 1, 2].includes(F.qtdComida) || !['gratis', 'metade', 'igual', 'lucro'].includes(F.preco)) throw new Error('Este pedido veio com dados inválidos. Recuse e peça para refazer.');
+    F.todos = false;
+  }
+  if (F.modelo === 'livre') {
+    F.paises = F.paises || { [F.a]: true, [F.b]: true };
+    F.efeitos = F.efeitos || { [F.a]: [], [F.b]: [] };
+  }
+  return F;
+}
+function noticiaDoPedido(e, p) {
+  const d = p.dados || {}, titulo = String(d.titulo || '').trim().slice(0, 140), texto = String(d.texto || '').trim().slice(0, 5000), mensagem = d.tipo === 'mensagem', para = mensagem && d.para ? d.para : null;
+  if (!titulo) throw new Error('O texto precisa de uma manchete.');
+  if (para && (para === p.pais || !paisPorId(e, para))) throw new Error('Escolha outro país para receber a mensagem.');
+  const base = { titulo, texto, chapeu: d.chapeu || null, origem: 'pedido' };
+  if (mensagem) return novaNoticia(e, { ...base, tipo: 'mensagem', selo: 'Mensagem', de: p.pais, para, privada: !!para && !!d.privada, paisId: para });
+  return novaNoticia(e, { ...base, tipo: 'noticia', selo: 'Imprensa', fontePais: p.pais });
+}
+const areaDoPedido = d => { if (!AREAS.some(a => a.id === d.area)) throw new Error('Escolha uma área.'); return d.area; };
+export function aplicarPedido(e, p) {
+  const d = p.dados || {};
+  if (p.tipo === 'subir') return subirNivel(e, p.pais, areaDoPedido(d));
+  if (p.tipo === 'manutencao') return cortarManutencao(e, p.pais, areaDoPedido(d), !!d.cortar);
+  if (p.tipo === 'dinheiro') return transferir(e, p.pais, d.para, d.valor, 'Pedido do grupo');
+  if (p.tipo === 'acordo') return registrarAcordoDoForm(e, acordoDoPedido(p));
+  if (p.tipo === 'noticia') { const n = noticiaDoPedido(e, p); e.noticias.push(n); return publicarNoticia(e, n); }
+  throw new Error('Pedido desconhecido.');
+}
+// Testa em uma cópia: o cartão já avisa se não vai dar certo.
+export function checarPedido(e, p) {
+  try { aplicarPedido(structuredClone({ ...e, historico: [] }), p); return { ok: true }; } catch (err) { return { ok: false, erro: err.message }; }
+}
+export function frasePedido(p, nomeDe) {
+  const d = p.dados || {};
+  if (p.tipo === 'subir') return `Subir ${nomeArea(d.area)}`;
+  if (p.tipo === 'manutencao') return d.cortar ? `Cortar a manutenção de ${nomeArea(d.area)}` : `Voltar a pagar a manutenção de ${nomeArea(d.area)}`;
+  if (p.tipo === 'dinheiro') return `Mandar ${d.valor} moedas para ${nomeDe(d.para)}`;
+  if (p.tipo === 'acordo') return fraseAcordo({ ...d }, nomeDe);
+  if (d.tipo === 'mensagem') return `Mensagem ${d.para ? `para ${nomeDe(d.para)}${d.privada ? ' (privada)' : ''}` : 'aberta a todos'}: ${d.titulo}`;
+  return `Notícia: ${d.titulo}`;
+}
+// O que o professor precisa ver para decidir de uma vez.
+export function detalhePedido(e, p) {
+  const c = paisPorId(e, p.pais), d = p.dados || {};
+  if (!c) return [];
+  if (p.tipo === 'subir' && AREAS.some(a => a.id === d.area)) {
+    const n = c.niveis[d.area], custo = custoSubir(n, e.params), a = AREAS.find(x => x.id === d.area);
+    return [`Nível ${n} para ${n + 1}. Custa ${custo}: tem ${c.moedas} moedas, fica com ${c.moedas - custo}. A manutenção sobe ${a.manut} por rodada.`];
+  }
+  if (p.tipo === 'manutencao' && AREAS.some(a => a.id === d.area)) {
+    const v = custoManutencao(c, d.area, e.params);
+    return [d.cortar ? `Economiza ${v} por rodada, e a área entra em crise na rodada seguinte.` : `Volta a custar ${v} por rodada, e a crise acaba.`];
+  }
+  if (p.tipo === 'dinheiro') return [`Tem ${c.moedas} moedas, fica com ${c.moedas - Number(d.valor)}.`];
+  if (p.tipo === 'acordo') {
+    try {
+      const a = montarAcordo(e, acordoDoPedido(p));
+      return [a.titulo, ...a.paises.map(id => `${paisPorId(e, id)?.nome}: ${textoEfeito(a.efeitos[id]) || 'nada muda nos números'}`)];
+    } catch { return []; }
+  }
+  if (p.tipo === 'noticia') return d.texto ? [d.texto] : [];
+  return [];
+}
+
 // Códigos sem letras e números que se confundem (O e 0, I e 1).
 const ALFABETO = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 export function novoCodigo() {
@@ -808,6 +948,6 @@ export function garantirCodigos(e) {
 
 export const estadoNovo = (paises, eventos, missoes) => garantirMissoes(garantirCodigos({
   rodada: 1, aviso: '', encerrado: false, timer: { rodando: false, fimEm: null, restanteMs: PARAMS_INICIAIS.duracaoMin * 60000 },
-  params: { ...PARAMS_INICIAIS }, paises: structuredClone(paises).map(c => ({ ...c, niveisIniciais: { ...c.niveis } })), acordos: [], trocas: [], noticias: [], acoes: [], marcas: [], sugestoesFeitas: [],
+  params: { ...PARAMS_INICIAIS }, paises: structuredClone(paises).map(c => ({ ...c, niveisIniciais: { ...c.niveis } })), acordos: [], trocas: [], noticias: [], acoes: [], marcas: [], sugestoesFeitas: [], janelas: { acoes: false, noticias: false }, acoesExtra: {},
   eventos: structuredClone(eventos), dado: null, resumo: null, posAnterior: null, historico: [], mudanca: 0,
 }), missoes);

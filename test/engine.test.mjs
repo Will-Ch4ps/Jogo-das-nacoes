@@ -783,3 +783,137 @@ test('eventos aplicam e o aviso público não mostra números', () => {
   for (const n of pub.noticias) assert.ok(!/\d/.test(n.titulo));
   assert.equal(pub.acordos.length, 0);
 });
+
+/* ---------- Pedidos dos grupos ---------- */
+const jogoPedidos = () => {
+  const s = com(modelo(), outro());
+  s.paises[0].moedas = 200;
+  return s;
+};
+const ped = (tipo, dados, extra = {}) => ({ id: 1, rodada: 1, pais: 'm', para: null, tipo, dados, estado: 'fila', editado: false, ...extra });
+
+test('pedido de subir área só muda o jogo quando é aplicado, e cobra o preço', () => {
+  const s = jogoPedidos(), antes = s.paises[0].niveis.emp, p = ped('subir', { area: 'emp' });
+  assert.equal(G.checarPedido(s, p).ok, true);
+  assert.equal(s.paises[0].niveis.emp, antes, 'a checagem não muda nada');
+  G.aplicarPedido(s, p);
+  assert.equal(s.paises[0].niveis.emp, antes + 1);
+  assert.equal(s.paises[0].moedas, 200 - G.custoSubir(antes, s.params));
+});
+
+test('checagem avisa quando falta dinheiro, sem mudar o jogo', () => {
+  const s = jogoPedidos();
+  s.paises[0].moedas = 1;
+  const r = G.checarPedido(s, ped('subir', { area: 'emp' }));
+  assert.equal(r.ok, false);
+  assert.match(r.erro, /precisa de/);
+  assert.equal(s.paises[0].moedas, 1);
+  assert.equal(G.checarPedido(s, ped('dinheiro', { para: 'o', valor: 50 })).ok, false);
+  assert.equal(G.checarPedido(s, ped('subir', { area: 'inventada' })).ok, false);
+});
+
+test('pedidos de manutenção e de dinheiro', () => {
+  const s = jogoPedidos();
+  G.aplicarPedido(s, ped('manutencao', { area: 'sau', cortar: true }));
+  assert.equal(s.paises[0].cortadas.sau, true);
+  G.aplicarPedido(s, ped('manutencao', { area: 'sau', cortar: false }));
+  assert.equal(s.paises[0].cortadas.sau, false);
+  const b = s.paises[1].moedas;
+  G.aplicarPedido(s, ped('dinheiro', { para: 'o', valor: 30 }));
+  assert.equal(s.paises[0].moedas, 170);
+  assert.equal(s.paises[1].moedas, b + 30);
+});
+
+test('acordo de pedido vira o mesmo acordo do formulário do admin', () => {
+  const s = jogoPedidos();
+  const F = { modelo: 'pagamento', a: 'm', b: 'o', tam: 1, valor: '', unica: '', dur: 3, secreto: true, desc: '' };
+  G.aplicarPedido(s, ped('acordo', F, { para: 'o' }));
+  const a = s.acordos.at(-1);
+  assert.deepEqual(a.paises, ['m', 'o']);
+  assert.equal(a.efeitos.m.moedas, -10);
+  assert.equal(a.efeitos.o.moedas, 10);
+  assert.equal(a.restantes, 3);
+  assert.equal(a.visibilidade, 'oculto');
+});
+
+test('acordo livre registra só o combinado, e o ajuste do professor pode pôr números', () => {
+  const s = jogoPedidos();
+  const F = { modelo: 'livre', a: 'm', b: 'o', dur: '', desc: 'Bloqueio da Estrada Central.' };
+  const p = ped('acordo', F, { para: 'o' });
+  assert.match(G.frasePedido(p, id => id), /Bloqueio da Estrada Central\. Vale até o fim do jogo\./);
+  G.aplicarPedido(s, p);
+  assert.equal(s.acordos.at(-1).descricao, 'Bloqueio da Estrada Central.');
+  assert.match(s.acordos.at(-1).titulo, /Acordo entre/);
+  const ajustado = G.acordoDoPedido(p);
+  ajustado.efeitos.m = [{ tipo: 'ganhaRodada', tamanho: 1, area: 'emp' }];
+  G.aplicarPedido(s, ped('acordo', ajustado, { para: 'o', editado: true }));
+  assert.equal(s.acordos.at(-1).efeitos.m.moedas, 10);
+});
+
+test('pedido de acordo com dados forjados é recusado', () => {
+  const s = jogoPedidos();
+  const base = { modelo: 'pagamento', a: 'm', b: 'o', tam: 1, dur: 3 };
+  const ruim = dados => G.checarPedido(s, ped('acordo', { ...base, ...dados }, { para: 'o' })).ok;
+  assert.equal(ruim({}), true);
+  assert.equal(ruim({ a: 'o', b: 'x' }), false, 'não envolve quem pediu');
+  assert.equal(ruim({ b: 'm' }), false, 'consigo mesmo');
+  assert.equal(ruim({ tam: 'x', valor: -500 }), false, 'valor negativo inverteria o pagamento');
+  assert.equal(ruim({ modelo: 'apoio', area: 'emp', niveis: 99 }), false);
+  assert.equal(ruim({ todos: true, modelo: 'inventado' }), false);
+  assert.equal(ruim({ dur: -1 }), false);
+});
+
+test('apoio pedido além do que o país tem é barrado na checagem', () => {
+  const s = jogoPedidos();
+  s.paises[0].niveis.emp = 1;
+  const r = G.checarPedido(s, ped('acordo', { modelo: 'apoio', a: 'm', b: 'o', area: 'emp', niveis: 2, precoApoio: 0, dur: 2 }, { para: 'o' }));
+  assert.equal(r.ok, false);
+  assert.match(r.erro, /não pode dar/);
+});
+
+test('texto de um grupo sai com a fonte do país, e mensagem privada não vai ao jornal', () => {
+  const s = jogoPedidos();
+  G.aplicarPedido(s, ped('noticia', { tipo: 'noticia', titulo: 'Nossa safra é a melhor', texto: 'Dizem.' }));
+  const n = s.noticias.at(-1);
+  assert.equal(n.estado, 'publicada');
+  assert.equal(n.fontePais, 'm');
+  assert.equal(G.partePublica(s).noticias.at(-1).titulo, 'Nossa safra é a melhor');
+  G.aplicarPedido(s, ped('noticia', { tipo: 'mensagem', titulo: 'SEGREDO', texto: '', para: 'o', privada: true }));
+  assert.ok(!JSON.stringify(G.partePublica(s)).includes('SEGREDO'));
+  assert.equal(G.visaoDoPais(s.paises[1], s).mensagens[0].titulo, 'SEGREDO');
+  assert.equal(G.checarPedido(s, ped('noticia', { titulo: '  ' })).ok, false, 'sem manchete');
+  assert.equal(G.checarPedido(s, ped('noticia', { tipo: 'mensagem', titulo: 'x', para: 'm' })).ok, false, 'para si mesmo');
+});
+
+test('limite de ações: dar e tirar vale só na rodada, e nunca fica negativo', () => {
+  const s = jogoPedidos();
+  assert.equal(G.limiteAcoes(s, 'm'), 5);
+  s.params.acoesPorRodada = 3;
+  s.acoesExtra = { m: 2, o: -9 };
+  assert.equal(G.limiteAcoes(s, 'm'), 5);
+  assert.equal(G.limiteAcoes(s, 'o'), 0);
+  const depois = G.fecharRodada(s);
+  assert.equal(G.limiteAcoes(depois, 'm'), 3);
+  assert.equal(G.limiteAcoes(depois, 'o'), 3);
+});
+
+test('conta de ações: só quem montou gasta, notícia não gasta, recusado e cancelado devolvem', () => {
+  const lista = [
+    ped('subir', {}, { estado: 'aprovado' }),
+    ped('acordo', {}, { para: 'o', estado: 'aguardando' }),
+    ped('dinheiro', {}, { estado: 'fila' }),
+    ped('subir', {}, { estado: 'recusado' }),
+    ped('subir', {}, { estado: 'cancelado' }),
+    ped('noticia', {}, { estado: 'fila' }),
+    ped('subir', {}, { rodada: 2, estado: 'aprovado' }),
+  ];
+  assert.equal(G.acoesUsadas(lista, 'm', 1), 3);
+  assert.equal(G.acoesUsadas(lista, 'o', 1), 0);
+});
+
+test('as janelas chegam à tela pública, sem pedidos nem códigos', () => {
+  const s = jogoPedidos();
+  assert.deepEqual(G.partePublica(s).janelas, { acoes: false, noticias: false });
+  s.janelas = { acoes: true, noticias: false };
+  assert.deepEqual(G.partePublica(s).janelas, { acoes: true, noticias: false });
+});

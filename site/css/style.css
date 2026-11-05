@@ -558,3 +558,52 @@ body.com-artigo { overflow: hidden; }
 @media (min-width: 1000px) {
   .artigo { min-height: 0; margin: 28px auto; border-radius: var(--raio); box-shadow: 0 20px 60px rgba(0, 0, 0, .5); }
 }
+
+/* Pedidos: o grupo manda pelo celular, o professor aprova ou recusa */
+.acoes-faixa { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; padding: 10px 13px; background: var(--cartao-2); border: 1px solid var(--ouro); border-radius: var(--raio-p); }
+.acoes-faixa strong { font-size: 18px; color: var(--ouro); }
+.acoes-faixa span { color: var(--suave); }
+.acoes-faixa.fechada { border-color: var(--linha); }
+.acoes-faixa.fechada strong { color: var(--texto); }
+.pedido-botoes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.btn-pedir { min-height: 62px; padding: 8px 12px; text-align: left; background: var(--cartao-2); color: var(--texto); border: 1px solid #3a5667; border-radius: var(--raio-p); font: inherit; cursor: pointer; }
+.btn-pedir strong, .btn-pedir small { display: block; }
+.btn-pedir small { color: var(--suave); font-size: 12.5px; }
+.btn-pedir.ativo { background: var(--ouro); border-color: var(--ouro); color: #231803; }
+.btn-pedir.ativo small { color: #5a4310; }
+.btn-pedir:disabled { opacity: .45; cursor: not-allowed; }
+.btn-pedir:last-child:nth-child(odd) { grid-column: 1 / -1; }
+.pedido-form { margin-top: 10px; padding: 12px; background: var(--fundo-2); border: 1px solid var(--linha); border-radius: var(--raio-p); }
+.form-pedido { display: flex; flex-direction: column; gap: 11px; }
+.form-pedido label:not(.check) { display: flex; flex-direction: column; gap: 4px; font-weight: 600; }
+.form-pedido select, .form-pedido input:not([type="checkbox"]), .form-pedido textarea { width: 100%; min-height: 44px; padding: 8px 10px; background: var(--cartao); color: var(--texto); border: 1px solid #3a5667; border-radius: var(--raio-p); font: inherit; font-weight: 400; font-size: 16px; }
+.form-pedido .btn { width: 100%; }
+.previa-pedido { padding: 9px 11px; background: var(--cartao-2); border-left: 3px solid var(--ouro); border-radius: 0 var(--raio-p) var(--raio-p) 0; }
+.lista-pedir { list-style: none; display: flex; flex-direction: column; gap: 6px; padding: 0; margin: 0; }
+.lista-pedir li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--linha); }
+.lista-pedir li:last-child { border-bottom: 0; }
+.lista-pedir small { display: block; color: var(--suave); font-size: 12.5px; }
+.lista-pedir .btn { flex: none; }
+.cartao.proposta { border-color: var(--ouro); }
+.etiqueta.estado-pedido.ok { background: #123d2a; color: #9eeac0; }
+.etiqueta.estado-pedido.nao { background: #4a2523; color: #ffc1bb; }
+
+.janelas { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
+.janela { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; background: var(--cartao-2); border: 1px solid var(--linha); border-radius: var(--raio-p); }
+.janela strong, .janela small { display: block; }
+.janela strong { font-size: 17px; }
+.janela small { color: var(--suave); }
+.janela.aberta { border-color: var(--ok); }
+.janela.aberta strong { color: var(--ok); }
+.cartao.pedido.com-erro { border-color: var(--ruim); }
+.pedido-frase { font-size: 16px; font-weight: 600; }
+.pedido-detalhe { white-space: pre-wrap; }
+.pedido-erro { color: var(--ruim); font-weight: 600; }
+.pedido-edicao { margin-top: 10px; }
+.acoes-paises { list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 6px 16px; padding: 0; margin: 0; }
+.acoes-paises li { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--linha); }
+.acoes-paises li > span:first-child { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.acoes-paises b { flex: none; color: var(--suave); font-weight: 600; }
+.acoes-paises .acoes { display: flex; flex: none; gap: 4px; }
+.form-pedido { align-items: stretch; }
+.form-pedido > * { width: 100%; max-width: none; flex: none; margin-left: 0; }

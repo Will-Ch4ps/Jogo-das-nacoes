@@ -1,14 +1,14 @@
 // Tela dos alunos. Mapa, histórias, ranking e jornal são de todos; a ficha do país abre com o código do grupo.
-// Aqui ninguém muda nada no jogo: o grupo decide e chama o professor.
-import { lerPublico, assinar, verPais, DEMO } from './backend.js';
+// Nada aqui muda o jogo direto: o grupo manda um pedido e o professor aprova ou recusa.
+import { lerPublico, assinar, verPais, enviarPedido, verPedidos, responderPedido, DEMO } from './backend.js';
 import { h, fmt, sinal, textoTimer, timerAcabando, fracaoTimer, areasDoPais, mapaSVG, icone, nomeMarca, animarDado } from './ui.js';
-import { textoEfeito } from './engine.js';
+import { textoEfeito, AREAS, VALORES_ACORDO, fraseAcordo, frasePedido } from './engine.js';
 import { HISTORIAS, CONTINENTE, ROTAS } from './dados.js';
 
 const app = document.getElementById('app');
 const url = new URLSearchParams(location.search);
 const quadro = url.has('quadro'); // Tela de teste: cada quadro tem o seu próprio login.
-const ui = { aba: 'mapa', pais: null, noticiasVistas: 0, offline: false, codigo: null, ficha: null, erroCodigo: null, entrando: false, abertos: new Set() };
+const ui = { ped: null, pedForm: null, pedMsg: null, enviando: false, aba: 'mapa', pais: null, noticiasVistas: 0, offline: false, codigo: null, ficha: null, erroCodigo: null, entrando: false, abertos: new Set() };
 let J = null;
 
 // Link do grupo: o professor manda um endereço terminado em #c=CODIGO e o país abre direto.
@@ -134,6 +134,154 @@ function secaoRanking() {
         h('strong', {}, fmt(c.riqueza)))))));
 }
 
+/* ---------- Pedidos: o grupo manda, o professor aprova ou recusa ---------- */
+const ERROS_PEDIDO = {
+  janela_noticias_fechada: 'O professor fechou a janela do jornal.', janela_fechada: 'O professor fechou a janela de ações.', sem_acoes: 'Acabaram as ações desta rodada.',
+  muitas_noticias: 'Vocês já têm 5 textos esperando o professor.', muitos_pedidos: 'Muitos pedidos nesta rodada. Fale com o professor.', jogo_encerrado: 'O jogo acabou.', pedido_invalido: 'Confira o pedido e tente de novo.', codigo_invalido: 'Código não encontrado.',
+};
+const erroPedido = err => Object.entries(ERROS_PEDIDO).find(([k]) => err.message.includes(k))?.[1] || 'Sem conexão. Tente de novo.';
+const ESTADOS_PEDIDO = { aguardando: 'Esperando o outro país', fila: 'Com o professor', aprovado: 'Aprovado', recusado: 'Recusado', cancelado: 'Cancelado' };
+const ROTULOS_FORM = { subir: 'Subir uma área', manutencao: 'Manutenção', dinheiro: 'Mandar dinheiro', acordo: 'Propor acordo', noticia: 'Escrever no jornal' };
+const pilulasPedido = (opcoes, valor, aoEscolher) => h('div', { class: 'pilulas', role: 'group' }, opcoes.map(o => h('button', {
+  type: 'button', class: 'pilula' + (String(o.v) === String(valor) ? ' ativa' : ''), 'aria-pressed': String(String(o.v) === String(valor)), onclick: () => { aoEscolher(o.v); render(); },
+}, o.t, o.d != null && h('small', {}, o.d))));
+const novoAcordoAluno = () => ({ com: '', direcao: 'nos', modelo: 'pagamento', tam: 1, valor: '', unica: '', qtdComida: 1, preco: 'igual', area: 'emp', niveis: 1, precoApoio: 0, desc: '', dur: 3, secreto: false });
+const novoTextoAluno = () => ({ tipo: 'noticia', para: '', privada: false, titulo: '', texto: '' });
+const opcoesOutros = (f, sel, vazio) => [h('option', { value: '' }, vazio), J.paises.filter(c => c.id !== f.id).map(c => h('option', { value: c.id, selected: sel === c.id }, c.nome))];
+
+async function carregarPedidos() {
+  if (!ui.codigo) return false;
+  try {
+    const p = await verPedidos(ui.codigo);
+    const mudou = JSON.stringify(p) !== JSON.stringify(ui.ped);
+    ui.ped = p;
+    return mudou;
+  } catch { return false; }
+}
+async function mandarPedido(tipo, dados, para, aviso) {
+  if (ui.enviando) return;
+  ui.enviando = true; ui.pedMsg = null; render();
+  try {
+    await enviarPedido(ui.codigo, tipo, dados, para);
+    ui.pedMsg = { tipo: 'ok', texto: aviso };
+    if (tipo === 'acordo') ui.pAcordo = null;
+    if (tipo === 'noticia') ui.pTexto = null;
+    if (tipo === 'dinheiro') ui.pDinheiro = null;
+    if (tipo !== 'subir' && tipo !== 'manutencao') ui.pedForm = null;
+  } catch (err) { ui.pedMsg = { tipo: 'erro', texto: erroPedido(err) }; }
+  ui.enviando = false;
+  await carregarPedidos();
+  render();
+}
+async function responder(id, acao, aviso) {
+  try {
+    const ok = await responderPedido(ui.codigo, id, acao);
+    ui.pedMsg = ok ? { tipo: 'ok', texto: aviso } : { tipo: 'erro', texto: 'Não deu: esse pedido já mudou.' };
+  } catch (err) { ui.pedMsg = { tipo: 'erro', texto: erroPedido(err) }; }
+  await carregarPedidos();
+  render();
+}
+function formSubir(f) {
+  return h('ul', { class: 'lista-pedir' }, f.areas.map(a => h('li', {},
+    h('span', {}, h('strong', {}, `${AREAS.find(x => x.id === a.id).nome}: nível ${a.nivel}`), h('small', {}, a.proximo == null ? 'Já está no máximo' : `Manutenção sobe ${AREAS.find(x => x.id === a.id).manut} por rodada`)),
+    h('button', { class: 'btn peq', disabled: ui.enviando || a.proximo == null || a.proximo > f.moedas, onclick: () => mandarPedido('subir', { area: a.id }, null, `Pedido enviado: subir ${AREAS.find(x => x.id === a.id).nome}.`) }, a.proximo == null ? 'Máximo' : `Subir por ${a.proximo}`))));
+}
+function formManutencao(f) {
+  return h('ul', { class: 'lista-pedir' }, f.areas.map(a => h('li', {},
+    h('span', {}, h('strong', {}, AREAS.find(x => x.id === a.id).nome), h('small', {}, a.cortada ? 'Manutenção cortada' : `Custa ${a.manut.valor} por rodada. Sem pagar, entra em crise.`)),
+    h('button', { class: 'btn peq leve', disabled: ui.enviando, onclick: () => mandarPedido('manutencao', { area: a.id, cortar: !a.cortada }, null, 'Pedido enviado ao professor.') }, a.cortada ? 'Voltar a pagar' : 'Cortar'))));
+}
+function formDinheiro(f) {
+  const st = (ui.pDinheiro ||= { para: '', valor: '' }), v = Math.round(Number(st.valor)), ok = st.para && v > 0 && v <= f.moedas;
+  return h('form', { class: 'form form-pedido', onsubmit: ev => { ev.preventDefault(); if (ok) mandarPedido('dinheiro', { para: st.para, valor: v }, null, 'Pedido enviado ao professor.'); } },
+    h('label', {}, 'Para qual país?', h('select', { onchange: ev => { st.para = ev.target.value; render(); } }, opcoesOutros(f, st.para, 'Escolha'))),
+    h('label', {}, `Quantas moedas? Vocês têm ${fmt(f.moedas)}.`, h('input', { type: 'number', min: 1, max: f.moedas, inputmode: 'numeric', value: st.valor, oninput: ev => { st.valor = ev.target.value; }, onchange: () => render() })),
+    h('button', { class: 'btn', disabled: !ok || ui.enviando }, 'Enviar pedido'));
+}
+function acordoDoAluno(f, st) {
+  const { com, direcao, ...resto } = st;
+  return { ...resto, a: direcao === 'nos' ? f.id : com, b: direcao === 'nos' ? com : f.id, niveis: Number(st.niveis), precoApoio: Number(st.precoApoio) };
+}
+function formAcordo(f) {
+  const st = (ui.pAcordo ||= novoAcordoAluno()), outro = st.com ? nomeDe(st.com) : 'o outro país', nos = st.direcao === 'nos';
+  const verbo = { pagamento: [`Nós pagamos a ${outro}`, `${outro} nos paga`], comida: [`Nós fornecemos a ${outro}`, `${outro} nos fornece`], apoio: [`Nós ajudamos ${outro}`, `${outro} nos ajuda`] }[st.modelo];
+  const F = acordoDoAluno(f, st), nomeOk = id => (id === f.id ? f.nome : nomeDe(id));
+  const pronto = st.com && (st.modelo !== 'livre' || st.desc.trim()) && (st.modelo !== 'pagamento' || st.tam !== 'x' || Number(st.valor) > 0 || Number(st.unica) > 0);
+  return h('div', { class: 'form form-pedido' },
+    h('label', {}, 'Com qual país?', h('select', { onchange: ev => { st.com = ev.target.value; render(); } }, opcoesOutros(f, st.com, 'Escolha'))),
+    h('div', { class: 'campo-bloco' }, h('span', { class: 'rot' }, 'O que vocês combinaram?'), pilulasPedido([{ v: 'pagamento', t: 'Pagamento' }, { v: 'comida', t: 'Comida' }, { v: 'apoio', t: 'Ajuda em uma área' }, { v: 'livre', t: 'Outra coisa' }], st.modelo, v => { st.modelo = v; })),
+    st.modelo !== 'livre' && h('div', { class: 'campo-bloco' }, h('span', { class: 'rot' }, 'Quem faz?'), pilulasPedido([{ v: 'nos', t: verbo[0] }, { v: 'eles', t: verbo[1] }], st.direcao, v => { st.direcao = v; })),
+    st.modelo === 'pagamento' && [
+      h('div', { class: 'campo-bloco' }, h('span', { class: 'rot' }, 'Quanto por rodada?'), pilulasPedido([...VALORES_ACORDO.pagamento.map((v, i) => ({ v: i, t: `${v} moedas` })), { v: 'x', t: 'Outro valor' }], st.tam, v => { st.tam = v; })),
+      st.tam === 'x' && h('label', {}, 'Moedas por rodada', h('input', { type: 'number', min: 0, inputmode: 'numeric', value: st.valor, oninput: ev => { st.valor = ev.target.value; }, onchange: () => render() })),
+      h('label', {}, 'Pagamento na hora, além disso (opcional)', h('input', { type: 'number', min: 0, inputmode: 'numeric', placeholder: '0', value: st.unica, oninput: ev => { st.unica = ev.target.value; }, onchange: () => render() })),
+    ],
+    st.modelo === 'comida' && [
+      h('div', { class: 'campo-bloco' }, h('span', { class: 'rot' }, 'Quanta comida por rodada?'), pilulasPedido(VALORES_ACORDO.comida.map((v, i) => ({ v: i, t: ['Pouca', 'Média', 'Muita'][i], d: `${v} moedas da conta` })), st.qtdComida, v => { st.qtdComida = v; })),
+      h('div', { class: 'campo-bloco' }, h('span', { class: 'rot' }, 'Quanto quem recebe paga?'), pilulasPedido([{ v: 'gratis', t: 'De graça' }, { v: 'metade', t: 'Metade do valor' }, { v: 'igual', t: 'O valor da comida' }, { v: 'lucro', t: 'Com lucro' }], st.preco, v => { st.preco = v; })),
+    ],
+    st.modelo === 'apoio' && [
+      h('label', {}, 'Em qual área?', h('select', { onchange: ev => { st.area = ev.target.value; render(); } }, AREAS.map(a => h('option', { value: a.id, selected: st.area === a.id }, a.nome)))),
+      h('div', { class: 'campo-bloco' }, h('span', { class: 'rot' }, 'Quanto a área sobe enquanto durar?'), pilulasPedido([1, 2, 3].map(v => ({ v, t: `+${v} ${v === 1 ? 'nível' : 'níveis'}` })), st.niveis, v => { st.niveis = v; })),
+      h('div', { class: 'campo-bloco' }, h('span', { class: 'rot' }, 'Quem recebe paga algo?'), pilulasPedido([0, 5, 10, 20].map(v => ({ v, t: v ? `${v} por rodada` : 'De graça' })), st.precoApoio, v => { st.precoApoio = v; })),
+    ],
+    h('label', {}, st.modelo === 'livre' ? 'Expliquem o combinado' : 'Quer explicar melhor? (opcional)', h('textarea', { rows: 3, maxlength: 400, oninput: ev => { st.desc = ev.target.value; }, onchange: () => render() }, st.desc)),
+    h('div', { class: 'campo-bloco' }, h('span', { class: 'rot' }, 'Por quanto tempo?'), pilulasPedido([{ v: 1, t: '1 rodada' }, { v: 2, t: '2 rodadas' }, { v: 3, t: '3 rodadas' }, { v: 5, t: '5 rodadas' }, { v: '', t: 'Até o fim' }], st.dur, v => { st.dur = v; })),
+    h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: st.secreto, onchange: ev => { st.secreto = ev.target.checked; render(); } }), 'Acordo secreto: só os dois países veem'),
+    st.com && h('p', { class: 'previa-pedido' }, fraseAcordo(F, nomeOk)),
+    h('p', { class: 'meta' }, st.com ? `${outro} precisa aceitar. Depois, o professor aprova. Só vocês gastam a ação.` : 'O outro país aceita, e depois o professor aprova. Só vocês gastam a ação.'),
+    h('button', { class: 'btn', disabled: !pronto || ui.enviando, onclick: () => mandarPedido('acordo', F, st.com, `Proposta enviada a ${outro}.`) }, 'Mandar proposta'));
+}
+function formTexto(f) {
+  const st = (ui.pTexto ||= novoTextoAluno()), mensagem = st.tipo === 'mensagem', ok = st.titulo.trim();
+  return h('form', { class: 'form form-pedido', onsubmit: ev => {
+    ev.preventDefault(); if (!st.titulo.trim()) return;
+    mandarPedido('noticia', { tipo: st.tipo, titulo: st.titulo.trim(), texto: st.texto.trim(), para: mensagem ? st.para || null : null, privada: mensagem && !!st.para && st.privada }, null, 'Texto enviado. O professor decide se publica.');
+  } },
+    h('div', { class: 'campo-bloco' }, h('span', { class: 'rot' }, 'O que é?'), pilulasPedido([{ v: 'noticia', t: 'Notícia', d: 'verdade, propaganda ou boato' }, { v: 'mensagem', t: 'Mensagem', d: 'para outro país' }], st.tipo, v => { st.tipo = v; })),
+    mensagem && h('label', {}, 'Para quem?', h('select', { onchange: ev => { st.para = ev.target.value; render(); } }, opcoesOutros(f, st.para, 'Aberta a todos'))),
+    mensagem && st.para && h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: st.privada, onchange: ev => { st.privada = ev.target.checked; render(); } }), 'Só quem recebe pode ler'),
+    h('label', {}, 'Manchete', h('input', { maxlength: 140, required: true, value: st.titulo, oninput: ev => { st.titulo = ev.target.value; }, onchange: () => render() })),
+    h('label', {}, 'Texto', h('textarea', { rows: 5, maxlength: 3000, oninput: ev => { st.texto = ev.target.value; } }, st.texto)),
+    h('button', { class: 'btn', disabled: !ok || ui.enviando }, 'Mandar ao professor'));
+}
+function telaPedidos(f) {
+  const P = ui.ped, jan = J.janelas || {}, lista = P?.pedidos || [], livres = P ? Math.max(0, P.limite - P.usadas) : null;
+  const propostas = lista.filter(p => p.para === f.id && p.estado === 'aguardando' && p.rodada === J.rodada);
+  const meus = lista.filter(p => !propostas.includes(p) && p.estado !== 'cancelado');
+  const nomeOk = id => (id === f.id ? f.nome : nomeDe(id));
+  const podeAcao = jan.acoes && livres > 0;
+  const botao = (id, sub, pode) => h('button', { class: 'btn-pedir' + (ui.pedForm === id ? ' ativo' : ''), disabled: !pode, 'aria-expanded': String(ui.pedForm === id), onclick: () => { ui.pedForm = ui.pedForm === id ? null : id; ui.pedMsg = null; render(); } }, h('strong', {}, ROTULOS_FORM[id]), h('small', {}, sub));
+  const forms = { subir: formSubir, manutencao: formManutencao, dinheiro: formDinheiro, acordo: formAcordo, noticia: formTexto };
+  const aberto = ui.pedForm && (ui.pedForm === 'noticia' ? jan.noticias : podeAcao) ? forms[ui.pedForm] : null;
+  return [
+    h('div', { class: 'acoes-faixa' + (jan.acoes ? '' : ' fechada') }, h('strong', {}, livres == null ? 'Ações' : `${livres} ${livres === 1 ? 'ação livre' : 'ações livres'}`), h('span', {}, jan.acoes ? (livres === 0 ? 'Acabaram nesta rodada.' : 'nesta rodada') : 'A janela de ações está fechada.')),
+    ui.pedMsg && h('p', { class: `mensagem ${ui.pedMsg.tipo}`, role: 'status' }, ui.pedMsg.texto),
+    propostas.length > 0 && h('div', {}, h('h4', {}, 'Propostas para vocês'), h('ul', { class: 'lista' }, propostas.map(p => h('li', { class: 'cartao proposta' },
+      h('div', { class: 'cartao-topo' }, h('strong', {}, `${nomeDe(p.pais)} propõe`), h('span', { class: 'etiqueta' }, 'Não gasta ação')),
+      h('p', {}, frasePedido(p, nomeOk)),
+      p.dados.modelo !== 'livre' && p.dados.desc && h('p', { class: 'meta' }, p.dados.desc),
+      h('div', { class: 'linha-acoes' },
+        h('button', { class: 'btn peq', onclick: () => responder(p.id, 'aceitar', 'Aceito. Agora o professor aprova.') }, 'Aceitar'),
+        h('button', { class: 'btn peq leve', onclick: () => responder(p.id, 'recusar', 'Proposta recusada.') }, 'Recusar')))))),
+    h('h4', {}, 'O que vocês querem fazer?'),
+    h('div', { class: 'pedido-botoes' },
+      botao('subir', 'usa 1 ação', podeAcao), botao('acordo', 'usa 1 ação', podeAcao), botao('dinheiro', 'usa 1 ação', podeAcao), botao('manutencao', 'usa 1 ação', podeAcao),
+      botao('noticia', jan.noticias ? 'não usa ação' : 'janela fechada', !!jan.noticias)),
+    aberto && h('div', { class: 'pedido-form' }, aberto(f)),
+    h('h4', {}, 'Pedidos de vocês'),
+    meus.length ? h('ul', { class: 'lista' }, meus.map(p => {
+      const passou = p.estado === 'aguardando' && p.rodada !== J.rodada, cls = p.estado === 'aprovado' ? ' ok' : p.estado === 'recusado' || passou ? ' nao' : '';
+      return h('li', { class: 'cartao pedido-meu' },
+        h('div', { class: 'cartao-topo' }, h('strong', {}, p.para === f.id ? `Proposta de ${nomeDe(p.pais)}` : ROTULOS_FORM[p.tipo]), h('span', { class: `etiqueta estado-pedido${cls}` }, passou ? 'Acabou o prazo' : ESTADOS_PEDIDO[p.estado])),
+        h('p', {}, frasePedido(p, nomeOk)),
+        p.editado && h('p', { class: 'meta' }, 'O professor ajustou este pedido antes de aprovar.'),
+        p.resposta && h('p', { class: 'meta' }, h('b', {}, 'Resposta: '), p.resposta),
+        p.pais === f.id && !passou && ['aguardando', 'fila'].includes(p.estado) && h('div', { class: 'linha-acoes' }, h('button', { class: 'btn peq leve', onclick: () => responder(p.id, 'cancelar', p.tipo === 'noticia' ? 'Texto cancelado.' : 'Cancelado. A ação voltou.') }, 'Cancelar')));
+    })) : h('p', { class: 'vazio-txt' }, 'Nenhum pedido ainda.'),
+  ];
+}
+
 /* ---------- Meu país ---------- */
 function telaCodigo() {
   return h('form', { class: 'codigo-form', onsubmit: ev => { ev.preventDefault(); entrar(ev.target.elements.codigo.value); } },
@@ -149,12 +297,12 @@ const rotuloDura = r => (r == null ? 'até o fim' : r === 1 ? 'última rodada' :
 const linhaConta = (x, sinalTxt) => h('div', { class: 'conta' + (x.ruim ? ' ruim' : '') },
   h('span', {}, x.rotulo, x.restantes !== undefined && h('em', { class: 'dura' }, rotuloDura(x.restantes))),
   h('strong', {}, `${sinalTxt}${fmt(Math.abs(x.valor))}`));
-const ABAS_FICHA = [['conta', 'Conta'], ['areas', 'Áreas'], ['acordos', 'Acordos'], ['projetos', 'Projetos'], ['missoes', 'Missões'], ['mensagens', 'Mensagens'], ['pais', 'Nosso país'], ['guia', 'Como jogar']];
+const ABAS_FICHA = [['conta', 'Conta'], ['pedidos', 'Pedidos'], ['areas', 'Áreas'], ['acordos', 'Acordos'], ['projetos', 'Projetos'], ['missoes', 'Missões'], ['mensagens', 'Mensagens'], ['pais', 'Nosso país'], ['guia', 'Como jogar']];
 function fichaPais(f) {
   const area = id => f.areas.find(a => a.id === id);
   const acordos = f.acordos.filter(a => a.origem === 'acordo'), efeitos = f.acordos.filter(a => a.origem === 'efeito'), emProjeto = f.acordos.filter(a => a.origem === 'projeto');
   const aba = ui.fichaAba || 'conta';
-  const contagem = { acordos: acordos.length + efeitos.length, projetos: (f.tentativas || []).length, missoes: (f.missoes || []).filter(m => m.estado === 'cumprida').length, mensagens: (f.mensagens || []).length };
+  const contagem = { pedidos: (ui.ped?.pedidos || []).filter(p => p.para === f.id && p.estado === 'aguardando' && p.rodada === J.rodada).length, acordos: acordos.length + efeitos.length, projetos: (f.tentativas || []).length, missoes: (f.missoes || []).filter(m => m.estado === 'cumprida').length, mensagens: (f.mensagens || []).length };
   const cartaoCompromisso = a => h('li', { class: 'cartao' },
     h('div', { class: 'cartao-topo' }, h('strong', {}, a.titulo),
       h('span', { class: 'etiquetas' }, a.secreto && h('span', { class: 'etiqueta selo-boato' }, 'Secreto'), h('span', { class: 'etiqueta' }, a.ateRodada == null ? 'Até o fim' : a.restantes === 1 ? 'Última rodada' : `Até a rodada ${a.ateRodada}`))),
@@ -162,6 +310,7 @@ function fichaPais(f) {
     h('p', { class: 'meta' }, `${a.comQuem ? `Com ${a.comQuem}. ` : ''}${a.efeito || 'Sem números combinados.'}`));
 
   const telas = {
+    pedidos: () => telaPedidos(f),
     conta: () => [
       h('div', { class: 'contas' },
         h('h5', {}, h('span', {}, 'Vai receber'), h('span', { class: 'pos' }, `+${fmt(f.recebe)}`)),
@@ -252,12 +401,12 @@ async function entrar(codigo) {
     const f = await verPais(codigo);
     // Ficha salva por uma versão anterior: só fica pronta quando o professor abrir o admin.
     if (f && !f.manutencao) ui.erroCodigo = 'A ficha ainda não está pronta. Avise o professor.';
-    else if (f) { ui.codigo = codigo.trim().toUpperCase(); ui.ficha = f; guardarCodigo(ui.codigo); }
+    else if (f) { ui.codigo = codigo.trim().toUpperCase(); ui.ficha = f; guardarCodigo(ui.codigo); await carregarPedidos(); }
     else ui.erroCodigo = 'Código não encontrado. Confira com o professor.';
   } catch { ui.erroCodigo = 'Sem conexão. Tente de novo em instantes.'; }
   ui.entrando = false; render();
 }
-function sair() { ui.codigo = null; ui.ficha = null; guardarCodigo(null); render(); }
+function sair() { ui.codigo = null; ui.ficha = null; ui.ped = null; ui.pedForm = null; ui.pedMsg = null; ui.pAcordo = null; ui.pTexto = null; ui.pDinheiro = null; guardarCodigo(null); render(); }
 async function atualizarFicha() {
   if (!ui.codigo) return false;
   try {
@@ -266,7 +415,8 @@ async function atualizarFicha() {
     if (!f.manutencao) { const tinha = !!ui.ficha; ui.ficha = null; return tinha; } // Versão anterior: espera o admin salvar.
     const mudou = JSON.stringify(f) !== JSON.stringify(ui.ficha);
     ui.ficha = f;
-    return mudou;
+    const pedidosMudaram = await carregarPedidos();
+    return mudou || pedidosMudaram;
   } catch { return false; }
 }
 
@@ -372,17 +522,17 @@ function conteudoGuia() {
       item('Leiam o jornal', 'As notícias mostram quem está em crise, quem cresceu e o que está mudando no continente.'),
       item('Decidam juntos', 'O que vale mais agora: subir uma área, fechar um acordo, tentar um projeto?'),
       item('Negociem', 'Um representante pode visitar as salas dos outros países e combinar o que quiser.'),
-      item('Chamem o professor', 'Nada vale até ele registrar. Quando decidirem, chamem e digam exatamente o que combinaram.')),
-    h('h4', {}, 'O que dá para pedir ao professor'),
+      item('Mandem o pedido', 'Em "Meu país", na aba Pedidos. Nada vale até o professor aprovar.')),
+    h('h4', {}, 'O que dá para pedir'),
     h('ul', { class: 'guia-lista' },
-      item('Subir uma área', 'Custa uma vez, e a área passa a render mais. Todo nível aumenta a manutenção.'),
-      item('Cortar uma manutenção', 'Sobra dinheiro agora, mas a área entra em crise na rodada seguinte, e depois perde níveis.'),
-      item('Fazer um acordo', 'Pode ser dinheiro por rodada, comida, apoio em uma área ou o que combinarem. Digam com quem, o quê e por quantas rodadas. Pode ser secreto. Quem dá apoio paga a manutenção dos níveis que está dando.'),
-      item('Passar dinheiro', 'Uma transferência única para outro país, para ajudar ou pagar por algo.'),
-      item('Tentar um projeto', 'Expliquem a ideia: qual problema resolve, como funciona e quem paga a conta. Quanto melhor a ideia, maior a chance no dado.'),
-      item('Publicar no jornal', 'Mandem o texto no formato que quiserem. Pode ser verdade, propaganda, boato, ou uma mensagem para outro país, aberta ou só para quem recebe.'),
+      item('Subir uma área', 'Usa 1 ação. Custa uma vez, e a área passa a render mais. Todo nível aumenta a manutenção.'),
+      item('Cortar uma manutenção', 'Usa 1 ação. Sobra dinheiro agora, mas a área entra em crise na rodada seguinte, e depois perde níveis.'),
+      item('Fazer um acordo', 'Quem monta usa 1 ação; o outro país só aceita. Pode ser dinheiro por rodada, comida, apoio em uma área ou o que combinarem. Pode ser secreto. Quem dá apoio paga a manutenção dos níveis que está dando.'),
+      item('Passar dinheiro', 'Usa 1 ação. Uma transferência única para outro país, para ajudar ou pagar por algo.'),
+      item('Tentar um projeto', 'Chamem o professor e expliquem a ideia: qual problema resolve, como funciona e quem paga a conta. Quanto melhor a ideia, maior a chance no dado.'),
+      item('Publicar no jornal', 'Quando a janela do jornal abrir, mandem o texto na aba Pedidos. Não gasta ação. Pode ser verdade, propaganda, boato, ou uma mensagem para outro país, aberta ou só para quem recebe.'),
       item('Confirmar uma missão', 'Cada país tem missões secretas, com prêmio em moedas. Quando cumprirem uma, chamem o professor.'),
-      item('Atacar', 'O dado decide, e quem perde paga parte do próprio dinheiro ao outro. O militar só vale contra vizinhos e vira notícia; o hacker é secreto.')),
+      item('Atacar', 'Chamem o professor. O dado decide, e quem perde paga parte do próprio dinheiro ao outro. O militar só vale contra vizinhos e vira notícia; o hacker é secreto.')),
     h('h4', {}, 'O que pode dar errado'),
     h('ul', { class: 'guia-lista' },
       item('Faltar comida', 'A conta de comida cresce com a população. Se o dinheiro não cobrir, o país perde 10% das pessoas, e nenhuma manutenção é paga naquela rodada.'),
@@ -426,6 +576,8 @@ function render() {
   if (!c) ui.pais = null;
   // Não redesenha com alguém digitando o código, senão o texto se perde.
   if (document.activeElement?.id === 'codigo' && document.activeElement.value) return;
+  // Nem no meio de um pedido: desenha quando a pessoa sair do campo.
+  if (document.activeElement?.closest?.('.form-pedido') && ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName) && document.activeElement.type !== 'checkbox') { ui.redesenhar = true; return; }
   const y = window.scrollY, rolagemArtigo = document.querySelector('.artigo-tela')?.scrollTop || 0;
   document.body.classList.toggle('com-artigo', !!ui.noticiaAberta);
   app.replaceChildren(...[
@@ -482,6 +634,12 @@ setInterval(() => {
   if (f) { f.style.width = `${fracaoTimer(J.timer, J.params.duracaoMin) * 100}%`; f.classList.toggle('alerta', alerta); }
 }, 500);
 setInterval(atualizar, 20000);
+// Com a aba Pedidos aberta, a resposta do professor e as propostas chegam mais rápido.
+setInterval(async () => {
+  if (document.hidden || !ui.ficha || ui.aba !== 'meu' || ui.fichaAba !== 'pedidos') return;
+  if (await carregarPedidos()) render();
+}, 5000);
+document.addEventListener('focusout', () => { if (ui.redesenhar) setTimeout(() => { if (!ui.redesenhar) return; ui.redesenhar = false; render(); }, 150); });
 document.addEventListener('visibilitychange', () => { if (!document.hidden) atualizar(); });
 window.addEventListener('online', atualizar);
 window.addEventListener('focus', atualizar);

@@ -80,3 +80,71 @@ export async function verPais(codigo) {
   if (error) throw new Error(error.message);
   return data;
 }
+
+/* ---------- Pedidos dos grupos ---------- */
+const K_PED = 'jn_demo_pedidos';
+const demoLista = () => JSON.parse(localStorage.getItem(K_PED) || '[]');
+const demoGrava = l => { localStorage.setItem(K_PED, JSON.stringify(l)); canal?.postMessage('mudou'); };
+const demoJogo = () => JSON.parse(localStorage.getItem(K_PRIV) || '{}').dados || {};
+const demoPais = codigo => JSON.parse(localStorage.getItem(K_VIS) || '{}')[String(codigo).trim().toUpperCase()]?.id || null;
+const demoLimite = (d, id) => Math.max(0, Number(d.params?.acoesPorRodada ?? 5) + Number(d.acoesExtra?.[id] || 0));
+const demoUsadas = (l, id, r) => l.filter(p => p.pais === id && p.rodada === r && p.tipo !== 'noticia' && ['aguardando', 'fila', 'aprovado'].includes(p.estado)).length;
+async function chamar(fn, args) {
+  const c = await db();
+  const { data, error } = await c.rpc(fn, args);
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+// As mesmas regras ficam no banco; o modo demonstração as repete para o teste local.
+export async function enviarPedido(codigo, tipo, dados, para = null) {
+  if (!DEMO) return chamar('jn_pais_pedir', { p_codigo: codigo, p_tipo: tipo, p_dados: dados, p_para: para });
+  const id = demoPais(codigo), d = demoJogo(), l = demoLista();
+  if (!id) throw new Error('codigo_invalido');
+  if (d.encerrado) throw new Error('jogo_encerrado');
+  if (tipo === 'noticia') {
+    if (!d.janelas?.noticias) throw new Error('janela_noticias_fechada');
+    if (l.filter(p => p.pais === id && p.tipo === 'noticia' && p.estado === 'fila').length >= 5) throw new Error('muitas_noticias');
+  } else {
+    if (!d.janelas?.acoes) throw new Error('janela_fechada');
+    if (demoUsadas(l, id, d.rodada) >= demoLimite(d, id)) throw new Error('sem_acoes');
+  }
+  if (tipo === 'acordo' && (!para || para === id)) throw new Error('pedido_invalido');
+  const novo = { id: Date.now() + Math.floor(Math.random() * 1000), rodada: d.rodada, pais: id, para, tipo, dados, estado: tipo === 'acordo' ? 'aguardando' : 'fila', resposta: null, editado: false };
+  demoGrava([...l, novo]);
+  return novo.id;
+}
+export async function verPedidos(codigo) {
+  if (!DEMO) return chamar('jn_pais_pedidos', { p_codigo: codigo });
+  const id = demoPais(codigo), d = demoJogo(), l = demoLista();
+  if (!id) return null;
+  return { rodada: d.rodada, limite: demoLimite(d, id), usadas: demoUsadas(l, id, d.rodada), pedidos: l.filter(p => p.pais === id || p.para === id).reverse().slice(0, 40) };
+}
+export async function responderPedido(codigo, idPedido, acao) {
+  if (!DEMO) return chamar('jn_pais_responder', { p_codigo: codigo, p_id: idPedido, p_acao: acao });
+  const id = demoPais(codigo), d = demoJogo(), l = demoLista(), p = l.find(x => x.id === idPedido);
+  if (!p) return false;
+  if (acao === 'cancelar' && p.pais === id && ['aguardando', 'fila'].includes(p.estado)) p.estado = 'cancelado';
+  else if (acao === 'aceitar' && p.para === id && p.estado === 'aguardando' && p.rodada === d.rodada) p.estado = 'fila';
+  else if (acao === 'recusar' && p.para === id && p.estado === 'aguardando') { p.estado = 'recusado'; p.resposta = 'O outro país recusou.'; }
+  else return false;
+  demoGrava(l);
+  return true;
+}
+export async function adminPedidos(senha) {
+  if (!DEMO) return chamar('jn_admin_pedidos', { p_senha: senha });
+  const r = demoJogo().rodada;
+  return demoLista().filter(p => p.estado === 'fila' || p.rodada === r);
+}
+export async function adminDecidir(senha, id, estado, resposta = null, dados = null, editado = false) {
+  if (!DEMO) return chamar('jn_admin_decidir', { p_senha: senha, p_id: id, p_estado: estado, p_resposta: resposta, p_dados: dados, p_editado: editado });
+  const l = demoLista(), p = l.find(x => x.id === id);
+  if (!p || !(p.estado === 'fila' || (p.estado === 'aprovado' && estado === 'recusado'))) return false;
+  Object.assign(p, { estado, resposta, editado, dados: dados ?? p.dados });
+  demoGrava(l);
+  return true;
+}
+export async function adminLimparPedidos(senha) {
+  if (!DEMO) return chamar('jn_admin_limpar_pedidos', { p_senha: senha });
+  demoGrava([]);
+}

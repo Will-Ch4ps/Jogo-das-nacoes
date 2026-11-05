@@ -86,6 +86,7 @@
       e = G.fecharComHistorico(e);
       e.aviso = 'Representantes: 2 minutos para fechar os acordos!';
       e.timer = { rodando: true, fimEm: Date.now() + 12 * 60000, restanteMs: 12 * 60000 };
+      localStorage.removeItem('jn_demo_pedidos');
       grava(e);
     }
 
@@ -106,7 +107,7 @@
       });
     }
     document.querySelectorAll('[data-tela]').forEach(b => b.addEventListener('click', () => { b.setAttribute('aria-pressed', String(b.getAttribute('aria-pressed') !== 'true')); monta(); }));
-    document.getElementById('zero').onclick = () => grava(novo());
+    document.getElementById('zero').onclick = () => { localStorage.removeItem('jn_demo_pedidos'); grava(novo()); };
     document.getElementById('exemplo').onclick = exemplo;
     document.getElementById('fechar').onclick = () => { const d = ler()?.dados; if (d?.paises) grava(G.fecharComHistorico(d)); };
 
