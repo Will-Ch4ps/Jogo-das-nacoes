@@ -72,23 +72,57 @@ export function icone(nome, tam = 22) {
     svg('path', { d: ICONES[nome] }));
 }
 
-export function nivelVisual(nivel) {
-  return h('span', { class: 'niveis', role: 'img', 'aria-label': `Nível ${nivel} de ${NIVEL_MAX}` },
-    Array.from({ length: NIVEL_MAX }, (_, i) => h('span', { class: 'nivel' + (i < nivel ? ' cheio' : '') + (i === 4 || i === 9 ? ' marco' : '') })));
+// Barrinhas de nível. comprado: o que o país pagou. real: o que vale agora, com acordos e efeitos.
+export function nivelVisual(real, comprado = real) {
+  return h('span', { class: 'niveis', role: 'img', 'aria-label': comprado === real ? `Nível ${real} de ${NIVEL_MAX}` : `Nível real ${real} de ${NIVEL_MAX}, comprado ${comprado}` },
+    Array.from({ length: NIVEL_MAX }, (_, i) => {
+      const cls = i < Math.min(real, comprado) ? ' cheio' : i < real ? ' extra' : i < comprado ? ' perdido' : '';
+      return h('span', { class: 'nivel' + cls + (i === 4 || i === 9 ? ' marco' : '') });
+    }));
 }
-// Áreas de um país. compacto: sem a explicação. minimo: marca o que está abaixo do mínimo. extra: o que só o próprio grupo vê.
-export function areasDoPais(niveis, { compacto = false, minimo = 0, extra } = {}) {
+// Áreas de um país. niveis: nível real. comprados: o que foi pago. compacto: sem a explicação. extra: o que só o próprio grupo vê.
+export function areasDoPais(niveis, { compacto = false, minimo = 0, extra, comprados } = {}) {
   return h('ul', { class: 'areas' + (compacto ? ' compactas' : '') }, AREAS.map(a => {
     const abaixo = niveis[a.id] < minimo;
     return h('li', { class: abaixo ? 'abaixo' : '' },
       h('div', { class: 'area-linha' },
         h('span', { class: 'area-nome' }, icone(a.id, 19), h('strong', {}, a.nome)),
-        h('span', { class: 'area-nivel' }, nivelVisual(niveis[a.id]), h('b', {}, niveis[a.id]))),
+        h('span', { class: 'area-nivel' }, nivelVisual(niveis[a.id], comprados ? comprados[a.id] : niveis[a.id]), h('b', {}, niveis[a.id]))),
       !compacto && h('p', { class: 'meta' }, a.faz),
       abaixo && h('p', { class: 'area-crise' }, a.sem),
       extra?.(a));
   }));
 }
+
+// Animação do dado, igual para o professor e para quem está na tela dos alunos.
+export function animarDado(d) {
+  document.querySelector('.dado-tela')?.remove();
+  const lados = d.lados || 20, valores = d.dados || [], calmo = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  const pecas = valores.map((_, i) => {
+    const num = h('span', { class: 'dado-num' }, '?');
+    return { num, el: h('div', { class: 'dado-peca' }, d.nomes?.[i] && h('small', {}, d.nomes[i]), h('div', { class: 'dado-face' }, num), h('small', { class: 'dado-tipo' }, `d${lados}`)) };
+  });
+  const texto = h('p', { class: 'dado-texto' }, '');
+  const tela = h('div', { class: 'dado-tela', role: 'status', onclick: () => fechar() },
+    h('div', { class: 'dado-caixa' }, h('h2', {}, d.titulo || 'Dado'), h('div', { class: 'dado-mesa' }, pecas.map(p => p.el)), texto));
+  document.body.append(tela);
+  let voltas = 0, fim;
+  const fechar = () => { clearInterval(giro); clearTimeout(fim); tela.remove(); };
+  const parar = () => {
+    clearInterval(giro);
+    pecas.forEach((p, i) => { p.num.textContent = valores[i]; p.el.classList.add('parou'); });
+    tela.classList.add('parou');
+    if (d.resultado) tela.dataset.resultado = d.resultado;
+    texto.textContent = d.texto || '';
+    fim = setTimeout(fechar, 7000);
+  };
+  const giro = setInterval(() => {
+    pecas.forEach(p => { p.num.textContent = 1 + Math.floor(Math.random() * lados); });
+    if (++voltas >= 28) parar();
+  }, 70);
+  if (calmo) parar();
+}
+
 export const nomeMarca = id => TIPOS_MARCA.find(t => t.id === id)?.nome || id;
 
 const pts = lista => lista.map(p => p.join(',')).join(' ');

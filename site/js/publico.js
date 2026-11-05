@@ -1,7 +1,8 @@
 // Tela dos alunos. Mapa, histórias, ranking e jornal são de todos; a ficha do país abre com o código do grupo.
 // Aqui ninguém muda nada no jogo: o grupo decide e chama o professor.
 import { lerPublico, assinar, verPais, DEMO } from './backend.js';
-import { h, fmt, sinal, textoTimer, timerAcabando, fracaoTimer, areasDoPais, mapaSVG, icone, nomeMarca } from './ui.js';
+import { h, fmt, sinal, textoTimer, timerAcabando, fracaoTimer, areasDoPais, mapaSVG, icone, nomeMarca, animarDado } from './ui.js';
+import { textoEfeito } from './engine.js';
 import { HISTORIAS, ROTAS } from './dados.js';
 
 const app = document.getElementById('app');
@@ -124,10 +125,19 @@ function telaCodigo() {
     h('button', { class: 'btn', disabled: ui.entrando }, ui.entrando ? 'Abrindo…' : 'Ver meu país'),
     telaGrande() && h('p', { class: 'meta aviso-tela' }, 'Se esta tela estiver sendo transmitida, não digite o código aqui: todos veriam.'));
 }
-const linhasConta = (titulo, lista, s) => [h('h5', {}, titulo), lista.map(x => h('div', { class: 'conta' + (x.ruim ? ' ruim' : '') }, h('span', {}, x.rotulo), h('strong', {}, `${s}${fmt(x.valor)}`)))];
+const rotuloDura = r => (r == null ? 'até o fim' : r === 1 ? 'última rodada' : `faltam ${r}`);
+const linhaConta = (x, sinalTxt) => h('div', { class: 'conta' + (x.ruim ? ' ruim' : '') },
+  h('span', {}, x.rotulo, x.restantes !== undefined && h('em', { class: 'dura' }, rotuloDura(x.restantes))),
+  h('strong', {}, `${sinalTxt}${fmt(Math.abs(x.valor))}`));
 function fichaPais(f) {
   const area = id => f.areas.find(a => a.id === id);
   const hs = HISTORIAS[f.id];
+  const acordos = f.acordos.filter(a => a.origem !== 'efeito'), efeitos = f.acordos.filter(a => a.origem === 'efeito');
+  const cartaoCompromisso = a => h('li', { class: 'cartao' },
+    h('div', { class: 'cartao-topo' }, h('strong', {}, a.titulo),
+      h('span', { class: 'etiquetas' }, a.secreto && h('span', { class: 'etiqueta selo-boato' }, 'Secreto'), h('span', { class: 'etiqueta' }, a.ateRodada == null ? 'Até o fim' : a.restantes === 1 ? 'Última rodada' : `Até a rodada ${a.ateRodada}`))),
+    a.descricao && h('p', {}, a.descricao),
+    h('p', { class: 'meta' }, `${a.comQuem ? `Com ${a.comQuem}. ` : ''}${a.efeito || 'Sem números combinados.'}`));
   return h('article', { class: 'detalhe ficha', style: `--cor:${f.cor}` },
     h('header', { class: 'detalhe-topo' },
       h('div', {}, h('h3', {}, f.nome), h('p', {}, `${f.pos}º lugar · ${f.perfil}`)),
@@ -135,36 +145,47 @@ function fichaPais(f) {
     h('div', { class: 'detalhe-corpo' },
       h('div', { class: 'destaques' }, destaque(fmt(f.moedas), 'moedas agora'), destaque(fmt(Math.round(f.pop)), 'mil pessoas'), destaque(`${fmt(f.desemprego)}%`, 'desemprego')),
 
-      h('h4', {}, `Até o fim da rodada ${f.rodada}`),
+      h('h4', {}, `Conta da rodada ${f.rodada}`),
       f.falta > 0
         ? h('div', { class: 'alerta-conta', role: 'alert' }, h('strong', {}, `Vão faltar ${fmt(f.falta)} moedas`), h('p', {}, `Se nada mudar, o país perde ${f.perdaFome}% das pessoas.`))
         : h('div', { class: 'previsao' }, h('span', {}, 'Vocês vão terminar com'), h('strong', {}, `${fmt(f.fimDaRodada)} moedas`)),
       h('div', { class: 'contas' },
-        linhasConta(`Precisa pagar: ${fmt(f.paga)}`, f.saidas, '−'),
-        linhasConta(`Vai receber: ${fmt(f.recebe)}`, f.entradas, '+')),
+        h('h5', {}, h('span', {}, 'Vai receber'), h('span', { class: 'pos' }, `+${fmt(f.recebe)}`)),
+        f.entradas.map(x => linhaConta(x, '+')),
+        h('h5', {}, h('span', {}, 'Comida'), h('span', {}, `−${fmt(f.comida.total)}`)),
+        f.comida.linhas.map(x => linhaConta(x, x.valor < 0 ? '+' : '−')),
+        f.saidas.length > 0 && [h('h5', {}, h('span', {}, 'Outros pagamentos'), h('span', {}, `−${fmt(f.saidas.reduce((t, x) => t + x.valor, 0))}`)), f.saidas.map(x => linhaConta(x, '−'))],
+        h('h5', { class: 'conta-final' }, h('span', {}, f.sobra < 0 ? 'Falta na rodada' : 'Sobra na rodada'), h('span', { class: f.sobra < 0 ? 'neg' : 'pos' }, sinal(f.sobra)))),
+
+      (f.proximas || []).length > 0 && h('div', {},
+        h('h4', {}, 'Próximas rodadas, se nada mudar'),
+        h('div', { class: 'rola-x' }, h('table', { class: 'tabela' },
+          h('thead', {}, h('tr', {}, ['Rodada', 'Sobra', 'Moedas', 'Pessoas', ''].map(t => h('th', { scope: 'col' }, t)))),
+          h('tbody', {}, f.proximas.map(x => h('tr', {}, h('td', {}, x.rodada), h('td', { class: x.sobra < 0 ? 'neg' : '' }, sinal(x.sobra)), h('td', {}, fmt(x.moedas)), h('td', {}, fmt(Math.round(x.pop))), h('td', { class: 'neg' }, x.fome ? 'Fome' : ''))))))),
+
+      h('h4', {}, 'Acordos do país'),
+      acordos.length ? h('ul', { class: 'lista' }, acordos.map(cartaoCompromisso)) : h('p', { class: 'vazio-txt' }, 'Nenhum acordo ainda.'),
+      efeitos.length > 0 && h('div', {}, h('h4', {}, 'Efeitos em andamento'), h('ul', { class: 'lista' }, efeitos.map(cartaoCompromisso))),
 
       h('h4', {}, 'Nosso desafio'),
       h('p', {}, hs.desafio),
 
-      h('h4', {}, 'Áreas e investimento'),
+      h('h4', {}, 'Áreas: o que foi comprado e o que vale agora'),
       h('div', { class: 'aviso-minimo' + (f.areas.some(a => a.abaixo) ? ' ruim' : '') },
         h('strong', {}, `Nível mínimo agora: ${f.minimo}`),
         h('p', {}, `Sobe para ${f.minimo + 1} na rodada ${f.minimoSobeNaRodada}. Área abaixo do mínimo dá prejuízo. Os níveis 5 e 10 valem em dobro.`)),
-      areasDoPais(Object.fromEntries(f.areas.map(a => [a.id, a.nivel])), { minimo: f.minimo, extra: a => {
+      areasDoPais(Object.fromEntries(f.areas.map(a => [a.id, a.real])), { comprados: Object.fromEntries(f.areas.map(a => [a.id, a.nivel])), minimo: f.minimo, extra: a => {
         const d = area(a.id);
-        return h('div', { class: 'area-extra' },
-          h('span', {}, `Investido: ${fmt(d.investido)}`),
-          h('span', { class: d.proximo != null && d.proximo <= f.moedas ? 'pos' : '' }, d.proximo == null ? 'Nível máximo' : `Próximo nível: ${d.proximo}`));
+        return h('div', { class: 'area-ficha' },
+          h('p', { class: 'area-agora' }, d.agora),
+          d.bonus.map(b => h('p', { class: 'area-bonus' }, `${b.valor > 0 ? '+' : ''}${b.valor} de ${b.titulo} · ${rotuloDura(b.restantes)}`)),
+          h('div', { class: 'area-extra' },
+            h('span', {}, `Comprado ${d.nivel} · investido ${fmt(d.investido)}`),
+            h('span', { class: d.proximo != null && d.proximo <= f.moedas ? 'pos' : '' }, d.proximo == null ? 'Nível máximo' : `Subir: ${d.proximo}`)));
       } }),
 
       h('h4', {}, 'Projetos'),
-      h('p', {}, f.projetos ? `${f.projetos} ${f.projetos === 1 ? 'projeto feito' : 'projetos feitos'}. ` : 'Nenhum projeto ainda. ', `O próximo custa ${f.proximoProjeto} moedas.`),
-
-      h('h4', {}, 'Acordos do país'),
-      f.acordos.length ? h('ul', { class: 'lista' }, f.acordos.map(a => h('li', { class: 'cartao' },
-        h('div', { class: 'cartao-topo' }, h('strong', {}, a.titulo), h('span', { class: 'etiqueta' + (a.secreto ? ' selo-boato' : '') }, a.secreto ? 'Secreto' : a.restantes == null ? 'Até o fim' : `Faltam ${a.restantes}`)),
-        a.descricao && h('p', {}, a.descricao),
-        h('p', { class: 'meta' }, `${a.comQuem ? `Com ${a.comQuem}. ` : ''}${a.moedas > 0 ? `Recebe ${fmt(a.moedas)} por rodada` : a.moedas < 0 ? `Paga ${fmt(-a.moedas)} por rodada` : 'Sem moedas envolvidas'}`)))) : h('p', { class: 'vazio-txt' }, 'Nenhum acordo ainda.'),
+      h('p', {}, f.projetos ? `${f.projetos} ${f.projetos === 1 ? 'projeto feito' : 'projetos feitos'}. ` : 'Nenhum projeto ainda. ', `O próximo custa ${f.proximoProjeto} moedas, ou o valor que o professor combinar.`),
 
       f.serie.length > 0 && h('div', {}, h('h4', {}, 'Rodadas anteriores'),
         h('div', { class: 'rola-x' }, h('table', { class: 'tabela' },
@@ -197,13 +218,13 @@ async function atualizarFicha() {
 }
 
 /* ---------- Jornal, acordos e regras ---------- */
-const textoMoedas = v => `${sinal(v)} moedas por rodada`;
 function cartaoAcordo(a) {
+  const ateR = a.restantes == null ? 'Até o fim' : a.restantes === 1 ? 'Última rodada' : `Até a rodada ${J.rodada + a.restantes - 1}`;
   const quem = a.tipo === 'global'
-    ? (a.efeitos['*'] ? `Todos os países: ${textoMoedas(a.efeitos['*'])}` : 'Todos os países')
-    : a.paises.map(id => (a.efeitos[id] ? `${nomeDe(id)}: ${textoMoedas(a.efeitos[id])}` : nomeDe(id))).join(' · ');
+    ? `Todos os países${textoEfeito(a.efeitos['*']) ? `: ${textoEfeito(a.efeitos['*'])}` : ''}`
+    : a.paises.map(id => (textoEfeito(a.efeitos[id]) ? `${nomeDe(id)}: ${textoEfeito(a.efeitos[id])}` : nomeDe(id))).join(' · ');
   return h('li', { class: 'cartao' },
-    h('div', { class: 'cartao-topo' }, h('strong', {}, a.titulo), h('span', { class: 'etiqueta' }, a.restantes == null ? 'Até o fim' : `Faltam ${a.restantes}`)),
+    h('div', { class: 'cartao-topo' }, h('strong', {}, a.titulo), h('span', { class: 'etiqueta' }, ateR)),
     a.descricao && h('p', {}, a.descricao),
     h('p', { class: 'meta' }, quem));
 }
@@ -230,8 +251,8 @@ function regras() {
       passo('Faltou dinheiro para a comida?', 'O país perde 10% das pessoas.'),
       passo('Suba suas áreas', 'Cada área vai do nível 1 ao 10. Subir custa dinheiro e não tem volta. Os níveis 5 e 10 valem em dobro.'),
       passo('Não abandone nenhuma', 'A cada 3 rodadas o nível mínimo sobe. Área abaixo do mínimo dá prejuízo: greves, crime, protestos, apagões.'),
-      passo('Negocie', 'Combinem entre vocês e chamem o professor: acordos e trocas valem quando ele registra.'),
-      passo('Tenha ideias', 'Um projeto pode aumentar o dinheiro por rodada. Quanto melhor a ideia, mais chance no dado.'),
+      passo('Negocie', 'Acordos podem mudar dinheiro, comida e áreas. Combinem entre vocês e chamem o professor: valem quando ele registra, e a duração aparece na ficha.'),
+      passo('Tenha ideias', 'Projetos podem render dinheiro, baratear comida ou subir áreas. O professor define custo, dificuldade e efeito antes de rolar: quanto maior o número, maior o resultado.'),
       passo('Ataque, se tiver coragem', 'O dado decide. Quem perde paga 20% do próprio dinheiro para o outro.')));
 }
 
@@ -291,6 +312,9 @@ async function atualizar() {
     const estavaOff = ui.offline;
     ui.offline = false;
     if (d && d.paises) {
+      // Dado novo rolando na tela de todos. Quem acabou de abrir a página não vê a animação antiga.
+      if (d.dado?.id && d.dado.id !== ui.ultimoDado) { if (ui.ultimoDado !== undefined) animarDado(d.dado); ui.ultimoDado = d.dado.id; }
+      else if (ui.ultimoDado === undefined) ui.ultimoDado = d.dado?.id ?? null;
       J = d;
       if (ui.aba === 'jornal' || telaGrande()) ui.noticiasVistas = J.noticias.length;
     }

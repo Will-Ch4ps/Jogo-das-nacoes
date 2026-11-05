@@ -266,11 +266,13 @@ const paises = P.map((p, i) => {
 });
 const mapa = { largura: LARG, altura: ALT, costa: costa.map(c => c.map(r1)), ilhas, biomas: pontosBioma, rios, lagos, vulcao, monstro, desenhos, paises: paisesMapa };
 const eventos = [
-  { id: 'e1', nome: 'Crise mundial', detalhe: 'Todos perdem 30 moedas', aviso: 'Uma crise atingiu o mundo todo', acao: { tipo: 'moedas', valor: -30 } },
-  { id: 'e2', nome: 'Colheita ruim', detalhe: 'Todos recebem 15 moedas a menos por 2 rodadas', aviso: 'Colheitas ruins preocupam o continente', acao: { tipo: 'acordo', valor: -15, duracao: 2 } },
-  { id: 'e3', nome: 'Epidemia', detalhe: 'Todos perdem 3% da população', aviso: 'Uma doença se espalha pelo continente', acao: { tipo: 'pop', valor: -3 } },
-  { id: 'e4', nome: 'Boom de comércio', detalhe: 'Todos ganham 30 moedas', aviso: 'O comércio mundial está aquecido', acao: { tipo: 'moedas', valor: 30 } },
-  { id: 'e5', nome: 'Boom tecnológico', detalhe: 'Quem tem Tecnologia 3 ou mais ganha 40 moedas', aviso: 'Uma onda de tecnologia movimenta os mercados', minTec: 3, acao: { tipo: 'moedas', valor: 40 } },
+  { id: 'e1', nome: 'Crise mundial', detalhe: 'Todos perdem 30 moedas', aviso: 'Uma crise atingiu o mundo todo', efeito: { moedasAgora: -30 } },
+  { id: 'e2', nome: 'Colheita ruim', detalhe: 'Comida 15 moedas mais cara para todos, por 2 rodadas', aviso: 'Colheitas ruins preocupam o continente', efeito: { comida: 15 }, duracao: 2 },
+  { id: 'e3', nome: 'Epidemia', detalhe: 'Todos perdem 3% das pessoas e 1 nível real de Saúde por 2 rodadas', aviso: 'Uma doença se espalha pelo continente', efeito: { popAgoraPct: -3, areas: { sau: -1 } }, duracao: 2 },
+  { id: 'e4', nome: 'Boom de comércio', detalhe: 'Todos ganham 30 moedas', aviso: 'O comércio mundial está aquecido', efeito: { moedasAgora: 30 } },
+  { id: 'e5', nome: 'Boom tecnológico', detalhe: 'Quem tem Tecnologia 3 ou mais ganha 40 moedas', aviso: 'Uma onda de tecnologia movimenta os mercados', minTec: 3, efeito: { moedasAgora: 40 } },
+  { id: 'e6', nome: 'Greve geral', detalhe: 'Todos perdem 1 nível real de Emprego por 2 rodadas', aviso: 'Trabalhadores cruzam os braços pelo continente', efeito: { areas: { emp: -1 } }, duracao: 2 },
+  { id: 'e7', nome: 'Apagão continental', detalhe: 'Todos perdem 1 nível real de Infraestrutura por 2 rodadas', aviso: 'Falhas de energia atingem o continente', efeito: { areas: { inf: -1 } }, duracao: 2 },
 ];
 const saida = `// Arquivo gerado por tools/gerar-dados.mjs\nexport const MAPA = ${JSON.stringify(mapa)};\nexport const ROTAS = ${JSON.stringify(ROTAS)};\nexport const HISTORIAS = ${JSON.stringify(HISTORIAS, null, 1)};\nexport const PAISES_INICIAIS = ${JSON.stringify(paises, null, 1)};\nexport const EVENTOS_INICIAIS = ${JSON.stringify(eventos, null, 1)};\n`;
 writeFileSync(new URL('../site/js/dados.js', import.meta.url), saida);

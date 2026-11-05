@@ -68,9 +68,11 @@
       const nomes = ['Nova Atlântida', 'Kaelor', 'Vale de Ferro', 'Solmar', 'Metrópolis', 'Technia', 'Áurea do Sul', 'Bastilha', 'Terra Dourada', 'Verdânia', 'Mar Azul', 'Sahar'];
       e.paises.forEach((c, i) => { c.nome = nomes[i]; });
       G.subirNivel(e, 'p1', 'emp'); G.subirNivel(e, 'p3', 'emp'); G.subirNivel(e, 'p7', 'sau');
-      G.projeto(e, 'p6', 2, () => 5);
-      G.criarAcordo(e, { titulo: 'Porto secreto', descricao: 'Solmar usa o porto em troca de pagamento.', tipo: 'paises', paises: ['p1', 'p4'], efeitos: { p1: 12, p4: -12 }, duracao: 4, visibilidade: 'oculto' });
-      G.criarAcordo(e, { titulo: 'Energia por comida', descricao: 'Kaelor constrói usinas e Nova Atlântida compra sua produção.', tipo: 'paises', paises: ['p1', 'p2'], efeitos: { p1: -5, p2: 15 }, duracao: 3 });
+      G.acaoDado(e, { paisId: 'p6', titulo: 'Chip nacional', lados: 20, area: 'edu', bonusExtra: 2, dificuldade: 10, custo: 20, efeito: { moedas: 10 }, projeto: true }, () => 12);
+      G.fornecimentoDeComida(e, { de: 'p9', para: 'p5', quantidade: 30, preco: 40, duracao: 3 });
+      G.registrarAcordo(e, { titulo: 'Treinamento de técnicos', tipo: 'paises', paises: ['p7', 'p1'], efeitos: { p7: { moedas: 10 }, p1: { moedas: -10, areas: { emp: 2 } } }, duracao: 2 });
+      G.criarAcordo(e, { titulo: 'Porto secreto', descricao: 'Solmar usa o porto em troca de pagamento.', tipo: 'paises', paises: ['p1', 'p4'], efeitos: { p1: { moedas: 12 }, p4: { moedas: -12, areas: { inf: 1 } } }, duracao: 4, visibilidade: 'oculto' });
+      G.criarAcordo(e, { titulo: 'Energia por comida', descricao: 'Kaelor constrói usinas e Nova Atlântida compra sua produção.', tipo: 'paises', paises: ['p1', 'p2'], efeitos: { p1: { moedas: -5, comida: -10 }, p2: { moedas: 15 } }, duracao: 3 });
       e.noticias.push(G.novaNoticia(e, { titulo: 'Technia anuncia chip nacional', texto: 'Governo promete baratear a produção.', paisId: 'p6', selo: 'Imprensa de Technia', estado: 'publicada' }));
       e.noticias.push(G.novaNoticia(e, { titulo: 'Dizem que Bastilha esconde um exército', selo: 'Boato', estado: 'publicada' }));
       G.adicionarMarca(e, 'p4', 'erupcao', 'Vulcão de Solmar volta a soltar fumaça');
@@ -104,7 +106,7 @@
     document.getElementById('exemplo').onclick = exemplo;
     document.getElementById('fechar').onclick = () => { const d = ler()?.dados; if (d?.paises) grava(G.fecharComHistorico(d)); };
 
-    if (!ler()?.dados?.paises?.[0]?.niveis?.emp) exemplo();
+    if (!ler()?.dados?.eventos?.[0]?.efeito) exemplo();
     monta();
   </script>
 </body>

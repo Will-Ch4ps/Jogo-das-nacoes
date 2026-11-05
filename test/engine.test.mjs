@@ -58,15 +58,40 @@ test('Saúde abaixo do mínimo faz a população encolher', () => {
   assert.equal(G.fecharRodada(s).paises[0].pop, 98);
 });
 
-test('crise nova vira rascunho uma vez só', () => {
-  const s = com(modelo({ niveis: { ...niveis(4), emp: 1, est: 1 } }));
+test('sugestões: crise e destaque aparecem uma vez e a notícia pode ter efeito', () => {
+  const s = com(modelo({ moedas: 100, niveis: { ...niveis(5), emp: 1 } }));
+  s.rodada = 4; // mínimo 2
+  const lista = G.sugestoesDeNoticias(s);
+  const crise = lista.find(x => x.tipo === 'crise');
+  assert.equal(lista.filter(x => x.tipo === 'crise').length, 1);
+  assert.match(crise.titulo, /Greves/);
+  assert.equal(lista.filter(x => x.tipo === 'destaque').length, 7);
+  G.resolverSugestao(s, crise, { publicar: true, comEfeito: true });
+  assert.equal(s.paises[0].moedas, 85);
+  assert.equal(s.marcas.length, 1);
+  assert.equal(G.partePublica(s).noticias.length, 1);
+  assert.ok(!G.sugestoesDeNoticias(s).some(x => x.chave === crise.chave));
+  s.rodada = 7; // mínimo sobe: a crise pode voltar
+  assert.ok(G.sugestoesDeNoticias(s).some(x => x.tipo === 'crise'));
+});
+
+test('sugestão de destaque só para quem chegou lá jogando', () => {
+  const s = novo();
+  assert.equal(G.sugestoesDeNoticias(s).filter(x => x.tipo === 'destaque').length, 0); // países que já nascem no nível 5
+  const c = s.paises.find(x => x.id === 'p1');
+  c.niveis.emp = 5;
+  assert.equal(G.sugestoesDeNoticias(s).filter(x => x.tipo === 'destaque').length, 1);
   s.rodada = 4;
-  const e1 = G.fecharRodada(s);
-  const r = e1.noticias.filter(n => n.origem === 'automatica');
-  assert.equal(r.length, 1);
-  assert.match(r[0].titulo, /greves e protestos/);
-  assert.equal(r[0].estado, 'rascunho');
-  assert.equal(G.fecharRodada(e1).noticias.filter(n => n.origem === 'automatica').length, 1);
+  assert.equal(G.sugestoesDeNoticias(s)[0].tipo, 'crise');
+});
+
+test('notícia com efeito aplica uma vez só', () => {
+  const s = com(modelo({ moedas: 100 }));
+  const n = G.novaNoticia(s, { titulo: 'Escândalo', paisId: 'm', efeito: { moedasAgora: -10 } });
+  s.noticias.push(n);
+  G.publicarNoticia(s, n); G.publicarNoticia(s, n);
+  assert.equal(s.paises[0].moedas, 90);
+  assert.ok(!JSON.stringify(G.partePublica(s)).includes('moedasAgora'));
 });
 
 test('fome: dinheiro zera, perde 10% das pessoas e vira rascunho de notícia', () => {
@@ -120,25 +145,150 @@ test('desfazer devolve o estado anterior', () => {
   assert.deepEqual(u.paises, s.paises);
 });
 
-test('dado de sorte: 1 e 6 sempre mandam', () => {
-  assert.equal(G.sorte(5, () => 1).nome, 'Deu muito errado');
-  assert.equal(G.sorte(0, () => 6).nome, 'Deu muito certo');
-  assert.equal(G.sorte(0, () => 2).nome, 'Não deu certo');
-  assert.equal(G.sorte(2, () => 3).nome, 'Deu certo');
+test('resultado do dado: dificuldade, desastre, crítico e número que pesa', () => {
+  assert.deepEqual(G.resultadoDado(20, 1, 9, 10), { total: 10, nome: 'Desastre', mult: -1 });
+  assert.equal(G.resultadoDado(20, 5, 2, 10).nome, 'Falhou');
+  const justo = G.resultadoDado(20, 8, 2, 10), alto = G.resultadoDado(20, 18, 2, 10);
+  assert.equal(justo.mult, 1);
+  assert.equal(alto.mult, 2);
+  assert.equal(G.resultadoDado(20, 8, 7, 10, false).mult, 1);
+  assert.equal(G.resultadoDado(20, 20, 0, 50).nome, 'Crítico');
+  assert.equal(G.resultadoDado(20, 20, 0, 50).mult, 2);
+  assert.equal(G.resultadoDado(6, 6, 0, 4).nome, 'Crítico');
 });
 
-test('projeto: usa Educação e ideia, Tecnologia barateia, custo sobe a cada projeto', () => {
+test('chance do dado conta só os números que dão certo', () => {
+  assert.equal(G.chanceDado(20, 0, 10), 55);
+  assert.equal(G.chanceDado(20, 5, 10), 80);
+  assert.equal(G.chanceDado(20, 50, 10), 95); // o 1 sempre falha
+  assert.equal(G.chanceDado(6, 0, 4), 50);
+});
+
+test('ação com dado: cobra o custo definido e aplica o efeito sozinho', () => {
   const s = com(modelo({ moedas: 100 }));
+  const r = G.acaoDado(s, { paisId: 'm', titulo: 'Fazenda', lados: 20, area: 'edu', bonusExtra: 1, dificuldade: 10, custo: 30, efeito: { moedas: 10, comida: -20, areas: { inf: 1 } }, duracao: 3 }, () => 7);
+  assert.equal(r.total, 10);
+  assert.equal(r.mult, 1);
+  assert.equal(s.paises[0].moedas, 70);
+  const ef = G.calcular(s.paises[0], s);
+  assert.equal(ef.entra, 120);
+  assert.equal(ef.comida, 100 - 15 - 20); // Infraestrutura real 3
+  assert.equal(s.acordos[0].restantes, 3);
+  assert.equal(s.acordos[0].origem, 'efeito');
+  assert.equal(G.partePublica(s).acordos.length, 0);
+});
+
+test('ação com dado: falha só cobra; desastre inverte e não dura para sempre', () => {
+  const s = com(modelo({ moedas: 100 }));
+  G.acaoDado(s, { paisId: 'm', lados: 20, dificuldade: 15, custo: 10, efeito: { moedasAgora: 50 } }, () => 5);
+  assert.equal(s.paises[0].moedas, 90);
+  const r = G.acaoDado(s, { paisId: 'm', lados: 20, dificuldade: 10, efeito: { moedas: 10 } }, () => 1);
+  assert.equal(r.mult, -1);
+  assert.equal(s.acordos[0].efeitos.m.moedas, -10);
+  assert.equal(s.acordos[0].restantes, 2);
+  assert.throws(() => G.acaoDado(s, { paisId: 'm', custo: 9999, efeito: {} }, () => 5), /precisa de 9999/);
+});
+
+test('efeito pode mudar nível permanente, pessoas e dinheiro na hora', () => {
+  const s = com(modelo({ moedas: 100 }));
+  G.aplicarEfeito(s, ['m'], { moedasAgora: 20, popAgoraPct: -10, niveisPerm: { emp: 2 } });
+  assert.equal(s.paises[0].moedas, 120);
+  assert.equal(s.paises[0].pop, 90);
+  assert.equal(s.paises[0].niveis.emp, 4);
+  assert.equal(s.acordos.length, 0);
+});
+
+test('nível comprado e nível real são separados', () => {
+  const s = com(modelo({ moedas: 100 }), outro());
+  G.registrarAcordo(s, { titulo: 'Treinamento', tipo: 'paises', paises: ['m', 'o'], efeitos: { m: { areas: { emp: 3 } }, o: { moedas: 5 } }, duracao: 1 });
+  const c = s.paises[0];
+  assert.equal(c.niveis.emp, 2);
+  assert.equal(G.nivelReal(c, 'emp', s), 5);
+  assert.equal(G.calcular(c, s).entra, 90 + 60); // nível 5 vale em dobro
+  assert.equal(G.partePublica(s).paises[0].niveis.emp, 5);
+  const v = G.visaoDoPais(c, s).areas.find(a => a.id === 'emp');
+  assert.equal(v.nivel, 2);
+  assert.equal(v.real, 5);
+  assert.equal(v.bonus[0].titulo, 'Treinamento');
+  assert.match(v.agora, /60 moedas/);
+  const f = G.fecharRodada(s);
+  assert.equal(G.nivelReal(f.paises[0], 'emp', f), 2);
+});
+
+test('nível real baixo também cobra o mínimo', () => {
+  const s = com(modelo());
+  s.rodada = 4; // mínimo 2
+  assert.equal(G.calcular(s.paises[0], s).totalPerdas, 0);
+  G.aplicarEfeito(s, ['m'], { areas: { emp: -1 } }, { duracao: 2 });
+  assert.equal(G.perdasDoPais(s.paises[0], s)[0].valor, 15);
+});
+
+test('fornecimento de comida: quem recebe não paga duas vezes e quem fornece ganha', () => {
+  const s = com(modelo({ id: 'a', nome: 'Fazenda', vizinhos: [] }), modelo({ id: 'b', nome: 'Cidade', vizinhos: [] }));
+  const antes = { a: G.calcular(s.paises[0], s), b: G.calcular(s.paises[1], s) };
+  G.fornecimentoDeComida(s, { de: 'a', para: 'b', quantidade: 30, preco: 25, custoProducao: 5, duracao: 3 });
+  const a = G.calcular(s.paises[0], s), b = G.calcular(s.paises[1], s);
+  assert.equal(b.comida, antes.b.comida - 30);
+  assert.equal(b.sobra, antes.b.sobra + 30 - 25);
+  assert.equal(a.sobra, antes.a.sobra + 25 - 5);
+  const conta = G.contaComida(s.paises[1], s);
+  assert.equal(conta.linhas.reduce((t, x) => t + x.valor, 0), conta.total);
+  assert.equal(conta.linhas.at(-1).restantes, 3);
+});
+
+test('abater comida não vira dinheiro: a conta para em zero', () => {
+  const s = com(modelo());
+  G.aplicarEfeito(s, ['m'], { comida: -999 });
+  const c = G.contaComida(s.paises[0], s);
+  assert.equal(c.total, 0);
+  assert.equal(c.linhas.reduce((t, x) => t + x.valor, 0), 0);
+});
+
+test('acordo com pagamento na hora confere o saldo e não aplica nada se faltar', () => {
+  const s = com(modelo({ moedas: 50 }), outro({ moedas: 50 }));
+  assert.throws(() => G.registrarAcordo(s, { titulo: 'x', tipo: 'paises', paises: ['m', 'o'], efeitos: { m: { moedasAgora: -80 }, o: { moedasAgora: 80 } } }), /não tem 80/);
+  assert.equal(s.paises[1].moedas, 50);
+  assert.equal(s.acordos.length, 0);
+  G.registrarAcordo(s, { titulo: 'x', tipo: 'paises', paises: ['m', 'o'], efeitos: { m: { moedasAgora: -20 }, o: { moedasAgora: 20, moedas: 5 } } });
+  assert.equal(s.paises[0].moedas, 30);
+  assert.equal(s.paises[1].moedas, 70);
+  assert.equal(s.acordos[0].efeitos.o.moedasAgora, undefined);
+});
+
+test('acordos antigos, só com número, continuam valendo', () => {
+  const s = com(modelo());
+  G.criarAcordo(s, { titulo: 'velho', tipo: 'paises', paises: ['m'], efeitos: { m: 8 }, duracao: 1 });
+  assert.equal(G.calcular(s.paises[0], s).entra, 118);
+  assert.equal(G.textoEfeito(8), '+8 moedas por rodada');
+});
+
+test('textos dos efeitos são claros', () => {
+  assert.equal(G.textoEfeito({ moedas: -5, comida: -10, areas: { emp: 2 } }), '−5 moedas por rodada, paga 10 moedas a menos de comida, +2 em Emprego');
+  assert.equal(G.textoEfeito({}), '');
+});
+
+test('efeito escalado arredonda e some quando multiplica por zero', () => {
+  assert.deepEqual(G.escalarEfeito({ moedas: 10, areas: { emp: 1 } }, 1.5), { moedas: 15, areas: { emp: 2 } });
+  assert.deepEqual(G.escalarEfeito({ moedas: 10 }, 0), {});
+  assert.deepEqual(G.escalarEfeito({ moedasAgora: 30 }, -1), { moedasAgora: -30 });
+});
+
+test('a estimativa bate com o fechamento e a projeção mostra o fim dos acordos', () => {
+  const s = com(modelo({ moedas: 100, codigo: 'AAAAAA' }), outro({ codigo: 'BBBBBB' }));
+  G.registrarAcordo(s, { titulo: 'x', tipo: 'paises', paises: ['m', 'o'], efeitos: { m: { moedas: 20, comida: -10 }, o: { moedas: -20 } }, duracao: 1 });
+  const v = G.todasAsVisoes(s).AAAAAA, f = G.fecharRodada(s);
+  assert.equal(v.fimDaRodada, f.paises[0].moedas);
+  assert.equal(v.proximas.length, 2);
+  assert.equal(v.proximas[0].rodada, 2);
+  assert.equal(v.proximas[0].sobra, G.calcular(f.paises[0], f).sobra); // sem o acordo, que acabou
+  assert.equal(v.acordos[0].ateRodada, 1);
+});
+
+test('ação custa o valor sugerido para projeto, que sobe e a Tecnologia desconta', () => {
+  const s = com(modelo({ moedas: 200 }));
   assert.equal(G.custoDoProjeto(s.paises[0], s), 20); // 30 - tecnologia 2 x 5
-  assert.equal(G.projeto(s, 'm', 1, () => 2).ganho, 10); // 2 + 2 + 1 = 5
-  assert.equal(s.paises[0].moedas, 80);
-  assert.equal(s.paises[0].renda, 100);
+  G.acaoDado(s, { paisId: 'm', custo: 20, projeto: true, efeito: {} }, () => 10);
   assert.equal(G.custoDoProjeto(s.paises[0], s), 50);
-  assert.equal(G.projeto(s, 'm', 2, () => 3).ganho, 20); // 7
-  s.paises[0].moedas = 100;
-  assert.equal(G.projeto(s, 'm', 2, () => 1).ganho, 0); // 1 sempre falha
-  s.paises[0].moedas = 5;
-  assert.throws(() => G.projeto(s, 'm', 0));
 });
 
 test('Tecnologia abaixo do mínimo deixa o projeto mais caro', () => {
@@ -160,6 +310,11 @@ test('ataque: quem perde paga 20% ao outro; empate é do defensor; militar só e
   s.paises[2].niveis.seg = 4; // hacker usa Tecnologia contra Segurança
   const h = [5, 3];
   assert.equal(G.ataque(s, 'm', 'z', 'hacker', () => h.shift()).totalD, 7);
+  const c = [9, 1];
+  const r = G.ataque(s, 'm', 'o', 'militar', { lados: 20, pct: 50, efeitoPerdedor: { areas: { mil: -1 } }, duracao: 2 }, () => c.shift());
+  assert.equal(r.venceu, true);
+  assert.equal(r.valor, 52); // o Outro tinha 104 moedas: perdeu 20 e depois ganhou 24
+  assert.equal(G.nivelReal(s.paises[1], 'mil', s), 1);
 });
 
 test('marcas no mapa aparecem para todos e podem sair', () => {
@@ -209,6 +364,7 @@ test('ficha do país: contas fecham, mostra o que paga, prejuízos e o investido
   const v = G.visaoDoPais(s.paises[0], s), ef = G.calcular(s.paises[0], s);
   assert.equal(v.recebe - v.paga, ef.sobra);
   assert.equal(v.paga, 110); // comida 90 + protestos 10 + acordo 10
+  assert.equal(v.comida.total, 90);
   assert.ok(v.saidas.some(x => x.rotulo === 'Protestos' && x.ruim));
   assert.equal(v.areas.find(a => a.id === 'est').abaixo, 1);
   assert.equal(v.areas.find(a => a.id === 'emp').investido, 30);
