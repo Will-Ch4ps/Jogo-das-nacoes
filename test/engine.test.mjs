@@ -5,9 +5,11 @@ import { PAISES_INICIAIS, EVENTOS_INICIAIS, MAPA, HISTORIAS, ROTAS } from '../si
 
 const novo = () => G.estadoNovo(PAISES_INICIAIS, EVENTOS_INICIAIS);
 const niveis = (n = 2) => Object.fromEntries(G.AREAS.map(a => [a.id, n]));
+// Em nível 2, a manutenção total é 36 moedas. Com manutenção zerada nos testes de conta, os números ficam simples.
 const modelo = (extra = {}) => ({ id: 'm', nome: 'Modelo', moedas: 50, pop: 100, renda: 90, niveis: niveis(), serie: [], vizinhos: ['o'], ...extra });
 const outro = (extra = {}) => modelo({ id: 'o', nome: 'Outro', vizinhos: ['m'], ...extra });
-const com = (...paises) => ({ ...novo(), paises });
+const com = (...paises) => { const e = { ...novo(), paises }; e.params = { ...e.params, manutencaoPct: 0 }; return e; };
+const comManut = (...paises) => ({ ...novo(), paises });
 
 test('fechamento: entra, paga comida, sobra e população cresce', () => {
   const s = com(modelo());
@@ -29,38 +31,70 @@ test('níveis 5 e 10 valem em dobro', () => {
   assert.equal(G.forca(10), 12);
 });
 
-test('nível mínimo sobe 1 a cada 3 rodadas', () => {
-  const p = G.PARAMS_INICIAIS;
-  assert.deepEqual([1, 3, 4, 6, 7, 9, 10].map(r => G.minimoDaRodada(r, p)), [1, 1, 2, 2, 3, 3, 4]);
-  assert.equal(G.rodadaDoProximoMinimo(1, p), 4);
-  assert.equal(G.rodadaDoProximoMinimo(3, p), 4);
-  assert.equal(G.rodadaDoProximoMinimo(4, p), 7);
+test('manutenção: cobra por nível comprado e entra na conta da rodada', () => {
+  const s = comManut(modelo({ moedas: 100 })); // todas as áreas em nível 2
+  const ef = G.calcular(s.paises[0], s);
+  assert.equal(ef.manutencao.total, 36); // soma dos pesos (18) x 2
+  assert.equal(ef.sobra, 110 - 90 - 36);
+  assert.equal(G.custoManutencao(s.paises[0], 'mil', s.params), 6);
+  G.registrarAcordo(s, { titulo: 't', tipo: 'paises', paises: ['m'], efeitos: { m: { areas: { emp: 3 } } }, duracao: 2 });
+  assert.equal(G.calcular(s.paises[0], s).manutencao.total, 36); // bônus de acordo não paga manutenção
 });
 
-test('área abaixo do mínimo dá prejuízo, por nível que falta', () => {
-  const s = com(modelo({ moedas: 100, niveis: { ...niveis(4), emp: 1, edu: 2, seg: 3, inf: 2, est: 3 } }));
-  s.rodada = 10; // mínimo 4
-  const perdas = Object.fromEntries(G.perdasDoPais(s.paises[0], s).map(x => [x.area, x.valor]));
-  assert.deepEqual(perdas, { emp: 45, edu: 20, seg: 5, inf: 20, est: 10 });
-  assert.equal(G.calcular(s.paises[0], s).totalPerdas, 100);
-  assert.equal(G.efetivo(s.paises[0], 'est', s), 2); // 3 de nível, menos 1 que falta
-});
-
-test('quem cumpre o mínimo não paga nada', () => {
-  const s = com(modelo());
-  s.rodada = 4; // mínimo 2
+test('sem manutenção: entra em crise na rodada seguinte, e a cada 2 rodadas perde nível', () => {
+  let s = comManut(modelo({ moedas: 500, renda: 300 }));
+  G.cortarManutencao(s, 'm', 'est', true);
+  assert.equal(G.calcular(s.paises[0], s).manutencao.total, 34); // sem Estabilidade (1 x 2)
   assert.equal(G.calcular(s.paises[0], s).totalPerdas, 0);
+  s = G.fecharRodada(s);
+  assert.equal(G.problema(s.paises[0], 'est'), 1);
+  assert.equal(s.paises[0].niveis.est, 2);
+  assert.equal(G.calcular(s.paises[0], s).perdas[0].valor, 10);
+  s = G.fecharRodada(s);
+  assert.equal(s.paises[0].niveis.est, 1); // 2 rodadas sem pagar
+  assert.deepEqual(s.resumo.itens[0].perdeuNivel, ['est']);
+  s = G.fecharRodada(s); s = G.fecharRodada(s);
+  assert.equal(s.paises[0].niveis.est, 1); // não passa de 1
+  G.cortarManutencao(s, 'm', 'est', false);
+  s = G.fecharRodada(s);
+  assert.equal(G.problema(s.paises[0], 'est'), 0); // voltou a pagar: a crise acaba
 });
 
-test('Saúde abaixo do mínimo faz a população encolher', () => {
-  const s = com(modelo({ niveis: { ...niveis(4), sau: 2 } }));
-  s.rodada = 10; // faltam 2 níveis
-  assert.equal(G.fecharRodada(s).paises[0].pop, 98);
+test('manutenção usa só o que sobra e nunca causa fome', () => {
+  const m = modelo({ moedas: 0, renda: 90 }); // sobram 20 depois da comida
+  const s = comManut(m);
+  const ef = G.calcular(m, s);
+  assert.ok(ef.manutencao.total <= 20);
+  assert.ok(ef.manutencao.linhas.some(l => l.estado === 'sem dinheiro'));
+  const f = G.fecharRodada(s);
+  assert.equal(f.resumo.itens[0].fome, false);
+  assert.equal(f.paises[0].moedas, 20 - ef.manutencao.total);
+  assert.ok(f.resumo.itens[0].semPagar.length > 0);
+});
+
+test('área em crise dá o prejuízo certo em cada uma', () => {
+  const s = com(modelo({ moedas: 100, semManutencao: { emp: 1, edu: 1, seg: 1, inf: 1, est: 1, sau: 1 } }));
+  const perdas = Object.fromEntries(G.perdasDoPais(s.paises[0], s).map(x => [x.area, x.valor]));
+  assert.deepEqual(perdas, { emp: 15, edu: 10, seg: 5, inf: 10, est: 10 });
+  assert.equal(G.efetivo(s.paises[0], 'est', s), 1);
+  assert.equal(G.fecharRodada(s).paises[0].pop, 99); // Saúde em crise encolhe 1%
+});
+
+test('escolhas prontas viram efeito: tamanho, valor próprio e área', () => {
+  assert.deepEqual(G.efeitoDeEscolhas([{ tipo: 'ganhaRodada', tamanho: 1 }]), { moedas: 10 });
+  assert.deepEqual(G.efeitoDeEscolhas([{ tipo: 'perdeAgora', tamanho: 2 }]), { moedasAgora: -60 });
+  assert.deepEqual(G.efeitoDeEscolhas([{ tipo: 'comidaBarata', tamanho: 0 }]), { comida: -10 });
+  assert.deepEqual(G.efeitoDeEscolhas([{ tipo: 'ganhaRodada', valor: 7 }]), { moedas: 7 });
+  assert.deepEqual(G.efeitoDeEscolhas([{ tipo: 'areaMelhora', tamanho: 1, area: 'emp' }, { tipo: 'popCai', tamanho: 0 }]), { areas: { emp: 2 }, popAgoraPct: -2 });
+  assert.deepEqual(G.efeitoDeEscolhas([{ tipo: 'nivelGanha', tamanho: 0 }]), {}); // sem área escolhida, não faz nada
+  assert.equal(G.escolhasTemDuracao([{ tipo: 'ganhaAgora' }]), false);
+  assert.equal(G.escolhasTemDuracao([{ tipo: 'comidaCara' }]), true);
+  for (const t of G.TIPOS_EFEITO) assert.equal(t.valores.length, G.TAMANHOS.length, t.id);
 });
 
 test('sugestões: crise e destaque aparecem uma vez e a notícia pode ter efeito', () => {
-  const s = com(modelo({ moedas: 100, niveis: { ...niveis(5), emp: 1 } }));
-  s.rodada = 4; // mínimo 2
+  const s = com(modelo({ moedas: 100, niveis: { ...niveis(5), emp: 1 }, semManutencao: { emp: 1 } }));
+  s.rodada = 4;
   const lista = G.sugestoesDeNoticias(s);
   const crise = lista.find(x => x.tipo === 'crise');
   assert.equal(lista.filter(x => x.tipo === 'crise').length, 1);
@@ -71,7 +105,8 @@ test('sugestões: crise e destaque aparecem uma vez e a notícia pode ter efeito
   assert.equal(s.marcas.length, 1);
   assert.equal(G.partePublica(s).noticias.length, 1);
   assert.ok(!G.sugestoesDeNoticias(s).some(x => x.chave === crise.chave));
-  s.rodada = 7; // mínimo sobe: a crise pode voltar
+  s.paises[0].semManutencao = { emp: 1 };
+  s.rodada = 7; // nova crise, em outro momento: pode voltar
   assert.ok(G.sugestoesDeNoticias(s).some(x => x.tipo === 'crise'));
 });
 
@@ -81,7 +116,7 @@ test('sugestão de destaque só para quem chegou lá jogando', () => {
   const c = s.paises.find(x => x.id === 'p1');
   c.niveis.emp = 5;
   assert.equal(G.sugestoesDeNoticias(s).filter(x => x.tipo === 'destaque').length, 1);
-  s.rodada = 4;
+  c.semManutencao = { est: 1 };
   assert.equal(G.sugestoesDeNoticias(s)[0].tipo, 'crise');
 });
 
@@ -215,14 +250,6 @@ test('nível comprado e nível real são separados', () => {
   assert.equal(G.nivelReal(f.paises[0], 'emp', f), 2);
 });
 
-test('nível real baixo também cobra o mínimo', () => {
-  const s = com(modelo());
-  s.rodada = 4; // mínimo 2
-  assert.equal(G.calcular(s.paises[0], s).totalPerdas, 0);
-  G.aplicarEfeito(s, ['m'], { areas: { emp: -1 } }, { duracao: 2 });
-  assert.equal(G.perdasDoPais(s.paises[0], s)[0].valor, 15);
-});
-
 test('fornecimento de comida: quem recebe não paga duas vezes e quem fornece ganha', () => {
   const s = com(modelo({ id: 'a', nome: 'Fazenda', vizinhos: [] }), modelo({ id: 'b', nome: 'Cidade', vizinhos: [] }));
   const antes = { a: G.calcular(s.paises[0], s), b: G.calcular(s.paises[1], s) };
@@ -291,10 +318,9 @@ test('ação custa o valor sugerido para projeto, que sobe e a Tecnologia descon
   assert.equal(G.custoDoProjeto(s.paises[0], s), 50);
 });
 
-test('Tecnologia abaixo do mínimo deixa o projeto mais caro', () => {
-  const s = com(modelo({ niveis: { ...niveis(4), tec: 2 } }));
-  s.rodada = 10; // faltam 2: 30 - 10 + 20
-  assert.equal(G.custoDoProjeto(s.paises[0], s), 40);
+test('Tecnologia em crise deixa o projeto mais caro', () => {
+  const s = com(modelo({ semManutencao: { tec: 1 } }));
+  assert.equal(G.custoDoProjeto(s.paises[0], s), 30); // 30 - 10 + 10
 });
 
 test('ataque: quem perde paga 20% ao outro; empate é do defensor; militar só em vizinho', () => {
@@ -356,8 +382,7 @@ test('códigos são únicos e cada um abre só o próprio país', () => {
 });
 
 test('ficha do país: contas fecham, mostra o que paga, prejuízos e o investido', () => {
-  const s = com(modelo({ moedas: 100, codigo: 'AAAAAA', niveis: { ...niveis(), est: 1 } }), outro({ codigo: 'BBBBBB' }));
-  s.rodada = 4; // mínimo 2: Estabilidade 1 fica abaixo
+  const s = com(modelo({ moedas: 100, codigo: 'AAAAAA', semManutencao: { est: 1 } }), outro({ codigo: 'BBBBBB' }));
   G.subirNivel(s, 'm', 'emp');
   G.criarAcordo(s, { titulo: 'Paga', tipo: 'paises', paises: ['m', 'o'], efeitos: { m: -10, o: 10 }, duracao: 2 });
   G.criarAcordo(s, { titulo: 'Recebe', tipo: 'paises', paises: ['m', 'o'], efeitos: { m: 5, o: -5 }, duracao: 2, visibilidade: 'oculto' });
@@ -366,13 +391,11 @@ test('ficha do país: contas fecham, mostra o que paga, prejuízos e o investido
   assert.equal(v.paga, 110); // comida 90 + protestos 10 + acordo 10
   assert.equal(v.comida.total, 90);
   assert.ok(v.saidas.some(x => x.rotulo === 'Protestos' && x.ruim));
-  assert.equal(v.areas.find(a => a.id === 'est').abaixo, 1);
+  assert.equal(v.areas.find(a => a.id === 'est').problema, 1);
   assert.equal(v.areas.find(a => a.id === 'emp').investido, 30);
   assert.equal(v.areas.find(a => a.id === 'emp').proximo, 40);
   assert.equal(v.acordos.find(a => a.titulo === 'Recebe').secreto, true);
   assert.equal(v.fimDaRodada, 70 + ef.sobra);
-  assert.equal(v.minimo, 2);
-  assert.equal(v.minimoSobeNaRodada, 7);
 });
 
 test('ficha avisa quanto vai faltar', () => {
@@ -382,7 +405,7 @@ test('ficha avisa quanto vai faltar', () => {
   assert.equal(v.fimDaRodada, 0);
 });
 
-test('12 países justos: mesma riqueza, mesma sobra, níveis somam 16 e todos têm vizinhos', () => {
+test('12 países justos: mesma riqueza, mesma sobra depois da manutenção, níveis somam 16 e todos têm vizinhos', () => {
   const s = novo();
   assert.equal(s.paises.length, 12);
   assert.equal(MAPA.paises.length, 12);

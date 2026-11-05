@@ -80,16 +80,17 @@ export function nivelVisual(real, comprado = real) {
       return h('span', { class: 'nivel' + cls + (i === 4 || i === 9 ? ' marco' : '') });
     }));
 }
-// Áreas de um país. niveis: nível real. comprados: o que foi pago. compacto: sem a explicação. extra: o que só o próprio grupo vê.
-export function areasDoPais(niveis, { compacto = false, minimo = 0, extra, comprados } = {}) {
+// Áreas de um país. niveis: nível real. comprados: o que foi pago. compacto: sem a explicação.
+// problemas: áreas sem manutenção. extra: o que só o próprio grupo vê.
+export function areasDoPais(niveis, { compacto = false, problemas = [], extra, comprados } = {}) {
   return h('ul', { class: 'areas' + (compacto ? ' compactas' : '') }, AREAS.map(a => {
-    const abaixo = niveis[a.id] < minimo;
-    return h('li', { class: abaixo ? 'abaixo' : '' },
+    const comProblema = problemas.includes(a.id);
+    return h('li', { class: comProblema ? 'com-problema' : '' },
       h('div', { class: 'area-linha' },
-        h('span', { class: 'area-nome' }, icone(a.id, 19), h('strong', {}, a.nome)),
+        h('span', { class: 'area-nome' }, icone(a.id, 19), h('strong', {}, a.nome), comProblema && compacto && h('span', { class: 'etiqueta aviso' }, 'Em crise')),
         h('span', { class: 'area-nivel' }, nivelVisual(niveis[a.id], comprados ? comprados[a.id] : niveis[a.id]), h('b', {}, niveis[a.id]))),
       !compacto && h('p', { class: 'meta' }, a.faz),
-      abaixo && h('p', { class: 'area-crise' }, a.sem),
+      comProblema && !compacto && h('p', { class: 'area-crise' }, a.sem),
       extra?.(a));
   }));
 }

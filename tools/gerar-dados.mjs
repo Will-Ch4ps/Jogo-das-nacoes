@@ -1,5 +1,6 @@
 // Gera site/js/dados.js: mapa do continente, rotas, histórias e os 12 países. Semente fixa: o mapa não muda sozinho.
 import { writeFileSync } from 'node:fs';
+import { AREAS as AREAS_JOGO } from '../site/js/engine.js';
 
 const LARG = 1000, ALT = 720;
 const P = [
@@ -258,9 +259,10 @@ const forca = n => n + (n >= 5 ? 1 : 0) + (n >= 10 ? 1 : 0);
 const paises = P.map((p, i) => {
   const [id, perfil, , , cor, pop, nv] = p;
   const niveis = Object.fromEntries(AREAS.map((a, k) => [a, nv[k]]));
-  // Começo justo: todos sobram 30 moedas por rodada e têm a mesma riqueza. Mais gente, menos dinheiro em caixa.
+  // Começo justo: depois da comida e da manutenção, todos sobram 30 moedas por rodada e têm a mesma riqueza. Mais gente, menos dinheiro em caixa.
   const comida = pop - forca(niveis.inf) * 5;
-  const renda = comida + SOBRA_INICIAL - forca(niveis.emp) * 10;
+  const manutencao = AREAS_JOGO.reduce((t, a) => t + niveis[a.id] * a.manut, 0);
+  const renda = comida + manutencao + SOBRA_INICIAL - forca(niveis.emp) * 10;
   const moedas = RIQUEZA_INICIAL - pop * 5;
   return { id, nome: `País ${i + 1}`, perfil, cor, moedas, pop, renda, niveis, investido: {}, projetos: 0, serie: [], vizinhos: [...viz[i]].sort((a, b) => a.slice(1) - b.slice(1)) };
 });

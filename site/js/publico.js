@@ -68,7 +68,7 @@ function dossie(c) {
       h('div', { class: 'forte' }, h('dt', {}, 'Ponto forte'), h('dd', {}, hs.forte)),
       h('div', { class: 'fraco' }, h('dt', {}, 'Ponto fraco'), h('dd', {}, hs.fraco)),
       h('div', { class: 'desafio' }, h('dt', {}, 'Desafio'), h('dd', {}, hs.desafio))),
-    h('h4', {}, `Áreas · mínimo atual: nível ${J.minimo}`), areasDoPais(c.niveis, { compacto: true, minimo: J.minimo }),
+    h('h4', {}, 'Áreas'), areasDoPais(c.niveis, { compacto: true, problemas: c.problemas || [] }),
     h('h4', {}, 'Vizinhos'), h('div', { class: 'chips' }, (c.vizinhos || []).filter(paisDe).map(v => h('button', { class: 'pais-chip', style: `--cor:${paisDe(v).cor}`, onclick: () => escolher(v, true) }, h('span', {}, nomeDe(v))))),
     rotas.length > 0 && h('div', {}, h('h4', {}, 'Rotas'), h('ul', { class: 'rotas-lista' }, rotas.map(r => h('li', {}, h('strong', {}, r.nome), ` · ${r.tipo === 'mar' ? 'mar' : 'terra'}, com ${nomeDe(r.de === c.id ? r.para : r.de)}`)))),
   ];
@@ -77,7 +77,7 @@ function dossie(c) {
 // O que todos veem ao tocar em um país no mapa.
 function cartaoPublico(c) {
   const acordos = J.acordos.filter(a => a.tipo === 'global' || a.paises.includes(c.id));
-  const noticias = J.noticias.filter(n => n.paisId === c.id).slice().reverse().slice(0, 3);
+  const qtdNoticias = J.noticias.filter(n => n.paisId === c.id || n.fontePais === c.id).length;
   return h('article', { class: 'detalhe', id: 'detalhe', 'data-aba': 'mapa', style: `--cor:${c.cor}` },
     h('header', { class: 'detalhe-topo' },
       h('div', {}, h('h3', {}, c.nome), h('p', {}, c.perfil)),
@@ -86,7 +86,7 @@ function cartaoPublico(c) {
       h('div', { class: 'destaques dois' }, destaque(`${c.pos}º`, 'posição'), destaque(fmt(c.riqueza), 'riqueza')),
       dossie(c),
       acordos.length > 0 && h('div', {}, h('h4', {}, 'Acordos públicos'), h('ul', { class: 'lista' }, acordos.map(a => cartaoAcordo(a)))),
-      noticias.length > 0 && h('div', {}, h('h4', {}, 'Notícias'), h('ul', { class: 'lista' }, noticias.map(cartaoNoticia)))));
+      qtdNoticias > 0 && h('button', { class: 'btn leve btn-ver-jornal', onclick: () => { ui.jornalPais = c.id; ui.jornalFonte = 'todas'; ui.jornalVista = 'noticias'; trocaAba('jornal'); } }, icone('jornal', 19), `Ver ${qtdNoticias} ${qtdNoticias === 1 ? 'notícia' : 'notícias'} no jornal`)));
 }
 
 // Tela à parte: todos os países, para conhecer o seu e estudar os outros.
@@ -104,7 +104,7 @@ function secaoRanking() {
   const lista = J.paises.slice().sort((a, b) => a.pos - b.pos);
   return h('section', { class: 'secao', 'data-aba': 'ranking' },
     h('h2', { class: 'titulo' }, 'Ranking'),
-    h('p', { class: 'meta explica' }, `Riqueza = dinheiro + ${J.params.valorPessoa} moedas por mil pessoas. Nível mínimo das áreas: ${J.minimo}, sobe para ${J.minimo + 1} na rodada ${J.minimoSobeNaRodada}.`),
+    h('p', { class: 'meta explica' }, `Riqueza = dinheiro + ${J.params.valorPessoa} moedas por mil pessoas.`),
     h('ol', { class: 'placar' }, lista.map(c => h('li', {},
       h('button', { class: 'placar-item', style: `--cor:${c.cor}`, onclick: () => escolher(c.id, true) },
         h('span', { class: 'placar-pos' }, c.pos),
@@ -154,6 +154,8 @@ function fichaPais(f) {
         f.entradas.map(x => linhaConta(x, '+')),
         h('h5', {}, h('span', {}, 'Comida'), h('span', {}, `−${fmt(f.comida.total)}`)),
         f.comida.linhas.map(x => linhaConta(x, x.valor < 0 ? '+' : '−')),
+        h('h5', {}, h('span', {}, 'Manutenção das áreas'), h('span', {}, `−${fmt(f.manutencao.total)}`)),
+        f.manutencao.linhas.filter(l => l.estado !== 'paga' && l.valor > 0).map(l => h('div', { class: 'conta aviso' }, h('span', {}, l.rotulo), h('strong', {}, l.estado === 'cortada' ? 'cortada' : 'sem dinheiro'))),
         f.saidas.length > 0 && [h('h5', {}, h('span', {}, 'Outros pagamentos'), h('span', {}, `−${fmt(f.saidas.reduce((t, x) => t + x.valor, 0))}`)), f.saidas.map(x => linhaConta(x, '−'))],
         h('h5', { class: 'conta-final' }, h('span', {}, f.sobra < 0 ? 'Falta na rodada' : 'Sobra na rodada'), h('span', { class: f.sobra < 0 ? 'neg' : 'pos' }, sinal(f.sobra)))),
 
@@ -170,17 +172,19 @@ function fichaPais(f) {
       h('h4', {}, 'Nosso desafio'),
       h('p', {}, hs.desafio),
 
-      h('h4', {}, 'Áreas: o que foi comprado e o que vale agora'),
-      h('div', { class: 'aviso-minimo' + (f.areas.some(a => a.abaixo) ? ' ruim' : '') },
-        h('strong', {}, `Nível mínimo agora: ${f.minimo}`),
-        h('p', {}, `Sobe para ${f.minimo + 1} na rodada ${f.minimoSobeNaRodada}. Área abaixo do mínimo dá prejuízo. Os níveis 5 e 10 valem em dobro.`)),
-      areasDoPais(Object.fromEntries(f.areas.map(a => [a.id, a.real])), { comprados: Object.fromEntries(f.areas.map(a => [a.id, a.nivel])), minimo: f.minimo, extra: a => {
-        const d = area(a.id);
+      h('h4', {}, 'Áreas: comprado, efeito real e manutenção'),
+      h('p', { class: 'meta explica' }, `Comprar sobe o nível. A manutenção é a despesa por rodada: sem pagar, a área entra em crise e, a cada ${f.rodadasParaPerderNivel} rodadas sem pagar, perde um nível. Os níveis 5 e 10 valem em dobro.`),
+      areasDoPais(Object.fromEntries(f.areas.map(a => [a.id, a.real])), { comprados: Object.fromEntries(f.areas.map(a => [a.id, a.nivel])), problemas: f.areas.filter(a => a.problema).map(a => a.id), extra: a => {
+        const d = area(a.id), semPagar = d.manut.estado !== 'paga';
         return h('div', { class: 'area-ficha' },
           h('p', { class: 'area-agora' }, d.agora),
           d.bonus.map(b => h('p', { class: 'area-bonus' }, `${b.valor > 0 ? '+' : ''}${b.valor} de ${b.titulo} · ${rotuloDura(b.restantes)}`)),
+          semPagar && h('p', { class: 'area-crise' }, d.cortada ? 'Manutenção cortada nesta rodada' : 'Falta dinheiro para a manutenção desta rodada', (d.rodadasSem + 1) % f.rodadasParaPerderNivel === 0 && d.nivel > 1 ? ': vai perder 1 nível' : ''),
           h('div', { class: 'area-extra' },
             h('span', {}, `Comprado ${d.nivel} · investido ${fmt(d.investido)}`),
+            h('span', {}, `Manutenção ${d.manut.valor}`)),
+          h('div', { class: 'area-extra sem-linha' },
+            h('span', {}, ''),
             h('span', { class: d.proximo != null && d.proximo <= f.moedas ? 'pos' : '' }, d.proximo == null ? 'Nível máximo' : `Subir: ${d.proximo}`)));
       } }),
 
@@ -200,7 +204,9 @@ async function entrar(codigo) {
   ui.entrando = true; ui.erroCodigo = null; render();
   try {
     const f = await verPais(codigo);
-    if (f) { ui.codigo = codigo.trim().toUpperCase(); ui.ficha = f; guardarCodigo(ui.codigo); }
+    // Ficha salva por uma versão anterior: só fica pronta quando o professor abrir o admin.
+    if (f && !f.manutencao) ui.erroCodigo = 'A ficha ainda não está pronta. Avise o professor.';
+    else if (f) { ui.codigo = codigo.trim().toUpperCase(); ui.ficha = f; guardarCodigo(ui.codigo); }
     else ui.erroCodigo = 'Código não encontrado. Confira com o professor.';
   } catch { ui.erroCodigo = 'Sem conexão. Tente de novo em instantes.'; }
   ui.entrando = false; render();
@@ -211,6 +217,7 @@ async function atualizarFicha() {
   try {
     const f = await verPais(ui.codigo);
     if (!f) { sair(); return false; } // Novo jogo: os códigos mudaram.
+    if (!f.manutencao) { const tinha = !!ui.ficha; ui.ficha = null; return tinha; } // Versão anterior: espera o admin salvar.
     const mudou = JSON.stringify(f) !== JSON.stringify(ui.ficha);
     ui.ficha = f;
     return mudou;
@@ -228,19 +235,51 @@ function cartaoAcordo(a) {
     a.descricao && h('p', {}, a.descricao),
     h('p', { class: 'meta' }, quem));
 }
-function cartaoNoticia(n) {
-  const cls = { Oficial: 'oficial', Boato: 'boato' }[n.selo] || 'imprensa';
-  return h('li', { class: `cartao noticia ${cls}` },
-    h('div', { class: 'cartao-topo' }, h('span', { class: `etiqueta selo-${cls}` }, n.selo), h('span', { class: 'meta' }, `Rodada ${n.rodada}`)),
-    h('strong', {}, n.titulo), n.texto && h('p', {}, n.texto));
+// Jornal: lugar próprio para ler as notícias, com manchete, filtros e a fonte de cada texto.
+const fonteDe = n => (n.fontePais ? `Imprensa de ${nomeDe(n.fontePais)}` : n.selo || 'Oficial');
+const classeFonte = n => (n.fontePais ? 'imprensa' : n.selo === 'Boato' ? 'boato' : 'oficial');
+function corpoNoticia(n, longa) {
+  if (!n.texto) return null;
+  if (!longa || n.texto.length <= 280) return h('p', { class: 'noticia-texto' }, n.texto);
+  return h('details', { class: 'noticia-mais' }, h('summary', {}, h('span', { class: 'noticia-texto' }, `${n.texto.slice(0, 220)}…`), h('b', {}, 'Ler tudo')), h('p', { class: 'noticia-texto' }, n.texto));
+}
+function cartaoNoticia(n, principal = false) {
+  const cor = n.fontePais ? paisDe(n.fontePais)?.cor : null;
+  return h(principal ? 'article' : 'li', { class: `noticia ${classeFonte(n)}${principal ? ' principal' : ''}`, style: cor ? `--fonte:${cor}` : null },
+    h('div', { class: 'noticia-topo' }, h('span', { class: `fonte ${classeFonte(n)}` }, fonteDe(n)), h('span', { class: 'meta' }, `Rodada ${n.rodada}`)),
+    h(principal ? 'h3' : 'h4', { class: 'noticia-titulo' }, n.titulo),
+    corpoNoticia(n, !principal),
+    n.paisId && !principal && h('p', { class: 'meta noticia-pais' }, `Sobre ${nomeDe(n.paisId)}`));
 }
 function secaoJornal() {
-  const lista = J.noticias.slice().reverse();
-  return h('section', { class: 'secao', 'data-aba': 'jornal' },
-    h('h2', { class: 'titulo' }, 'Jornal'),
-    lista.length ? h('ul', { class: 'lista' }, lista.map(cartaoNoticia)) : h('p', { class: 'vazio-txt' }, 'Nenhuma notícia ainda.'),
-    h('h2', { class: 'titulo titulo-2' }, 'Acordos'),
-    J.acordos.length ? h('ul', { class: 'lista' }, J.acordos.map(cartaoAcordo)) : h('p', { class: 'vazio-txt' }, 'Nenhum acordo público ativo.'));
+  const vista = ui.jornalVista || 'noticias', filtroFonte = ui.jornalFonte || 'todas', filtroPais = ui.jornalPais || '';
+  const lista = J.noticias.slice().reverse().filter(n =>
+    (filtroFonte === 'todas' || classeFonte(n) === filtroFonte) && (!filtroPais || n.paisId === filtroPais || n.fontePais === filtroPais));
+  const [manchete, ...resto] = lista;
+  const aba = (id, t) => h('button', { class: 'jornal-aba' + (vista === id ? ' ativa' : ''), onclick: () => { ui.jornalVista = id; render(); } }, t);
+  const chip = (id, t) => h('button', { class: 'jornal-filtro' + (filtroFonte === id ? ' ativo' : ''), 'aria-pressed': String(filtroFonte === id), onclick: () => { ui.jornalFonte = id; render(); } }, t);
+  // Agrupa por rodada, da mais nova para a mais antiga.
+  const porRodada = [...new Set(resto.map(n => n.rodada))].map(r => [r, resto.filter(n => n.rodada === r)]);
+  return h('section', { class: 'secao jornal', 'data-aba': 'jornal' },
+    h('header', { class: 'jornal-capa' }, h('p', { class: 'jornal-linha' }, `Rodada ${J.rodada}`), h('h2', {}, 'A Voz do Continente'), h('p', { class: 'jornal-linha' }, 'Notícias, boatos e a imprensa de cada país')),
+    h('div', { class: 'jornal-abas' }, aba('noticias', `Notícias (${J.noticias.length})`), aba('acordos', `Acordos (${J.acordos.length})`)),
+    vista === 'acordos'
+      ? (J.acordos.length ? h('ul', { class: 'lista' }, J.acordos.map(cartaoAcordo)) : h('p', { class: 'vazio-txt' }, 'Nenhum acordo público ativo.'))
+      : [
+        h('div', { class: 'jornal-filtros' },
+          chip('todas', 'Tudo'), chip('oficial', 'Oficial'), chip('imprensa', 'Imprensa'), chip('boato', 'Boatos'),
+          h('label', { class: 'sr', for: 'filtro-pais' }, 'Filtrar por país'),
+          h('select', { id: 'filtro-pais', class: 'jornal-select', onchange: ev => { ui.jornalPais = ev.target.value; render(); } }, h('option', { value: '' }, 'Todos os países'), J.paises.map(c => h('option', { value: c.id, selected: c.id === filtroPais }, c.nome)))),
+        manchete ? cartaoNoticia(manchete, true) : h('p', { class: 'vazio-txt' }, J.noticias.length ? 'Nada com esse filtro.' : 'Nenhuma notícia ainda. Tem algo a contar? Mande para o professor.'),
+        porRodada.map(([r, ns]) => h('div', { class: 'jornal-rodada' }, h('h3', {}, `Rodada ${r}`), h('ul', { class: 'jornal-lista' }, ns.map(n => cartaoNoticia(n))))),
+        h('p', { class: 'jornal-dica' }, 'Quer publicar algo? Mande o texto para o professor, no formato que quiser.'),
+      ]);
+}
+// Faixa com a última notícia, para ninguém perder o que acabou de sair.
+function ultimaHora() {
+  const n = J.noticias[J.noticias.length - 1];
+  if (!n || ui.aba === 'jornal') return null;
+  return h('button', { class: 'ultima-hora', onclick: () => { ui.jornalFonte = 'todas'; ui.jornalPais = ''; ui.jornalVista = 'noticias'; trocaAba('jornal'); } }, h('b', {}, 'Última hora'), h('span', {}, n.titulo));
 }
 function regras() {
   const passo = (t, d) => h('li', {}, h('strong', {}, t), h('p', { class: 'meta' }, d));
@@ -250,7 +289,7 @@ function regras() {
       passo('Toda rodada', 'O país recebe dinheiro e paga a comida: 1 moeda por mil pessoas.'),
       passo('Faltou dinheiro para a comida?', 'O país perde 10% das pessoas.'),
       passo('Suba suas áreas', 'Cada área vai do nível 1 ao 10. Subir custa dinheiro e não tem volta. Os níveis 5 e 10 valem em dobro.'),
-      passo('Não abandone nenhuma', 'A cada 3 rodadas o nível mínimo sobe. Área abaixo do mínimo dá prejuízo: greves, crime, protestos, apagões.'),
+      passo('Mantenha o que comprou', 'Cada nível tem uma despesa de manutenção por rodada. Sem pagar, a área entra em crise, e a cada 2 rodadas sem pagar perde um nível.'),
       passo('Negocie', 'Acordos podem mudar dinheiro, comida e áreas. Combinem entre vocês e chamem o professor: valem quando ele registra, e a duração aparece na ficha.'),
       passo('Tenha ideias', 'Projetos podem render dinheiro, baratear comida ou subir áreas. O professor define custo, dificuldade e efeito antes de rolar: quanto maior o número, maior o resultado.'),
       passo('Ataque, se tiver coragem', 'O dado decide. Quem perde paga 20% do próprio dinheiro para o outro.')));
@@ -294,6 +333,7 @@ function render() {
     topo(),
     J.encerrado && h('div', { class: 'faixa-fim' }, `${J.paises.find(p => p.pos === 1)?.nome} venceu!`),
     J.dado && h('div', { class: 'faixa-dado' }, icone('dado', 20), h('span', {}, J.dado.texto)),
+    ultimaHora(),
     h('main', { class: `grade aba-${ui.aba}` },
       colunaMapa(),
       h('div', { class: 'coluna' },

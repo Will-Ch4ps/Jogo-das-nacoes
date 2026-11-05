@@ -1,21 +1,22 @@
 // Regras do Jogo das Nações. Funções puras, sem tela e sem banco.
-// Cada área cuida de uma coisa só. "faz" é o benefício de cada nível; "sem" é o que acontece abaixo do nível mínimo.
+// Cada área cuida de uma coisa só. "faz" é o benefício de cada nível; "manut" é a despesa por nível, por rodada;
+// "sem" é o problema que aparece quando a manutenção não é paga.
 export const AREAS = [
-  { id: 'emp', nome: 'Emprego', cuida: 'dinheiro', faz: 'Cada nível dá +10 moedas por rodada', sem: 'Greves: −15 moedas por rodada', crise: 'Greves paralisam [País]', destaque: 'Desemprego despenca em [País]', marcaCrise: 'protesto', marcaDestaque: 'festa' },
-  { id: 'edu', nome: 'Educação', cuida: 'ideias', faz: 'Cada nível dá +1 no dado dos projetos', sem: 'Falta gente preparada: −10 moedas por rodada e −1 no dado', crise: 'Escolas de [País] ficam sem professores', destaque: 'Universidades de [País] viram destino mundial', marcaCrise: 'protesto', marcaDestaque: 'festa' },
-  { id: 'sau', nome: 'Saúde', cuida: 'população', faz: 'Cada nível faz a população crescer 1% por rodada', sem: 'Hospitais lotados: a população encolhe 1% por rodada', crise: 'Hospitais de [País] ficam lotados', destaque: 'Sistema de saúde de [País] é elogiado', marcaCrise: 'epidemia', marcaDestaque: 'festa' },
-  { id: 'tec', nome: 'Tecnologia', cuida: 'projetos e ataques hacker', faz: 'Cada nível deixa os projetos 5 moedas mais baratos e dá +1 no ataque hacker', sem: 'Projetos 10 moedas mais caros e −1 no ataque hacker', crise: 'Fábricas de [País] param por falta de sistemas', destaque: 'Laboratórios de [País] atraem investidores', marcaCrise: 'obra', marcaDestaque: 'descoberta' },
-  { id: 'seg', nome: 'Segurança', cuida: 'proteção do dinheiro', faz: 'Cada nível dá +1 para se defender de ataque hacker', sem: 'Crime: perde 5% do dinheiro por rodada e −1 na defesa', crise: 'Onda de crimes assusta [País]', destaque: '[País] vira referência em segurança', marcaCrise: 'guerra', marcaDestaque: 'festa' },
-  { id: 'mil', nome: 'Poder militar', cuida: 'fronteiras', faz: 'Cada nível dá +1 para atacar e se defender em ataque militar', sem: 'Fronteiras frágeis: −1 nesses dados', crise: 'Fronteiras de [País] ficam sem defesa', destaque: 'Exército de [País] impressiona os vizinhos', marcaCrise: 'guerra', marcaDestaque: 'festa' },
-  { id: 'inf', nome: 'Infraestrutura', cuida: 'comida', faz: 'Cada nível faz a comida custar 5 moedas a menos', sem: 'Apagões e estradas ruins: a comida custa 10 moedas a mais', crise: 'Apagão deixa [País] no escuro', destaque: 'Grandes obras ligam [País] ao mundo', marcaCrise: 'tempestade', marcaDestaque: 'obra' },
-  { id: 'est', nome: 'Estabilidade', cuida: 'imprevistos', faz: 'Cada nível dá +1 no dado de negociações e imprevistos', sem: 'Protestos: −10 moedas por rodada e −1 no dado', crise: 'Protestos tomam as ruas de [País]', destaque: '[País] vive um momento de confiança', marcaCrise: 'protesto', marcaDestaque: 'festa' },
+  { id: 'emp', nome: 'Emprego', cuida: 'dinheiro', manut: 2, faz: 'Cada nível dá +10 moedas por rodada', sem: 'Greves: −15 moedas por rodada', crise: 'Greves paralisam [País]', destaque: 'Desemprego despenca em [País]', marcaCrise: 'protesto', marcaDestaque: 'festa' },
+  { id: 'edu', nome: 'Educação', cuida: 'ideias', manut: 2, faz: 'Cada nível dá +1 no dado dos projetos', sem: 'Falta gente preparada: −10 moedas por rodada e −1 no dado', crise: 'Escolas de [País] ficam sem professores', destaque: 'Universidades de [País] viram destino mundial', marcaCrise: 'protesto', marcaDestaque: 'festa' },
+  { id: 'sau', nome: 'Saúde', cuida: 'população', manut: 3, faz: 'Cada nível faz a população crescer 1% por rodada', sem: 'Hospitais lotados: a população encolhe 1% por rodada', crise: 'Hospitais de [País] ficam lotados', destaque: 'Sistema de saúde de [País] é elogiado', marcaCrise: 'epidemia', marcaDestaque: 'festa' },
+  { id: 'tec', nome: 'Tecnologia', cuida: 'projetos e ataques hacker', manut: 2, faz: 'Cada nível deixa os projetos 5 moedas mais baratos e dá +1 no ataque hacker', sem: 'Projetos 10 moedas mais caros e −1 no ataque hacker', crise: 'Fábricas de [País] param por falta de sistemas', destaque: 'Laboratórios de [País] atraem investidores', marcaCrise: 'obra', marcaDestaque: 'descoberta' },
+  { id: 'seg', nome: 'Segurança', cuida: 'proteção do dinheiro', manut: 2, faz: 'Cada nível dá +1 para se defender de ataque hacker', sem: 'Crime: perde 5% do dinheiro por rodada e −1 na defesa', crise: 'Onda de crimes assusta [País]', destaque: '[País] vira referência em segurança', marcaCrise: 'guerra', marcaDestaque: 'festa' },
+  { id: 'mil', nome: 'Poder militar', cuida: 'fronteiras', manut: 3, faz: 'Cada nível dá +1 para atacar e se defender em ataque militar', sem: 'Fronteiras frágeis: −1 nesses dados', crise: 'Fronteiras de [País] ficam sem defesa', destaque: 'Exército de [País] impressiona os vizinhos', marcaCrise: 'guerra', marcaDestaque: 'festa' },
+  { id: 'inf', nome: 'Infraestrutura', cuida: 'comida', manut: 3, faz: 'Cada nível faz a comida custar 5 moedas a menos', sem: 'Apagões e estradas ruins: a comida custa 10 moedas a mais', crise: 'Apagão deixa [País] no escuro', destaque: 'Grandes obras ligam [País] ao mundo', marcaCrise: 'tempestade', marcaDestaque: 'obra' },
+  { id: 'est', nome: 'Estabilidade', cuida: 'imprevistos', manut: 1, faz: 'Cada nível dá +1 no dado de negociações e imprevistos', sem: 'Protestos: −10 moedas por rodada e −1 no dado', crise: 'Protestos tomam as ruas de [País]', destaque: '[País] vive um momento de confiança', marcaCrise: 'protesto', marcaDestaque: 'festa' },
 ];
 export const NIVEL_MAX = 10;
 const nomeArea = id => AREAS.find(a => a.id === id)?.nome || id;
 
 export const PARAMS_INICIAIS = {
   duracaoMin: 15, valorPessoa: 5, moedasPorEmprego: 10, crescimentoPorSaude: 1, economiaInfra: 5, descontoTecnologia: 5, perdaFome: 10,
-  precoNivel: 10, custoProjeto: 30, premioAtaque: 20, minimoInicial: 1, rodadasPorMinimo: 3,
+  precoNivel: 10, custoProjeto: 30, premioAtaque: 20, manutencaoPct: 100, rodadasParaPerderNivel: 2,
   multaEmprego: 15, multaEducacao: 10, perdaSaude: 1, multaTecnologia: 10, crimePct: 5, multaInfra: 10, multaEstabilidade: 10,
 };
 
@@ -75,6 +76,41 @@ export function aplicarEfeito(e, ids, ef, { titulo = 'Efeito', descricao = '', d
   }
 }
 
+/* ---------- Escolhas prontas para o professor: o que acontece e de que tamanho ---------- */
+export const TAMANHOS = ['Pequeno', 'Médio', 'Grande'];
+export const TIPOS_EFEITO = [
+  { id: 'ganhaAgora', grupo: 'Dinheiro', nome: 'Ganha dinheiro agora', campo: 'moedasAgora', sinal: 1, valores: [15, 30, 60], unidade: 'moedas, uma vez' },
+  { id: 'perdeAgora', grupo: 'Dinheiro', nome: 'Perde dinheiro agora', campo: 'moedasAgora', sinal: -1, valores: [15, 30, 60], unidade: 'moedas, uma vez' },
+  { id: 'ganhaRodada', grupo: 'Dinheiro', nome: 'Ganha dinheiro toda rodada', campo: 'moedas', sinal: 1, valores: [5, 10, 20], unidade: 'moedas por rodada', dura: true },
+  { id: 'perdeRodada', grupo: 'Dinheiro', nome: 'Perde dinheiro toda rodada', campo: 'moedas', sinal: -1, valores: [5, 10, 20], unidade: 'moedas por rodada', dura: true },
+  { id: 'comidaBarata', grupo: 'Comida', nome: 'A comida fica mais barata', campo: 'comida', sinal: -1, valores: [10, 20, 40], unidade: 'moedas a menos por rodada', dura: true },
+  { id: 'comidaCara', grupo: 'Comida', nome: 'A comida fica mais cara', campo: 'comida', sinal: 1, valores: [10, 20, 40], unidade: 'moedas a mais por rodada', dura: true },
+  { id: 'areaMelhora', grupo: 'Áreas', nome: 'Uma área melhora por um tempo', campo: 'areas', sinal: 1, valores: [1, 2, 3], unidade: 'níveis enquanto durar', dura: true, area: true },
+  { id: 'areaPiora', grupo: 'Áreas', nome: 'Uma área piora por um tempo', campo: 'areas', sinal: -1, valores: [1, 2, 3], unidade: 'níveis enquanto durar', dura: true, area: true },
+  { id: 'nivelGanha', grupo: 'Áreas', nome: 'Ganha nível para sempre', campo: 'niveisPerm', sinal: 1, valores: [1, 2, 3], unidade: 'níveis comprados', area: true },
+  { id: 'nivelPerde', grupo: 'Áreas', nome: 'Perde nível para sempre', campo: 'niveisPerm', sinal: -1, valores: [1, 2, 3], unidade: 'níveis comprados', area: true },
+  { id: 'popCresce', grupo: 'População', nome: 'Chega gente nova', campo: 'popAgoraPct', sinal: 1, valores: [2, 5, 10], unidade: 'mil pessoas num país de 100 mil' },
+  { id: 'popCai', grupo: 'População', nome: 'O país perde gente', campo: 'popAgoraPct', sinal: -1, valores: [2, 5, 10], unidade: 'mil pessoas num país de 100 mil' },
+];
+export const tipoEfeito = id => TIPOS_EFEITO.find(t => t.id === id);
+// Transforma as escolhas ({ tipo, tamanho, valor, area }) no efeito que o jogo entende.
+export function efeitoDeEscolhas(lista = []) {
+  const ef = {};
+  for (const it of lista) {
+    const t = tipoEfeito(it.tipo);
+    if (!t) continue;
+    const bruto = it.valor !== null && it.valor !== undefined && it.valor !== '' ? Number(it.valor) : t.valores[it.tamanho ?? 1];
+    const v = Math.abs(bruto) * t.sinal;
+    if (!v) continue;
+    if (t.campo === 'areas' || t.campo === 'niveisPerm') {
+      if (!it.area) continue;
+      ef[t.campo] = { ...(ef[t.campo] || {}), [it.area]: (ef[t.campo]?.[it.area] || 0) + v };
+    } else ef[t.campo] = (ef[t.campo] || 0) + v;
+  }
+  return ef;
+}
+export const escolhasTemDuracao = (lista = []) => lista.some(it => tipoEfeito(it.tipo)?.dura);
+
 /* ---------- Níveis: o comprado (investimento) e o real (comprado + acordos e efeitos) ---------- */
 // Os níveis 5 e 10 valem em dobro: é o único bônus especial do jogo.
 export const forca = n => n + (n >= 5 ? 1 : 0) + (n >= 10 ? 1 : 0);
@@ -88,17 +124,34 @@ export const bonusDaArea = (c, area, e) => acordosDoPais(e, c.id)
   .filter(x => x.valor);
 export const nivelReal = (c, area, e) => Math.max(0, Math.min(NIVEL_MAX, c.niveis[area] + bonusDaArea(c, area, e).reduce((t, x) => t + x.valor, 0)));
 
-// O mundo não para: o nível mínimo sobe com o tempo. Área abaixo dele dá prejuízo.
-export const minimoDaRodada = (rodada, p) => p.minimoInicial + Math.floor((rodada - 1) / p.rodadasPorMinimo);
-export const rodadaDoProximoMinimo = (rodada, p) => (Math.floor((rodada - 1) / p.rodadasPorMinimo) + 1) * p.rodadasPorMinimo + 1;
-export const deficit = (c, area, e) => Math.max(0, minimoDaRodada(e.rodada, e.params) - nivelReal(c, area, e));
-// Bônus de uma área nos dados: nível real menos o que faltou para o mínimo.
-export const efetivo = (c, area, e) => forca(nivelReal(c, area, e)) - deficit(c, area, e);
-export const desemprego = (c, e) => Math.min(60, Math.max(0, 30 - forca(nivelReal(c, 'emp', e)) * 3 + deficit(c, 'emp', e) * 8));
+// Área sem manutenção paga na rodada anterior está com problema.
+export const problema = (c, area) => ((c.semManutencao?.[area] || 0) > 0 ? 1 : 0);
+// Bônus de uma área nos dados: nível real menos o problema, se houver.
+export const efetivo = (c, area, e) => forca(nivelReal(c, area, e)) - problema(c, area);
+export const desemprego = (c, e) => Math.min(60, Math.max(0, 30 - forca(nivelReal(c, 'emp', e)) * 3 + problema(c, 'emp') * 8));
+
+// Manutenção: cada nível comprado custa moedas por rodada. Depende só do que foi comprado, não dos bônus de acordos.
+export const custoManutencao = (c, area, p) => Math.round((c.niveis[area] * AREAS.find(a => a.id === area).manut * p.manutencaoPct) / 100);
+export function contaManutencao(c, e, disponivel) {
+  let resta = Math.max(0, disponivel), total = 0;
+  const linhas = AREAS.map(a => {
+    const valor = custoManutencao(c, a.id, e.params);
+    let estado = 'paga';
+    if (c.cortadas?.[a.id]) estado = 'cortada';
+    else if (valor > resta) estado = 'sem dinheiro';
+    if (estado === 'paga') { resta -= valor; total += valor; }
+    return { area: a.id, rotulo: a.nome, valor, estado };
+  });
+  return { linhas, total };
+}
+export function cortarManutencao(e, id, area, cortar) {
+  const c = paisPorId(e, id);
+  c.cortadas = { ...(c.cortadas || {}), [area]: !!cortar };
+}
 
 // O que o nível real de uma área está causando agora, em palavras.
 export function efeitoAgora(c, area, e) {
-  const p = e.params, f = forca(nivelReal(c, area, e)), d = deficit(c, area, e), b = efetivo(c, area, e);
+  const p = e.params, f = forca(nivelReal(c, area, e)), d = problema(c, area), b = efetivo(c, area, e);
   const textos = {
     emp: `Rende ${f * p.moedasPorEmprego} moedas por rodada`,
     edu: `${b >= 0 ? '+' : ''}${b} no dado dos projetos`,
@@ -113,9 +166,9 @@ export function efeitoAgora(c, area, e) {
 }
 
 /* ---------- Contas da rodada ---------- */
-// Prejuízos de quem está abaixo do nível mínimo, em moedas por rodada.
+// Prejuízos das áreas que estão sem manutenção, em moedas por rodada.
 export function perdasDoPais(c, e) {
-  const p = e.params, d = id => deficit(c, id, e), out = [];
+  const p = e.params, d = id => problema(c, id), out = [];
   if (d('emp')) out.push({ area: 'emp', rotulo: 'Greves', valor: d('emp') * p.multaEmprego });
   if (d('edu')) out.push({ area: 'edu', rotulo: 'Falta de profissionais', valor: d('edu') * p.multaEducacao });
   if (d('seg')) out.push({ area: 'seg', rotulo: 'Crime', valor: Math.round((c.moedas * d('seg') * p.crimePct) / 100) });
@@ -143,7 +196,10 @@ export function calcular(c, e) {
   const entra = c.renda + forca(nivelReal(c, 'emp', e)) * p.moedasPorEmprego + dosAcordos;
   const comida = contaComida(c, e).total;
   const perdas = perdasDoPais(c, e), totalPerdas = perdas.reduce((t, x) => t + x.valor, 0);
-  return { entra, comida, perdas, totalPerdas, sobra: entra - comida - totalPerdas };
+  // Primeiro a comida e os compromissos; a manutenção usa o que sobrar, e nunca causa fome.
+  const antes = entra - comida - totalPerdas;
+  const manutencao = contaManutencao(c, e, c.moedas + antes);
+  return { entra, comida, perdas, totalPerdas, manutencao, sobra: antes - manutencao.total };
 }
 export const riqueza = (c, p) => Math.round(c.moedas + c.pop * p.valorPessoa);
 export function ranking(e) {
@@ -168,13 +224,14 @@ export function publicarNoticia(e, n) {
   if (n.marca && !n.marcaAplicada && n.paisId) { adicionarMarca(e, n.paisId, n.marca, n.titulo); n.marcaAplicada = true; }
   return n;
 }
-// Notícias prontas para o professor soltar quando um país cai abaixo do mínimo ou chega aos níveis 5 e 10.
+// Notícias prontas para o professor soltar quando uma área fica sem manutenção ou um país chega aos níveis 5 e 10.
 export function sugestoesDeNoticias(e) {
-  const feitas = new Set(e.sugestoesFeitas || []), min = minimoDaRodada(e.rodada, e.params), out = [];
+  const feitas = new Set(e.sugestoesFeitas || []), out = [];
   for (const c of e.paises) {
     for (const a of AREAS) {
       const real = nivelReal(c, a.id, e);
-      if (real < min) out.push({ chave: `${c.id}:${a.id}:crise:${min}`, paisId: c.id, tipo: 'crise', titulo: a.crise.replace('[País]', c.nome), marca: a.marcaCrise, efeito: { moedasAgora: -15 } });
+      const rodadasSem = c.semManutencao?.[a.id] || 0;
+      if (rodadasSem > 0) out.push({ chave: `${c.id}:${a.id}:crise:${e.rodada - rodadasSem}`, paisId: c.id, tipo: 'crise', titulo: a.crise.replace('[País]', c.nome), marca: a.marcaCrise, efeito: { moedasAgora: -15 } });
       for (const marco of [5, 10]) if (real >= marco && (c.niveisIniciais?.[a.id] ?? 0) < marco) out.push({ chave: `${c.id}:${a.id}:destaque:${marco}`, paisId: c.id, tipo: 'destaque', titulo: a.destaque.replace('[País]', c.nome), marca: a.marcaDestaque, efeito: { moedasAgora: marco === 10 ? 40 : 20 } });
     }
   }
@@ -196,9 +253,9 @@ export function fecharRodada(original) {
   const posAntes = Object.fromEntries(ranking(e).map(r => [r.id, r]));
   const itens = [];
   for (const c of e.paises) {
-    const { entra, comida, totalPerdas, sobra } = calcular(c, e);
+    const { entra, comida, totalPerdas, manutencao, sobra } = calcular(c, e);
     const moedasDe = c.moedas, popDe = c.pop;
-    const dSaude = deficit(c, 'sau', e);
+    const dSaude = problema(c, 'sau');
     let novas = c.moedas + sobra, fome = false;
     const crescimento = forca(nivelReal(c, 'sau', e)) * p.crescimentoPorSaude;
     if (novas < 0) {
@@ -211,7 +268,16 @@ export function fecharRodada(original) {
       c.pop = um(c.pop * (1 + crescimento / 100));
     }
     c.moedas = novas;
-    itens.push({ id: c.id, moedasDe, moedasPara: c.moedas, popDe, popPara: c.pop, entra, comida, perdas: totalPerdas, sobra, fome });
+    // Área sem manutenção: fica com problema, e a cada 2 rodadas seguidas perde 1 nível comprado.
+    const sem = { ...(c.semManutencao || {}) }, perdeuNivel = [], semPagar = [];
+    for (const l of manutencao.linhas) {
+      if (l.estado === 'paga') { sem[l.area] = 0; continue; }
+      sem[l.area] = (sem[l.area] || 0) + 1;
+      semPagar.push(l.area);
+      if (sem[l.area] % p.rodadasParaPerderNivel === 0 && c.niveis[l.area] > 1) { c.niveis[l.area] -= 1; perdeuNivel.push(l.area); }
+    }
+    c.semManutencao = sem;
+    itens.push({ id: c.id, moedasDe, moedasPara: c.moedas, popDe, popPara: c.pop, entra, comida, perdas: totalPerdas, manutencao: manutencao.total, sobra, fome, semPagar, perdeuNivel });
   }
   for (const a of e.acordos) {
     if (a.estado === 'ativo' && a.restantes != null) { a.restantes -= 1; if (a.restantes <= 0) a.estado = 'encerrado'; }
@@ -347,7 +413,7 @@ export function bonusDaAcao(e, id, area, extra = 0) {
 // Cada projeto do país custa mais que o anterior; a Tecnologia deixa mais barato.
 export const custoDoProjeto = (c, e) => {
   const p = e.params, real = nivelReal(c, 'tec', e);
-  return Math.max(10, p.custoProjeto * ((c.projetos || 0) + 1) - forca(real) * p.descontoTecnologia + deficit(c, 'tec', e) * p.multaTecnologia);
+  return Math.max(10, p.custoProjeto * ((c.projetos || 0) + 1) - forca(real) * p.descontoTecnologia + problema(c, 'tec') * p.multaTecnologia);
 };
 // Ação com dado: tudo é definido antes de rolar, e o efeito se aplica sozinho.
 export function acaoDado(e, d, rola = lancar) {
@@ -392,18 +458,17 @@ export function partePublica(e) {
   return {
     rodada: e.rodada, aviso: e.aviso, timer: e.timer, encerrado: !!e.encerrado, mudanca: e.mudanca || 0,
     params: { duracaoMin: e.params.duracaoMin, valorPessoa: e.params.valorPessoa },
-    minimo: minimoDaRodada(e.rodada, e.params), minimoSobeNaRodada: rodadaDoProximoMinimo(e.rodada, e.params),
     paises: e.paises.map(c => {
       const it = r.find(x => x.id === c.id), ant = e.posAnterior?.[c.id];
       return {
         id: c.id, nome: c.nome, perfil: c.perfil, cor: c.cor, niveis: Object.fromEntries(AREAS.map(a => [a.id, nivelReal(c, a.id, e)])),
-        vizinhos: c.vizinhos, riqueza: it.riqueza, pos: it.pos, variacao: ant ? it.riqueza - ant.riqueza : 0, jogou: (c.serie || []).length > 0,
+        vizinhos: c.vizinhos, problemas: AREAS.filter(a => problema(c, a.id)).map(a => a.id), riqueza: it.riqueza, pos: it.pos, variacao: ant ? it.riqueza - ant.riqueza : 0, jogou: (c.serie || []).length > 0,
       };
     }),
     acordos: e.acordos.filter(a => a.visibilidade === 'publico' && a.estado === 'ativo' && (a.origem || 'acordo') === 'acordo')
       .map(({ id, titulo, descricao, tipo, paises, efeitos, restantes, inicio }) => ({ id, titulo, descricao, tipo, paises, efeitos, restantes, inicio })),
     noticias: e.noticias.filter(n => n.estado === 'publicada')
-      .map(({ id, titulo, texto, paisId, rodada, selo, publicadaEm }) => ({ id, titulo, texto, paisId, rodada, selo, publicadaEm })),
+      .map(({ id, titulo, texto, paisId, rodada, selo, fontePais, publicadaEm }) => ({ id, titulo, texto, paisId, rodada, selo, fontePais, publicadaEm })),
     marcas: e.marcas || [],
     dado: e.dado?.exibir ? e.dado : null,
   };
@@ -412,7 +477,7 @@ export function partePublica(e) {
 const ateRodada = (a, rodada) => (a.restantes == null ? null : rodada + a.restantes - 1);
 // A ficha privada de um país: o que o grupo vê ao digitar o código.
 export function visaoDoPais(c, e) {
-  const p = e.params, r = ranking(e).find(x => x.id === c.id), { perdas, sobra } = calcular(c, e);
+  const p = e.params, r = ranking(e).find(x => x.id === c.id), { perdas, manutencao, sobra } = calcular(c, e);
   const comida = contaComida(c, e);
   const acordos = acordosDoPais(e, c.id).map(a => ({
     titulo: a.titulo, descricao: a.descricao, moedas: moedasDoAcordo(a, c.id), restantes: a.restantes, ateRodada: ateRodada(a, e.rodada), efeito: textoEfeito(efeitoDe(a, c.id)),
@@ -429,14 +494,14 @@ export function visaoDoPais(c, e) {
     if (a.moedas > 0) entradas.push({ rotulo: a.titulo, valor: a.moedas, restantes: a.restantes });
     if (a.moedas < 0) saidas.push({ rotulo: a.titulo, valor: -a.moedas, restantes: a.restantes });
   }
-  const recebe = entradas.reduce((t, x) => t + x.valor, 0), paga = comida.total + saidas.reduce((t, x) => t + x.valor, 0), fim = c.moedas + sobra;
+  const recebe = entradas.reduce((t, x) => t + x.valor, 0), paga = comida.total + manutencao.total + saidas.reduce((t, x) => t + x.valor, 0), fim = c.moedas + sobra;
   return {
     id: c.id, nome: c.nome, perfil: c.perfil, cor: c.cor, rodada: e.rodada, moedas: c.moedas, pop: c.pop, pos: r.pos, riqueza: r.riqueza,
-    desemprego: desemprego(c, e), minimo: minimoDaRodada(e.rodada, p), minimoSobeNaRodada: rodadaDoProximoMinimo(e.rodada, p),
+    desemprego: desemprego(c, e), manutencao, rodadasParaPerderNivel: p.rodadasParaPerderNivel,
     comida, entradas, saidas, recebe, paga, sobra, fimDaRodada: Math.max(0, fim), falta: fim < 0 ? -fim : 0, perdaFome: p.perdaFome,
     areas: AREAS.map(a => ({
       id: a.id, nivel: c.niveis[a.id], real: nivelReal(c, a.id, e), bonus: bonusDaArea(c, a.id, e), agora: efeitoAgora(c, a.id, e),
-      investido: c.investido?.[a.id] || 0, abaixo: deficit(c, a.id, e), proximo: c.niveis[a.id] >= NIVEL_MAX ? null : custoSubir(c.niveis[a.id], p),
+      investido: c.investido?.[a.id] || 0, problema: problema(c, a.id), rodadasSem: c.semManutencao?.[a.id] || 0, cortada: !!c.cortadas?.[a.id], manut: manutencao.linhas.find(l => l.area === a.id), proximo: c.niveis[a.id] >= NIVEL_MAX ? null : custoSubir(c.niveis[a.id], p),
     })),
     projetos: c.projetos || 0, proximoProjeto: custoDoProjeto(c, e), acordos, serie: (c.serie || []).slice(-6), proximas: [],
   };

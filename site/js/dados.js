@@ -95,7 +95,7 @@ export const PAISES_INICIAIS = [
   "cor": "#3f8fc4",
   "moedas": 100,
   "pop": 100,
-  "renda": 80,
+  "renda": 118,
   "niveis": {
    "emp": 3,
    "edu": 2,
@@ -122,7 +122,7 @@ export const PAISES_INICIAIS = [
   "cor": "#b9794f",
   "moedas": 125,
   "pop": 95,
-  "renda": 85,
+  "renda": 124,
   "niveis": {
    "emp": 3,
    "edu": 1,
@@ -150,7 +150,7 @@ export const PAISES_INICIAIS = [
   "cor": "#8b95a5",
   "moedas": 50,
   "pop": 110,
-  "renda": 90,
+  "renda": 125,
   "niveis": {
    "emp": 4,
    "edu": 2,
@@ -177,7 +177,7 @@ export const PAISES_INICIAIS = [
   "cor": "#2cb5b0",
   "moedas": 150,
   "pop": 90,
-  "renda": 80,
+  "renda": 115,
   "niveis": {
    "emp": 3,
    "edu": 2,
@@ -204,7 +204,7 @@ export const PAISES_INICIAIS = [
   "cor": "#d6566f",
   "moedas": 50,
   "pop": 110,
-  "renda": 90,
+  "renda": 126,
   "niveis": {
    "emp": 4,
    "edu": 2,
@@ -231,7 +231,7 @@ export const PAISES_INICIAIS = [
   "cor": "#8a6be0",
   "moedas": 150,
   "pop": 90,
-  "renda": 95,
+  "renda": 129,
   "niveis": {
    "emp": 2,
    "edu": 2,
@@ -261,7 +261,7 @@ export const PAISES_INICIAIS = [
   "cor": "#7fae3f",
   "moedas": 100,
   "pop": 100,
-  "renda": 105,
+  "renda": 140,
   "niveis": {
    "emp": 2,
    "edu": 5,
@@ -292,7 +292,7 @@ export const PAISES_INICIAIS = [
   "cor": "#a39440",
   "moedas": 100,
   "pop": 100,
-  "renda": 105,
+  "renda": 144,
   "niveis": {
    "emp": 2,
    "edu": 1,
@@ -320,7 +320,7 @@ export const PAISES_INICIAIS = [
   "cor": "#d9a028",
   "moedas": 50,
   "pop": 110,
-  "renda": 90,
+  "renda": 129,
   "niveis": {
    "emp": 3,
    "edu": 1,
@@ -347,7 +347,7 @@ export const PAISES_INICIAIS = [
   "cor": "#1e9a80",
   "moedas": 150,
   "pop": 90,
-  "renda": 100,
+  "renda": 137,
   "niveis": {
    "emp": 1,
    "edu": 2,
@@ -375,7 +375,7 @@ export const PAISES_INICIAIS = [
   "cor": "#4a73e0",
   "moedas": 75,
   "pop": 105,
-  "renda": 90,
+  "renda": 129,
   "niveis": {
    "emp": 3,
    "edu": 1,
@@ -403,7 +403,7 @@ export const PAISES_INICIAIS = [
   "cor": "#e0733a",
   "moedas": 150,
   "pop": 90,
-  "renda": 85,
+  "renda": 120,
   "niveis": {
    "emp": 3,
    "edu": 2,
