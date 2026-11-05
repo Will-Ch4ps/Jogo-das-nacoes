@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Teste do Jogo</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #2a3138; color: #fff; font: 15px/1.4 system-ui, "Segoe UI", sans-serif; }
+    header { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px 16px; background: #1b2026; }
+    header strong { margin-right: 8px; }
+    button { min-height: 36px; padding: 4px 12px; border: 1px solid #55606b; border-radius: 7px; background: #39424b; color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+    button[aria-pressed="true"] { background: #fff; color: #17212b; border-color: #fff; }
+    .sep { width: 1px; height: 24px; background: #55606b; margin: 0 4px; }
+    #aviso { margin-left: auto; color: #b9c4ce; font-size: 13.5px; }
+    main { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; padding: 16px; }
+    figure { margin: 0; }
+    figcaption { margin-bottom: 6px; font-weight: 700; }
+    figcaption a { color: #9cc4ff; font-weight: 500; margin-left: 8px; font-size: 13.5px; }
+    .moldura { overflow: hidden; background: #fff; border-radius: 10px; }
+    iframe { display: block; border: 0; transform-origin: 0 0; }
+  </style>
+</head>
+<body>
+  <header>
+    <strong>Teste do Jogo</strong>
+    <button data-tela="celular" aria-pressed="true">Celular</button>
+    <button data-tela="grupo" aria-pressed="true">Grupo com código</button>
+    <button data-tela="computador" aria-pressed="true">Transmissão</button>
+    <button data-tela="admin" aria-pressed="true">Admin</button>
+    <span class="sep"></span>
+    <button id="zero">Começar do zero</button>
+    <button id="exemplo">Partida de exemplo</button>
+    <button id="fechar">Fechar rodada</button>
+    <span id="aviso">Dados de teste: ficam só neste navegador, sem tocar no banco.</span>
+  </header>
+  <main id="telas"></main>
+  <script type="module">
+    import * as G from '/js/engine.js';
+    import { PAISES_INICIAIS, EVENTOS_INICIAIS } from '/js/dados.js';
+
+    const TELAS = {
+      celular: { nome: 'Celular, sem código', url: '/index.html?demo&quadro', l: 390, a: 780, largura: 390 },
+      grupo: { nome: 'Celular do grupo', url: () => `/index.html?demo&quadro&codigo=${codigoExemplo()}`, l: 390, a: 780, largura: 390 },
+      computador: { nome: 'Transmissão no Meet', url: '/index.html?demo&quadro', l: 1366, a: 768, largura: 820 },
+      admin: { nome: 'Admin (professor)', url: '/admin.html?demo', l: 1100, a: 768, largura: 660 },
+    };
+    const K_PUB = 'jn_demo_publico', K_PRIV = 'jn_demo_privado', K_VIS = 'jn_demo_visoes', canal = new BroadcastChannel('jn_demo');
+    sessionStorage.setItem('jn_s', 'teste'); // No modo de teste o admin entra direto.
+
+    const ler = () => JSON.parse(localStorage.getItem(K_PRIV) || 'null');
+    const codigoExemplo = () => ler()?.dados?.paises?.[0]?.codigo || '';
+    function grava(e) {
+      const v = (ler()?.versao || 0) + 1;
+      const trocouCodigos = codigoExemplo() !== e.paises[0].codigo;
+      e.mudanca = Date.now();
+      localStorage.setItem(K_VIS, JSON.stringify(G.todasAsVisoes(e)));
+      localStorage.setItem(K_PUB, JSON.stringify(G.partePublica(e)));
+      localStorage.setItem(K_PRIV, JSON.stringify({ versao: v, dados: e }));
+      canal.postMessage('mudou');
+      document.querySelectorAll('iframe[data-admin]').forEach(f => f.contentWindow.location.reload());
+      if (trocouCodigos) monta();
+    }
+    const novo = () => G.estadoNovo(PAISES_INICIAIS, EVENTOS_INICIAIS);
+
+    function exemplo() {
+      let e = novo();
+      const nomes = ['Nova Atlântida', 'Kaelor', 'Vale de Ferro', 'Solmar', 'Metrópolis', 'Technia', 'Áurea do Sul', 'Bastilha', 'Terra Dourada', 'Verdânia', 'Mar Azul', 'Sahar'];
+      e.paises.forEach((c, i) => { c.nome = nomes[i]; });
+      G.subirNivel(e, 'p1', 'emp'); G.subirNivel(e, 'p3', 'emp'); G.subirNivel(e, 'p7', 'sau');
+      G.projeto(e, 'p6', 2, () => 5);
+      G.criarAcordo(e, { titulo: 'Porto secreto', descricao: 'Solmar usa o porto em troca de pagamento.', tipo: 'paises', paises: ['p1', 'p4'], efeitos: { p1: 12, p4: -12 }, duracao: 4, visibilidade: 'oculto' });
+      G.criarAcordo(e, { titulo: 'Energia por comida', descricao: 'Kaelor constrói usinas e Nova Atlântida compra sua produção.', tipo: 'paises', paises: ['p1', 'p2'], efeitos: { p1: -5, p2: 15 }, duracao: 3 });
+      e.noticias.push(G.novaNoticia(e, { titulo: 'Technia anuncia chip nacional', texto: 'Governo promete baratear a produção.', paisId: 'p6', selo: 'Imprensa de Technia', estado: 'publicada' }));
+      e.noticias.push(G.novaNoticia(e, { titulo: 'Dizem que Bastilha esconde um exército', selo: 'Boato', estado: 'publicada' }));
+      G.adicionarMarca(e, 'p4', 'erupcao', 'Vulcão de Solmar volta a soltar fumaça');
+      G.adicionarMarca(e, 'p2', 'nevasca', 'Nevasca isola as minas de Kaelor');
+      G.adicionarMarca(e, 'p6', 'descoberta', 'Technia anuncia chip nacional');
+      G.adicionarMarca(e, 'p5', 'protesto', 'Protestos em Metrópolis');
+      e = G.fecharComHistorico(e);
+      e.aviso = 'Representantes: 2 minutos para fechar os acordos!';
+      e.timer = { rodando: true, fimEm: Date.now() + 12 * 60000, restanteMs: 12 * 60000 };
+      grava(e);
+    }
+
+    function monta() {
+      const raiz = document.getElementById('telas');
+      raiz.replaceChildren();
+      document.querySelectorAll('[data-tela]').forEach(b => {
+        if (b.getAttribute('aria-pressed') !== 'true') return;
+        const t = TELAS[b.dataset.tela], escala = t.largura / t.l, endereco = typeof t.url === 'function' ? t.url() : t.url;
+        const fig = document.createElement('figure'), leg = document.createElement('figcaption'), mold = document.createElement('div'), fr = document.createElement('iframe'), link = document.createElement('a');
+        leg.textContent = t.nome;
+        link.href = endereco; link.target = '_blank'; link.rel = 'noopener'; link.textContent = 'abrir em janela própria';
+        leg.append(link);
+        mold.className = 'moldura'; mold.style.cssText = `width:${t.largura}px;height:${Math.round(t.a * escala)}px`;
+        fr.src = endereco; fr.title = t.nome; fr.style.cssText = `width:${t.l}px;height:${t.a}px;transform:scale(${escala})`;
+        if (b.dataset.tela === 'admin') fr.dataset.admin = '1';
+        mold.append(fr); fig.append(leg, mold); raiz.append(fig);
+      });
+    }
+    document.querySelectorAll('[data-tela]').forEach(b => b.addEventListener('click', () => { b.setAttribute('aria-pressed', String(b.getAttribute('aria-pressed') !== 'true')); monta(); }));
+    document.getElementById('zero').onclick = () => grava(novo());
+    document.getElementById('exemplo').onclick = exemplo;
+    document.getElementById('fechar').onclick = () => { const d = ler()?.dados; if (d?.paises) grava(G.fecharComHistorico(d)); };
+
+    if (!ler()?.dados?.paises?.[0]?.niveis?.emp) exemplo();
+    monta();
+  </script>
+</body>
+</html>

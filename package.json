@@ -1,0 +1,19 @@
+{
+  "name": "jogo-das-nacoes",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/engine.test.mjs",
+    "dados": "node tools/gerar-dados.mjs",
+    "db:setup": "node --env-file=.env tools/db-setup.mjs",
+    "db:teste": "node --env-file=.env tools/teste-banco.mjs",
+    "teste": "node tools/servidor.mjs",
+    "verificar": "node tools/verificar-site.mjs"
+  },
+  "devDependencies": {
+    "@fontsource-variable/bricolage-grotesque": "^5.3.0",
+    "@fontsource-variable/figtree": "^5.3.0",
+    "@supabase/supabase-js": "^2.119.0",
+    "pg": "^8.23.1"
+  }
+}
