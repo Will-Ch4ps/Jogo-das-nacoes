@@ -332,12 +332,15 @@ function painelSugestoes() {
       filtradas.length > 4 && h('button', { class: 'btn peq leve', onclick: () => { ui.sugTodas = !ui.sugTodas; render(); } }, ui.sugTodas ? 'Mostrar menos' : `Mostrar todas (${filtradas.length})`)),
     lista.length ? h('ul', { class: 'lista' }, lista.map(s => h('li', { class: 'cartao' },
       h('div', { class: 'cartao-topo' }, h('span', { class: 'area-nome' }, icone(s.marca, 19), h('strong', {}, s.titulo)), h('span', { class: 'etiqueta' }, s.tipo === 'crise' ? 'Crise' : 'Destaque')),
+      h('p', { class: 'meta' }, s.texto),
       h('div', { class: 'linha-acoes' },
         h('button', { class: 'btn peq', onclick: () => commit(e => { G.resolverSugestao(e, s, { publicar: true }); }, { msg: 'Notícia publicada.' }) }, 'Publicar'),
-        h('button', { class: 'btn peq leve', onclick: () => commit(e => { G.resolverSugestao(e, s, { publicar: true, comEfeito: true }); }, { msg: 'Publicada com efeito.' }) }, `Publicar e aplicar: ${G.textoEfeito(s.efeito)}`),
+        h('button', { class: 'btn peq leve', onclick: () => commit(e => { G.resolverSugestao(e, s, { publicar: true, comEfeito: true }); }, { msg: 'Publicada, com efeito oculto.' }) }, `Com efeito oculto: ${G.textoEfeito(s.efeito)}`),
+        h('button', { class: 'btn peq leve', onclick: () => commit(e => { G.resolverSugestao(e, s, { publicar: true, comEfeito: true, mostrarEfeito: true }); }, { msg: 'Publicada, com efeito visível.' }) }, 'Com efeito visível'),
         h('button', { class: 'btn peq leve', onclick: () => commit(e => { G.resolverSugestao(e, s, { publicar: false }); }) }, 'Dispensar'))))) : h('p', { class: 'vazio-txt' }, 'Nenhuma sugestão agora.'));
 }
-const novaNoticiaForm = () => ({ fonte: 'Oficial', titulo: '', texto: '', pais: '', marca: '', temEfeito: false, efeitos: [novoEfeito()], dur: 3, todos: false, id: null });
+const CHAPEUS = ['Urgente', 'Exclusivo', 'Economia', 'Política', 'Opinião', 'Fofoca'];
+const novaNoticiaForm = () => ({ tipo: 'noticia', fonte: 'Oficial', titulo: '', texto: '', pais: '', marca: '', chapeu: '', de: 'prof', para: '', privada: false, temEfeito: false, mostrarEfeito: false, efeitos: [novoEfeito()], dur: 3, todos: false, id: null });
 // Quem manda o texto escolhe a forma: a primeira linha vira a manchete, se o campo da manchete estiver vazio.
 function separarTexto(F) {
   const bruto = (F.texto || '').trim();
@@ -345,66 +348,91 @@ function separarTexto(F) {
   const [primeira, ...resto] = bruto.split(/\r?\n/);
   return { titulo: (primeira || '').trim(), texto: resto.join('\n').trim() };
 }
+const fonteNome = n => {
+  if (n.tipo === 'mensagem') return `Mensagem ${n.de === 'prof' ? 'do professor' : `de ${nomeDe(n.de)}`}${n.para ? ` para ${nomeDe(n.para)}` : ''}${n.privada ? ' (privada)' : ''}`;
+  return n.fontePais ? `Imprensa de ${nomeDe(n.fontePais)}` : n.selo;
+};
 function abaNoticias() {
   let F = form('noticia', novaNoticiaForm);
   if (ui.editando && F.id !== ui.editando) {
     const n = E.noticias.find(x => x.id === ui.editando);
-    if (n) { F = ui.f.noticia = { ...novaNoticiaForm(), id: n.id, titulo: n.titulo, texto: n.texto, pais: n.paisId || '', marca: n.marca || '', fonte: n.fontePais ? `pais:${n.fontePais}` : n.selo === 'Boato' ? 'Boato' : 'Oficial' }; }
+    if (n) { F = ui.f.noticia = { ...novaNoticiaForm(), id: n.id, titulo: n.titulo, texto: n.texto, pais: n.paisId || '', marca: n.marca || '', chapeu: n.chapeu || '', tipo: n.tipo || 'noticia', de: n.de || 'prof', para: n.para || '', privada: !!n.privada, mostrarEfeito: !!n.mostrarEfeito, fonte: n.fontePais ? `pais:${n.fontePais}` : n.selo === 'Boato' ? 'Boato' : 'Oficial' }; }
   }
+  const mensagem = F.tipo === 'mensagem';
   const salvar = estado => {
     const { titulo, texto: corpo } = separarTexto(F);
     if (!titulo) { ui.msg = { tipo: 'erro', texto: 'Cole o texto ou escreva a manchete.' }; render(); return; }
+    if (mensagem && F.privada && !F.para) { ui.msg = { tipo: 'erro', texto: 'Para uma mensagem privada, escolha quem recebe.' }; render(); return; }
+    if (mensagem && F.de === F.para && F.para) { ui.msg = { tipo: 'erro', texto: 'Quem manda e quem recebe precisam ser diferentes.' }; render(); return; }
+    const paisId = mensagem ? (F.para || null) : (F.pais || null);
     const efeito = F.temEfeito ? G.efeitoDeEscolhas(F.efeitos) : null, comEfeito = efeito && Object.keys(efeito).length;
-    if (comEfeito && !F.pais && !F.todos) { ui.msg = { tipo: 'erro', texto: 'Para o efeito, escolha o país ou marque "Vale para todos".' }; render(); return; }
-    if (F.marca && !F.pais) { ui.msg = { tipo: 'erro', texto: 'Para marcar no mapa, escolha o país da notícia.' }; render(); return; }
-    const fontePais = F.fonte.startsWith('pais:') ? F.fonte.slice(5) : null;
-    const dados = { titulo, texto: corpo, paisId: F.pais || null, selo: fontePais ? 'Imprensa' : F.fonte, fontePais, marca: F.marca || null, efeito: comEfeito ? efeito : undefined, duracao: lerDur(F) };
+    if (comEfeito && !paisId && !F.todos) { ui.msg = { tipo: 'erro', texto: 'Para o efeito, escolha o país ou marque "Vale para todos".' }; render(); return; }
+    if (F.marca && !paisId) { ui.msg = { tipo: 'erro', texto: 'Para marcar no mapa, escolha o país da notícia.' }; render(); return; }
+    const fontePais = !mensagem && F.fonte.startsWith('pais:') ? F.fonte.slice(5) : null;
+    const dados = {
+      titulo, texto: corpo, paisId, tipo: F.tipo, chapeu: F.chapeu || null, marca: F.marca || null, fontePais,
+      selo: mensagem ? 'Mensagem' : fontePais ? 'Imprensa' : F.fonte,
+      de: mensagem ? F.de : null, para: mensagem ? (F.para || null) : null, privada: mensagem && !!F.para && !!F.privada,
+      efeito: comEfeito ? efeito : undefined, duracao: lerDur(F), mostrarEfeito: !!(comEfeito && F.mostrarEfeito),
+    };
     const ok = commit(e => {
       let alvo = e.noticias.find(n => n.id === F.id);
       if (alvo) Object.assign(alvo, dados); else { alvo = G.novaNoticia(e, dados); e.noticias.push(alvo); }
       if (estado === 'publicada') G.publicarNoticia(e, alvo); else alvo.estado = estado;
-    }, { msg: estado === 'publicada' ? 'Notícia publicada no jornal.' : 'Notícia guardada.' });
+    }, { msg: estado === 'publicada' ? (dados.privada ? 'Mensagem entregue só para quem recebe.' : 'Publicado no jornal.') : 'Guardado sem publicar.' });
     if (ok) { ui.editando = null; ui.f.noticia = null; render(); }
   };
   const fontePaisAtual = F.fonte.startsWith('pais:') ? F.fonte : '';
-  const fonteNome = n => (n.fontePais ? `Imprensa de ${nomeDe(n.fontePais)}` : n.selo);
   const previa = caixaPrevia(() => {
     const { titulo, texto: corpo } = separarTexto(F);
-    if (!titulo) return [h('p', { class: 'vazio' }, 'A primeira linha do texto vira a manchete.')];
-    const fonte = fontePaisAtual ? `Imprensa de ${nomeDe(fontePaisAtual.slice(5))}` : F.fonte;
-    return [h('p', { class: 'meta' }, fonte), h('p', {}, h('b', {}, titulo)), corpo && h('p', { class: 'meta' }, corpo.length > 140 ? `${corpo.slice(0, 140)}…` : corpo)].filter(Boolean);
+    if (!titulo) return [h('p', { class: 'vazio' }, 'A primeira linha do texto vira a manchete. O resto aparece quando o aluno abrir a matéria.')];
+    const ef = F.temEfeito ? G.textoEfeito(G.efeitoDeEscolhas(F.efeitos)) : '';
+    const assinatura = mensagem ? fonteNome({ tipo: 'mensagem', de: F.de, para: F.para, privada: F.para && F.privada }) : fontePaisAtual ? `Imprensa de ${nomeDe(fontePaisAtual.slice(5))}` : F.fonte;
+    return [
+      h('p', { class: 'meta' }, [F.chapeu, assinatura].filter(Boolean).join(' · ')), h('p', {}, h('b', {}, titulo)),
+      corpo && h('p', { class: 'meta' }, corpo.length > 140 ? `${corpo.slice(0, 140)}…` : corpo),
+      ef && h('p', { class: 'meta' }, F.mostrarEfeito ? `Os alunos veem o efeito: ${ef}.` : `O efeito fica oculto: ${ef}. Os alunos leem só o texto.`),
+    ].filter(Boolean);
   });
   const item = (n, botoes) => h('li', { class: 'cartao' },
     h('div', { class: 'cartao-topo' }, h('strong', {}, n.titulo), h('span', { class: 'etiqueta' }, `${fonteNome(n)} · R${n.rodada}`)),
-    n.efeito && h('p', { class: 'meta' }, `Efeito: ${G.textoEfeito(n.efeito)}${n.efeitoAplicado ? ' (já aplicado)' : ''}`),
+    n.efeito && h('p', { class: 'meta' }, `Efeito ${n.mostrarEfeito ? 'visível' : 'oculto'}: ${G.textoEfeito(n.efeito)}${n.efeitoAplicado ? ' (já aplicado)' : ''}`),
     h('div', { class: 'linha-acoes' }, botoes));
   const editar = n => h('button', { class: 'btn peq leve', onclick: () => { ui.editando = n.id; render(); window.scrollTo(0, 0); } }, 'Editar');
   const fila = E.noticias.filter(n => n.estado !== 'publicada').reverse(), pubs = E.noticias.filter(n => n.estado === 'publicada').reverse();
   return [
-    painel(F.id ? 'Editar notícia' : 'Publicar no jornal',
+    painel(F.id ? 'Editar' : 'Publicar no jornal',
       h('div', { class: 'form' },
-        bloco('Quem está publicando?', h('div', { class: 'frase' },
-          pilulas([{ v: 'Oficial', t: 'Oficial' }, { v: 'Boato', t: 'Boato' }], fontePaisAtual ? '' : F.fonte, v => { F.fonte = v; }),
-          h('select', { 'aria-label': 'Imprensa de um país', onchange: ev => { F.fonte = ev.target.value || 'Oficial'; render(); } }, h('option', { value: '' }, 'Imprensa de um país…'), E.paises.map(c => h('option', { value: `pais:${c.id}`, selected: fontePaisAtual === `pais:${c.id}` }, `Imprensa de ${c.nome}`))))),
-        campo('Cole aqui o texto, do jeito que o grupo mandou', textoLongo(F, 'texto', { rows: 6, maxlength: 4000, class: 'campo-noticia', placeholder: 'A primeira linha vira a manchete.' }), 'largo'),
+        bloco('O que é?', pilulas([{ v: 'noticia', t: 'Notícia', d: 'matéria ou boato' }, { v: 'mensagem', t: 'Mensagem', d: 'sua ou de um país' }], F.tipo, v => { F.tipo = v; })),
+        mensagem
+          ? [
+            h('div', { class: 'frase' }, 'De:', selecao(F, 'de', [h('option', { value: 'prof', selected: F.de === 'prof' }, 'Professor'), opcoesPaises(F.de)]), 'Para:', selecao(F, 'para', [h('option', { value: '' }, 'Todos'), opcoesPaises(F.para)])),
+            F.para && marcar(F, 'privada', 'Só quem recebe pode ler (não vai para o jornal)'),
+          ]
+          : bloco('Quem está publicando?', h('div', { class: 'frase' },
+            pilulas([{ v: 'Oficial', t: 'Oficial' }, { v: 'Boato', t: 'Boato' }], fontePaisAtual ? '' : F.fonte, v => { F.fonte = v; }),
+            h('select', { 'aria-label': 'Imprensa de um país', onchange: ev => { F.fonte = ev.target.value || 'Oficial'; render(); } }, h('option', { value: '' }, 'Imprensa de um país…'), E.paises.map(c => h('option', { value: `pais:${c.id}`, selected: fontePaisAtual === `pais:${c.id}` }, `Imprensa de ${c.nome}`))))),
+        campo('Cole aqui o texto, do jeito que mandaram', textoLongo(F, 'texto', { rows: 7, maxlength: 5000, class: 'campo-noticia', placeholder: 'A primeira linha vira a manchete. O resto aparece quando o aluno abrir a matéria.' }), 'largo'),
         campo('Manchete (opcional, se quiser trocar a primeira linha)', texto(F, 'titulo', { maxlength: 140 }), 'largo'),
-        campo('Sobre qual país', selecao(F, 'pais', [h('option', { value: '' }, 'Geral'), opcoesPaises(F.pais)])),
+        bloco('Etiqueta da matéria (opcional)', pilulas([{ v: '', t: 'Nenhuma' }, ...CHAPEUS.map(c => ({ v: c, t: c }))], F.chapeu, v => { F.chapeu = v; })),
+        !mensagem && campo('Sobre qual país', selecao(F, 'pais', [h('option', { value: '' }, 'Geral'), opcoesPaises(F.pais)])),
         campo('Marcar no mapa', selecao(F, 'marca', [h('option', { value: '' }, 'Não marcar'), G.TIPOS_MARCA.map(t => h('option', { value: t.id, selected: F.marca === t.id }, t.nome))])),
-        marcar(F, 'temEfeito', 'Esta notícia também muda algo no jogo'),
+        marcar(F, 'temEfeito', 'Isto também muda algo no jogo'),
         F.temEfeito && h('div', { class: 'bloco-efeito' }, bloco('O que muda?', blocoEfeitos(F.efeitos)),
-          G.escolhasTemDuracao(F.efeitos) && blocoDuracao(F), marcar(F, 'todos', 'Vale para todos os países')),
+          G.escolhasTemDuracao(F.efeitos) && blocoDuracao(F),
+          h('div', { class: 'frase' }, marcar(F, 'mostrarEfeito', 'Mostrar o efeito aos alunos na matéria'), marcar(F, 'todos', 'Vale para todos os países'))),
         previa,
         h('div', { class: 'linha-acoes', style: 'width:100%;margin:0' },
-          h('button', { type: 'button', class: 'btn', onclick: () => salvar('publicada') }, 'Publicar'),
+          h('button', { type: 'button', class: 'btn', onclick: () => salvar('publicada') }, mensagem && F.para && F.privada ? 'Entregar' : 'Publicar'),
           h('button', { type: 'button', class: 'btn leve', onclick: () => salvar('rascunho') }, 'Guardar sem publicar'),
           F.id && h('button', { type: 'button', class: 'btn leve', onclick: () => { ui.editando = null; ui.f.noticia = null; render(); } }, 'Cancelar')))),
     painelSugestoes(),
     painelMarcas(),
     fila.length > 0 && painel(`Guardadas (${fila.length})`, h('ul', { class: 'lista' }, fila.map(n => item(n, [
-      h('button', { class: 'btn peq', onclick: () => commit(e => { G.publicarNoticia(e, n); }, { msg: 'Notícia publicada.' }) }, 'Publicar'), editar(n),
+      h('button', { class: 'btn peq', onclick: () => commit(e => { G.publicarNoticia(e, n); }, { msg: 'Publicado.' }) }, 'Publicar'), editar(n),
       h('button', { class: 'btn peq leve', onclick: () => commit(e => { e.noticias = e.noticias.filter(x => x.id !== n.id); }) }, 'Descartar')])))),
     pubs.length > 0 && painel(`Publicadas (${pubs.length})`, h('ul', { class: 'lista' }, pubs.map(n => item(n, [editar(n),
-      h('button', { class: 'btn peq leve', onclick: () => commit(() => { n.estado = 'rascunho'; }, { msg: 'Notícia retirada do jornal.' }) }, 'Retirar')])))),
+      h('button', { class: 'btn peq leve', onclick: () => commit(() => { n.estado = 'rascunho'; }, { msg: 'Retirado do jornal.' }) }, 'Retirar')])))),
   ].filter(Boolean);
 }
 
@@ -475,7 +503,7 @@ function abaDado() {
       const nA = nomeDe(A.autor), nB = nomeDe(A.alvo);
       ui.resultado = `${nA} tirou ${r.dadoA} (total ${r.totalA}) e ${nB} tirou ${r.dadoD} (total ${r.totalD}). ${r.venceu ? `${nA} venceu e levou ${r.valor} moedas.` : `${nB} venceu e levou ${r.valor} moedas.`}`;
       registrarAcao({ tipo: `ataque ${A.tipo}`, autor: A.autor, alvo: A.alvo, rolagens: [r.dadoA, r.dadoD], resultado: r.venceu ? 'Atacante venceu' : 'Defensor venceu', efeito: `${r.valor} moedas`, nota: A.nota });
-      if (militar) e.noticias.push(G.novaNoticia(e, { titulo: `${nA} ataca ${nB}: ${r.venceu ? 'o ataque deu certo' : 'os defensores resistiram'}`, paisId: A.alvo, origem: 'acao', estado: 'publicada', publicadaEm: Date.now() }));
+      if (militar) e.noticias.push(G.novaNoticia(e, { titulo: `${nA} ataca ${nB}: ${r.venceu ? 'o ataque deu certo' : 'os defensores resistiram'}`, chapeu: 'Urgente', texto: r.venceu ? `Tropas de ${nA} cruzaram a fronteira ao amanhecer, e os cofres de ${nB} amanheceram bem mais leves. O governo de ${nB} classificou o episódio como "um mal-entendido com armas".` : `Tropas de ${nA} cruzaram a fronteira ao amanhecer e voltaram antes do almoço, bem mais rápido do que foram. O governo de ${nA} garante que tudo não passou de um exercício, e que o plano era perder.`, paisId: A.alvo, origem: 'acao', estado: 'publicada', publicadaEm: Date.now() }));
       const dado = G.registrarDado(e, { exibir: militar, lados: r.lados, dados: [r.dadoA, r.dadoD], nomes: [nA, nB], titulo: militar ? 'Ataque militar' : 'Ataque hacker', texto: ui.resultado });
       if (!militar) e.dado = null;
       ui.animar = dado;
@@ -502,7 +530,7 @@ function abaDado() {
     const txt = `${c.nome}, ${titulo}: tirou ${r.dado} (total ${r.total}). ${r.nome}${r.textoEfeito ? `: ${r.textoEfeito}.` : '.'}`;
     ui.resultado = txt;
     registrarAcao({ tipo: titulo, autor: F.pais, rolagens: [r.dado], resultado: `${r.nome} (×${r.mult})`, efeito: r.textoEfeito, nota: F.nota });
-    if (F.noticia && r.mult !== 0) e.noticias.push(G.novaNoticia(e, { titulo: `${c.nome}: ${titulo.toLowerCase()} ${r.mult > 0 ? 'dá certo' : 'termina em desastre'}`, paisId: F.pais, origem: 'acao', estado: 'publicada', publicadaEm: Date.now() }));
+    if (F.noticia && r.mult !== 0) e.noticias.push(G.novaNoticia(e, { titulo: `${c.nome}: ${titulo.toLowerCase()} ${r.mult > 0 ? 'dá certo' : 'termina em desastre'}`, chapeu: r.mult > 0 ? 'Exclusivo' : 'Urgente', texto: r.mult > 0 ? `O governo de ${c.nome} apresentou os resultados com orgulho e vários gráficos. Ninguém entendeu os gráficos, mas os aplausos foram sinceros.` : `O governo de ${c.nome} afirma que a ideia era ótima e que a realidade é que não colaborou. Uma comissão foi criada para descobrir de quem foi a culpa, e já tem um favorito.`, paisId: F.pais, origem: 'acao', estado: 'publicada', publicadaEm: Date.now() }));
     const dado = G.registrarDado(e, { exibir: !!F.exibir, lados, dados: [r.dado], bonus: r.bonus, total: r.total, nomes: [c.nome], titulo, resultado: r.nome, mult: r.mult, texto: txt });
     if (!F.exibir) e.dado = null;
     ui.animar = dado;

@@ -499,6 +499,7 @@ export const EVENTOS_INICIAIS = [
   "nome": "Crise mundial",
   "detalhe": "Todos perdem 30 moedas",
   "aviso": "Uma crise atingiu o mundo todo",
+  "texto": "Os mercados despencaram, e os economistas explicaram por quê, cada um de um jeito diferente. O consenso é que a culpa é de outra pessoa, e que a conta vai chegar para todo mundo.",
   "efeito": {
    "moedasAgora": -30
   }
@@ -508,6 +509,7 @@ export const EVENTOS_INICIAIS = [
   "nome": "Colheita ruim",
   "detalhe": "Comida 15 moedas mais cara para todos, por 2 rodadas",
   "aviso": "Colheitas ruins preocupam o continente",
+  "texto": "Os agricultores olham para o céu, o céu olha para os agricultores, e ninguém chega a um acordo. O preço do pão subiu tanto que já há quem o guarde no cofre.",
   "efeito": {
    "comida": 15
   },
@@ -518,6 +520,7 @@ export const EVENTOS_INICIAIS = [
   "nome": "Epidemia",
   "detalhe": "Todos perdem 3% das pessoas e 1 nível real de Saúde por 2 rodadas",
   "aviso": "Uma doença se espalha pelo continente",
+  "texto": "Médicos pedem que a população lave as mãos, evite aglomerações e pare de jurar que é só uma gripe. Em vários países, o estoque de chá de limão acabou antes do meio-dia.",
   "efeito": {
    "popAgoraPct": -3,
    "areas": {
@@ -531,6 +534,7 @@ export const EVENTOS_INICIAIS = [
   "nome": "Boom de comércio",
   "detalhe": "Todos ganham 30 moedas",
   "aviso": "O comércio mundial está aquecido",
+  "texto": "Navios cheios, portos lotados e comerciantes sorrindo mais do que seria recomendável. Ninguém sabe quanto vai durar, então todo mundo está vendendo como se fosse acabar amanhã.",
   "efeito": {
    "moedasAgora": 30
   }
@@ -540,6 +544,7 @@ export const EVENTOS_INICIAIS = [
   "nome": "Boom tecnológico",
   "detalhe": "Quem tem Tecnologia 3 ou mais ganha 40 moedas",
   "aviso": "Uma onda de tecnologia movimenta os mercados",
+  "texto": "Máquinas novas, aplicativos novos e palavras novas que ninguém sabe o que significam. Quem entendeu primeiro já está rico. Quem não entendeu está em uma reunião sobre o assunto.",
   "minTec": 3,
   "efeito": {
    "moedasAgora": 40
@@ -550,6 +555,7 @@ export const EVENTOS_INICIAIS = [
   "nome": "Greve geral",
   "detalhe": "Todos perdem 1 nível real de Emprego por 2 rodadas",
   "aviso": "Trabalhadores cruzam os braços pelo continente",
+  "texto": "Fábricas paradas, ruas cheias e cartazes cada vez mais criativos. Os governos se dizem abertos ao diálogo, assim que encontrarem alguém disposto a dialogar.",
   "efeito": {
    "areas": {
     "emp": -1
@@ -562,6 +568,7 @@ export const EVENTOS_INICIAIS = [
   "nome": "Apagão continental",
   "detalhe": "Todos perdem 1 nível real de Infraestrutura por 2 rodadas",
   "aviso": "Falhas de energia atingem o continente",
+  "texto": "O continente apagou na hora do jantar. Ninguém sabe a causa, mas muita gente descobriu como é a cara da própria família sem uma tela no meio.",
   "efeito": {
    "areas": {
     "inf": -1

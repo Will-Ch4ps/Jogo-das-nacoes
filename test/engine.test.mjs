@@ -216,6 +216,42 @@ test('ação com dado fica registrada na ficha do país', () => {
   assert.equal(G.partePublica(s).acordos.length, 0);
 });
 
+test('efeito da notícia: oculto nem chega ao leitor; visível aparece explicado', () => {
+  const s = com(modelo({ moedas: 100 }));
+  const oculta = G.novaNoticia(s, { titulo: 'Oculta', paisId: 'm', efeito: { moedasAgora: -10 } });
+  const visivel = G.novaNoticia(s, { titulo: 'Visível', paisId: 'm', efeito: { moedas: 5 }, duracao: 2, mostrarEfeito: true });
+  s.noticias.push(oculta, visivel);
+  G.publicarNoticia(s, oculta); G.publicarNoticia(s, visivel);
+  const [a, b] = G.partePublica(s).noticias;
+  assert.equal(s.paises[0].moedas, 90); // o oculto se aplica do mesmo jeito
+  assert.equal(a.consequencia, undefined);
+  assert.equal(a.efeito, undefined);
+  assert.equal(b.consequencia, 'Modelo: +5 moedas por rodada, por 2 rodadas.');
+});
+
+test('mensagem privada só chega a quem manda e a quem recebe', () => {
+  const s = com(modelo({ codigo: 'AAAAAA' }), outro({ codigo: 'BBBBBB' }), modelo({ id: 'z', nome: 'Terceiro', codigo: 'CCCCCC' }));
+  s.noticias.push(G.novaNoticia(s, { titulo: 'SEGREDO-CARTA', tipo: 'mensagem', de: 'm', para: 'o', privada: true, estado: 'publicada' }));
+  s.noticias.push(G.novaNoticia(s, { titulo: 'Carta aberta', tipo: 'mensagem', de: 'm', para: 'o', estado: 'publicada' }));
+  assert.ok(!JSON.stringify(G.partePublica(s)).includes('SEGREDO'));
+  assert.equal(G.partePublica(s).noticias[0].titulo, 'Carta aberta');
+  const v = G.todasAsVisoes(s);
+  assert.equal(v.AAAAAA.mensagens[0].titulo, 'SEGREDO-CARTA');
+  assert.equal(v.BBBBBB.mensagens[0].titulo, 'SEGREDO-CARTA');
+  assert.equal(v.CCCCCC.mensagens.length, 0);
+});
+
+test('sugestões do sistema já vêm com texto de matéria, com o nome do país', () => {
+  const s = com(modelo({ semManutencao: { emp: 1 } }));
+  const sug = G.sugestoesDeNoticias(s).find(x => x.tipo === 'crise');
+  assert.ok(sug.texto.length > 40);
+  for (const a of G.AREAS) { const c = com(modelo({ semManutencao: { [a.id]: 1 } })); const t = G.sugestoesDeNoticias(c).find(x => x.tipo === 'crise'); assert.ok(t.texto.length > 40, a.id); assert.ok(!t.texto.includes('[País]'), a.id); }
+  G.resolverSugestao(s, sug, { publicar: true, comEfeito: true, mostrarEfeito: true });
+  const n = G.partePublica(s).noticias[0];
+  assert.equal(n.texto, sug.texto);
+  assert.match(n.consequencia, /−15 moedas/);
+});
+
 test('notícia com efeito aplica uma vez só', () => {
   const s = com(modelo({ moedas: 100 }));
   const n = G.novaNoticia(s, { titulo: 'Escândalo', paisId: 'm', efeito: { moedasAgora: -10 } });

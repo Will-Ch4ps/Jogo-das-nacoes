@@ -422,36 +422,6 @@ select option { background: #0c1a25; color: var(--texto); }
 .linha-area .acoes { display: flex; flex-wrap: wrap; gap: 6px; }
 .linha-area small { display: block; color: var(--suave); }
 
-/* Jornal */
-.jornal-capa { padding: 14px 8px 12px; border-top: 4px double var(--ouro); border-bottom: 4px double var(--ouro); text-align: center; }
-.jornal-capa h2 { font-size: 34px; font-weight: 800; letter-spacing: -.02em; line-height: 1.05; margin: 3px 0; }
-.jornal-linha { color: var(--suave); font-size: 12.5px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; }
-.jornal-abas { display: flex; gap: 18px; margin: 12px 0 10px; border-bottom: 1px solid var(--linha); }
-.jornal-aba { min-height: 42px; padding: 4px 0; background: none; border: 0; border-bottom: 3px solid transparent; color: var(--suave); font-weight: 700; }
-.jornal-aba.ativa { color: var(--texto); border-bottom-color: var(--ouro); }
-.jornal-filtros { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
-.jornal-filtro { min-height: 36px; padding: 3px 12px; background: var(--cartao); border: 1px solid var(--linha); border-radius: 18px; color: var(--suave); font-weight: 600; font-size: 14px; }
-.jornal-filtro.ativo { background: var(--texto); border-color: var(--texto); color: var(--fundo); }
-.jornal-select { min-height: 36px; padding: 3px 8px; background: var(--cartao); border: 1px solid var(--linha); border-radius: 18px; font-size: 14px; }
-.noticia { --fonte: var(--acento); overflow-wrap: anywhere; list-style: none; }
-.noticia.boato { --fonte: #ef9440; }
-.noticia-topo { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 4px; }
-.fonte { color: var(--fonte); font-size: 12.5px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
-.noticia-titulo { font: 700 19px/1.2 var(--display); }
-.noticia-texto { margin-top: 5px; color: #c9d6df; font-size: 15.5px; line-height: 1.5; white-space: pre-wrap; }
-.noticia.principal { padding: 16px; background: linear-gradient(160deg, var(--cartao-2), var(--cartao)); border: 1px solid var(--linha); border-top: 4px solid var(--fonte); border-radius: var(--raio); }
-.noticia.principal .noticia-titulo { font-size: 29px; font-weight: 800; line-height: 1.08; letter-spacing: -.015em; margin-top: 2px; }
-.noticia.principal .noticia-texto { font-size: 17px; }
-.jornal-rodada { margin-top: 20px; }
-.jornal-rodada > h3 { margin-bottom: 4px; color: var(--suave); font: 700 12.5px var(--corpo); letter-spacing: .09em; text-transform: uppercase; }
-.jornal-lista { display: grid; }
-.jornal-lista .noticia { padding: 12px 0 12px 12px; border-top: 1px solid var(--linha); border-left: 3px solid var(--fonte); margin-top: -1px; }
-.noticia-pais { margin-top: 4px; }
-.noticia-mais summary { cursor: pointer; list-style: none; }
-.noticia-mais summary::-webkit-details-marker { display: none; }
-.noticia-mais summary b { display: block; margin-top: 4px; color: var(--ouro); font-size: 14px; }
-.noticia-mais[open] summary { display: none; }
-.jornal-dica { margin-top: 18px; padding-top: 10px; border-top: 1px solid var(--linha); color: var(--suave); font-size: 14px; text-align: center; }
 .ultima-hora { width: 100%; display: flex; align-items: baseline; gap: 10px; padding: 8px 16px; background: var(--fundo-2); border: 0; border-bottom: 1px solid var(--linha); text-align: left; font-size: 14.5px; min-width: 0; }
 .ultima-hora b { flex: none; color: var(--ouro); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; }
 .ultima-hora span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -518,3 +488,78 @@ select option { background: #0c1a25; color: var(--texto); }
 .peso.essencial { color: var(--ouro); }
 .peso.importante { color: var(--acento); }
 .peso.estrategica { color: #b6a7ee; }
+
+/* Jornal: uma folha de papel no meio do app */
+.jornal { --papel: #f4eddc; --tinta: #1e1a13; --tinta-2: #5f5645; --fio: #cbbfa6; --fonte: #1e1a13; margin: 0 -16px; padding: 16px 16px 20px; background: var(--papel); color: var(--tinta); }
+.jornal-capa { text-align: center; }
+.jornal-linha { display: flex; justify-content: space-between; gap: 8px; padding: 4px 0; border-top: 1px solid var(--tinta); border-bottom: 1px solid var(--tinta); color: var(--tinta); font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+.jornal-capa h2 { margin: 10px 0 8px; padding-bottom: 8px; border-bottom: 4px double var(--tinta); font: 800 clamp(30px, 9vw, 42px)/1 var(--display); letter-spacing: -.03em; }
+.jornal-abas { display: flex; gap: 18px; margin: 8px 0 10px; border-bottom: 1px solid var(--fio); }
+.jornal-aba { min-height: 42px; padding: 4px 0; background: none; border: 0; border-bottom: 3px solid transparent; color: var(--tinta-2); font-weight: 700; }
+.jornal-aba.ativa { color: var(--tinta); border-bottom-color: var(--tinta); }
+.jornal-filtros { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.jornal-filtro { min-height: 36px; padding: 3px 12px; background: transparent; border: 1px solid var(--fio); border-radius: 18px; color: var(--tinta); font-weight: 600; font-size: 14px; }
+.jornal-filtro.ativo { background: var(--tinta); border-color: var(--tinta); color: var(--papel); }
+.jornal-select { min-height: 36px; padding: 3px 8px; background: transparent; border: 1px solid var(--fio); border-radius: 18px; color: var(--tinta); font-size: 14px; color-scheme: light; }
+.jornal-select option { background: #fff; color: #1e1a13; }
+.jornal-vazio, .jornal .vazio-txt { padding: 16px 0; color: var(--tinta-2); text-align: center; }
+.jornal .cartao { background: #fbf6ea; border-color: var(--fio); color: var(--tinta); }
+.jornal .meta { color: var(--tinta-2); }
+.jornal .etiqueta { background: #e7dec8; color: var(--tinta); }
+
+.nota { --fonte: #1e1a13; list-style: none; overflow-wrap: anywhere; }
+.nota.oficial { --fonte: #123a55; }
+.nota.boato { --fonte: #a2470f; }
+.nota.mensagem { --fonte: #5b3a8c; }
+.nota-botao { display: grid; gap: 4px; width: 100%; padding: 12px 0; background: none; border: 0; color: inherit; text-align: left; }
+.nota-botao:hover .nota-titulo { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; }
+.jornal :focus-visible { outline-color: #123a55; }
+.nota-topo { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.chapeu { display: inline-block; padding: 1px 7px; background: var(--fonte, #1e1a13); color: #fff; font-size: 11.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.fonte { color: var(--fonte); font-size: 12.5px; font-weight: 800; letter-spacing: .03em; filter: brightness(.75); }
+.nota-titulo { margin: 0; font: 700 20px/1.14 var(--display); letter-spacing: -.012em; }
+.nota-trecho { color: #3f382b; font: 15.5px/1.4 Georgia, "Times New Roman", serif; }
+.nota-rodape { display: flex; justify-content: space-between; gap: 10px; margin-top: 2px; color: var(--tinta-2); font-size: 12.5px; font-weight: 600; }
+.nota-ler { color: var(--tinta); text-decoration: underline; text-underline-offset: 2px; }
+.nota.boato .nota-titulo { font-style: italic; }
+.nota.mensagem .nota-botao { padding: 12px; background: #fbf6ea; border: 1px dashed #8d7ab0; }
+.nota.principal { border-bottom: 1px solid var(--tinta); }
+.nota.principal .nota-botao { padding-top: 4px; }
+.nota.principal .nota-titulo { font-size: clamp(29px, 8.5vw, 40px); font-weight: 800; line-height: 1.02; letter-spacing: -.025em; }
+.nota.principal .nota-trecho { font-size: 17px; }
+.jornal-rodada { margin-top: 16px; }
+.jornal-rodada > h3 { padding-bottom: 3px; border-bottom: 2px solid var(--tinta); font: 800 12.5px var(--corpo); letter-spacing: .1em; text-transform: uppercase; }
+.jornal-lista { display: grid; }
+.jornal-lista .nota + .nota { border-top: 1px solid var(--fio); }
+.jornal-dica { margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--fio); color: var(--tinta-2); font: italic 14.5px Georgia, serif; text-align: center; }
+
+/* Matéria aberta */
+body.com-artigo { overflow: hidden; }
+.artigo-tela { position: fixed; inset: 0; z-index: 50; overflow-y: auto; background: rgba(4, 11, 17, .78); -webkit-overflow-scrolling: touch; }
+.artigo { --fonte: #1e1a13; min-height: 100%; max-width: 680px; margin: 0 auto; padding: 14px 20px 40px; background: #f4eddc; color: #1e1a13; overflow-wrap: anywhere; }
+.artigo.oficial { --fonte: #123a55; }
+.artigo.boato { --fonte: #a2470f; }
+.artigo.mensagem { --fonte: #5b3a8c; }
+.artigo :focus-visible { outline-color: #123a55; }
+.artigo-fechar { min-height: 44px; padding: 4px 0; background: none; border: 0; color: #1e1a13; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+.artigo-capa { margin: 4px 0 18px; padding: 4px 0; border-top: 1px solid #1e1a13; border-bottom: 3px double #1e1a13; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-align: center; text-transform: uppercase; }
+.artigo .chapeu { margin-bottom: 8px; }
+.artigo h2 { font: 800 clamp(32px, 8vw, 46px)/1.02 var(--display); letter-spacing: -.028em; }
+.artigo.boato h2 { font-style: italic; }
+.artigo-fonte { margin-top: 10px; color: var(--fonte); font-size: 14px; font-weight: 800; filter: brightness(.75); }
+.artigo-aviso { margin-top: 12px; padding: 8px 12px; border: 2px dashed #a2470f; color: #7a3408; font-weight: 700; font-size: 14.5px; transform: rotate(-.6deg); }
+.artigo-corpo { margin-top: 16px; font: 18.5px/1.55 Georgia, "Times New Roman", serif; }
+.artigo-corpo p { white-space: pre-wrap; }
+.artigo-corpo p + p { margin-top: 12px; }
+.artigo-corpo p:first-child { display: flow-root; }
+.artigo:not(.mensagem) .artigo-corpo p:first-child::first-letter { float: left; margin: 5px 7px 0 0; font: 800 54px/.8 var(--display); }
+.artigo-efeito { margin-top: 22px; padding: 12px 14px; background: #e7dec8; border-left: 4px solid #1e1a13; }
+.artigo-efeito h3 { font: 800 12.5px var(--corpo); letter-spacing: .08em; text-transform: uppercase; }
+.artigo-efeito p { margin-top: 3px; font-size: 16px; font-weight: 600; }
+.artigo-pais { --cor: #1e1a13; min-height: 44px; margin-top: 20px; padding: 6px 14px; background: transparent; border: 1px solid #1e1a13; border-left: 6px solid var(--cor); color: #1e1a13; font-weight: 700; }
+.mensagem-item { display: grid; gap: 3px; width: 100%; text-align: left; color: var(--texto); }
+
+@media (min-width: 1000px) {
+  .jornal { margin: 0; border-radius: var(--raio); box-shadow: var(--sombra); }
+  .artigo { min-height: 0; margin: 28px auto; box-shadow: 0 20px 60px rgba(0, 0, 0, .5); }
+}

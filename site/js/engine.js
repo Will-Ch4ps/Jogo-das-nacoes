@@ -19,6 +19,19 @@ export const AREAS = [
   area('seg', 'Segurança', 'estrategica', 'proteção do dinheiro', 'Cada nível dá +1 para se defender de ataque hacker', 'Crime: perde 5% do dinheiro por rodada e −1 na defesa', 'Onda de crimes assusta [País]', '[País] vira referência em segurança', 'guerra', 'festa'),
   area('mil', 'Poder militar', 'estrategica', 'fronteiras', 'Cada nível dá +1 para atacar e se defender em ataque militar', 'Fronteiras frágeis: −1 nesses dados', 'Fronteiras de [País] ficam sem defesa', 'Exército de [País] impressiona os vizinhos', 'guerra', 'festa'),
 ];
+// Texto das matérias que o sistema sugere: [crise, destaque].
+const MATERIAS = {
+  alim: ['Nos mercados de [País], a fila já dá duas voltas no quarteirão, e o único produto em estoque é a esperança. O governo pede calma à população, de preferência depois do almoço, caso haja almoço.', 'Agrônomos do continente inteiro vieram ver de perto o milagre. Um ministro chegou a chorar diante de um tomate. "É só um tomate", tentaram explicar. Ele não ouviu.'],
+  sau: ['A sala de espera virou ponto de encontro: já tem gente marcando aniversário por lá. Um paciente aguardando atendimento desde a rodada passada foi visto ensinando o novo enfermeiro a usar o estetoscópio.', 'Delegações estrangeiras vieram estudar o sistema e foram embora mais saudáveis do que chegaram. Dois espiões foram descobertos porque pararam para fazer exames de rotina.'],
+  emp: ['Os trabalhadores cruzaram os braços e, segundo testemunhas, já estão cruzando as pernas também. O governo prometeu negociar assim que achar alguém para abrir a porta do ministério, que também está em greve.', 'As filas agora são na porta das empresas, à procura de funcionários. Um desempregado foi visto na praça central e virou atração turística.'],
+  edu: ['A aula de matemática foi cancelada por falta de professor, e a de história virou lembrança. Alunos relatam estar aprendendo muito, principalmente a jogar baralho.', 'Vestibulandos de todo o continente estão se mudando para lá. Os pais estão orgulhosos. O aluguel perto do campus, mais ainda.'],
+  inf: ['Sem luz há dias, a população redescobriu as velas, a conversa e o quanto odeia os vizinhos. A estrada principal agora é considerada, oficialmente, uma trilha de aventura.', 'Ministros cortaram a fita da nova ponte, depois da nova estrada, e depois de mais uma ponte. Faltou fita. Já há licitação para comprar mais.'],
+  est: ['As praças estão cheias, e os cartazes estão cada vez mais criativos. O governo garante que está tudo sob controle, e pediu para ninguém reparar na fumaça atrás do palácio.', 'As pesquisas mostram que o povo confia no governo, um fenômeno tão raro que cientistas pediram para repetir a pergunta. Deu o mesmo resultado.'],
+  tec: ['O sistema caiu, e ninguém sabe onde está o técnico, porque o sistema de localizar técnicos também caiu. Funcionários foram orientados a desligar e ligar de novo. O país inteiro.', 'Investidores fazem fila para conhecer os laboratórios. Ninguém entendeu direito o que eles fazem, mas todos concordam que parece muito caro, e portanto muito bom.'],
+  seg: ['A polícia pede que os moradores tranquem bem as portas, depois que levaram a porta da delegacia. Em nota, o governo afirma que a situação é séria, e que devolvam a porta.', 'A criminalidade caiu tanto que os ladrões locais pediram seguro-desemprego. O pedido foi negado, e o autor foi preso na saída, por precaução.'],
+  mil: ['O último soldado da fronteira pediu licença para ir ao banheiro, e não voltou. Em seu lugar, o governo colocou um espantalho de uniforme, que já foi promovido duas vezes.', 'A parada militar durou seis horas, e os vizinhos juram que assistiram só por curiosidade. Vários telefonaram logo depois, para perguntar como anda a amizade.'],
+};
+const materia = (area, i, nome) => MATERIAS[area][i].replaceAll('[País]', nome);
 export const NIVEL_MAX = 10;
 const nomeArea = id => AREAS.find(a => a.id === id)?.nome || id;
 
@@ -254,19 +267,31 @@ export function sugestoesDeNoticias(e) {
     for (const a of AREAS) {
       const real = nivelReal(c, a.id, e);
       const rodadasSem = c.semManutencao?.[a.id] || 0;
-      if (rodadasSem > 0) out.push({ chave: `${c.id}:${a.id}:crise:${e.rodada - rodadasSem}`, paisId: c.id, tipo: 'crise', titulo: a.crise.replace('[País]', c.nome), marca: a.marcaCrise, efeito: { moedasAgora: -15 } });
-      for (const marco of [5, 10]) if (real >= marco && (c.niveisIniciais?.[a.id] ?? 0) < marco) out.push({ chave: `${c.id}:${a.id}:destaque:${marco}`, paisId: c.id, tipo: 'destaque', titulo: a.destaque.replace('[País]', c.nome), marca: a.marcaDestaque, efeito: { moedasAgora: marco === 10 ? 40 : 20 } });
+      if (rodadasSem > 0) out.push({ chave: `${c.id}:${a.id}:crise:${e.rodada - rodadasSem}`, paisId: c.id, tipo: 'crise', titulo: a.crise.replace('[País]', c.nome), texto: materia(a.id, 0, c.nome), chapeu: 'Crise', marca: a.marcaCrise, efeito: { moedasAgora: -15 } });
+      for (const marco of [5, 10]) if (real >= marco && (c.niveisIniciais?.[a.id] ?? 0) < marco) out.push({ chave: `${c.id}:${a.id}:destaque:${marco}`, paisId: c.id, tipo: 'destaque', titulo: a.destaque.replace('[País]', c.nome), texto: materia(a.id, 1, c.nome), chapeu: 'Destaque', marca: a.marcaDestaque, efeito: { moedasAgora: marco === 10 ? 40 : 20 } });
     }
   }
   // Crises primeiro: são as que o professor mais precisa ver.
   return out.filter(s => !feitas.has(s.chave)).sort((a, b) => (a.tipo === 'crise' ? 0 : 1) - (b.tipo === 'crise' ? 0 : 1));
 }
-export function resolverSugestao(e, s, { publicar, comEfeito }) {
+export function resolverSugestao(e, s, { publicar, comEfeito, mostrarEfeito }) {
   e.sugestoesFeitas = [...(e.sugestoesFeitas || []), s.chave];
   if (!publicar) return null;
-  const n = novaNoticia(e, { titulo: s.titulo, paisId: s.paisId, origem: 'sugestao', marca: s.marca, efeito: comEfeito ? s.efeito : undefined });
+  const n = novaNoticia(e, { titulo: s.titulo, texto: s.texto, chapeu: s.chapeu, paisId: s.paisId, origem: 'sugestao', marca: s.marca, efeito: comEfeito ? s.efeito : undefined, mostrarEfeito: !!mostrarEfeito });
   e.noticias.push(n);
   return publicarNoticia(e, n);
+}
+
+// O que o leitor recebe. O efeito só vai junto se o professor marcou para mostrar: oculto nem sai do banco.
+function noticiaParaLeitor(n, e) {
+  const { id, titulo, texto, paisId, rodada, selo, fontePais, publicadaEm, chapeu, tipo, de, para, privada } = n;
+  const out = { id, titulo, texto, paisId, rodada, selo, fontePais, publicadaEm, chapeu, tipo, de, para, privada };
+  if (n.mostrarEfeito && n.efeito && textoEfeito(n.efeito)) {
+    const quem = n.paisId ? paisPorId(e, n.paisId)?.nome : 'Todos os países';
+    const dura = temContinuo(normEf(n.efeito)) ? (n.duracao == null ? ', até o fim do jogo' : `, por ${n.duracao} ${n.duracao === 1 ? 'rodada' : 'rodadas'}`) : '';
+    out.consequencia = `${quem}: ${textoEfeito(n.efeito)}${dura}.`;
+  }
+  return out;
 }
 
 /* ---------- Fechamento ---------- */
@@ -284,7 +309,7 @@ export function fecharRodada(original) {
     if (novas < 0) {
       novas = 0; fome = true;
       c.pop = um(c.pop * (1 - p.perdaFome / 100));
-      e.noticias.push(novaNoticia(e, { titulo: `Falta comida em ${c.nome}`, paisId: c.id, origem: 'automatica' }));
+      e.noticias.push(novaNoticia(e, { titulo: `Falta comida em ${c.nome}`, texto: `As prateleiras estão vazias, e o cardápio dos restaurantes virou uma lista de lembranças. Boa parte da população de ${c.nome} já arruma as malas à procura de um lugar onde o almoço ainda exista.`, chapeu: 'Urgente', paisId: c.id, origem: 'automatica' }));
     } else if (dSaude > 0) {
       c.pop = um(c.pop * (1 - (dSaude * p.perdaSaude) / 100));
     } else {
@@ -403,7 +428,7 @@ export function aplicarEvento(e, ev) {
   const alvos = ev.minTec ? e.paises.filter(c => nivelReal(c, 'tec', e) >= ev.minTec).map(c => c.id) : (ev.alvos?.length ? ev.alvos : e.paises.map(c => c.id));
   aplicarEfeito(e, alvos, ev.efeito, { titulo: ev.nome, duracao: ev.duracao ?? null, secreto: true });
   ev.aplicado = true; ev.rodadaAplicada = e.rodada;
-  if (ev.aviso) e.noticias.push(novaNoticia(e, { titulo: ev.aviso, origem: 'evento', estado: 'publicada', publicadaEm: Date.now() }));
+  if (ev.aviso) e.noticias.push(novaNoticia(e, { titulo: ev.aviso, texto: ev.texto || '', chapeu: 'Urgente', origem: 'evento', estado: 'publicada', publicadaEm: Date.now() }));
 }
 
 // Marcas de acontecimentos no mapa
@@ -570,8 +595,7 @@ export function partePublica(e) {
     }),
     acordos: e.acordos.filter(a => a.visibilidade === 'publico' && a.estado === 'ativo' && (a.origem || 'acordo') === 'acordo')
       .map(({ id, titulo, descricao, tipo, paises, efeitos, restantes, inicio }) => ({ id, titulo, descricao, tipo, paises, efeitos, restantes, inicio })),
-    noticias: e.noticias.filter(n => n.estado === 'publicada')
-      .map(({ id, titulo, texto, paisId, rodada, selo, fontePais, publicadaEm }) => ({ id, titulo, texto, paisId, rodada, selo, fontePais, publicadaEm })),
+    noticias: e.noticias.filter(n => n.estado === 'publicada' && !n.privada).map(n => noticiaParaLeitor(n, e)),
     marcas: e.marcas || [],
     dado: e.dado?.exibir ? e.dado : null,
   };
@@ -608,6 +632,7 @@ export function visaoDoPais(c, e) {
       problema: problema(c, a.id), rodadasSem: c.semManutencao?.[a.id] || 0, cortada: !!c.cortadas?.[a.id], manut: manutencao.linhas.find(l => l.area === a.id), proximo: c.niveis[a.id] >= NIVEL_MAX ? null : custoSubir(c.niveis[a.id], p),
     })),
     projetos: c.projetos || 0, proximoProjeto: custoDoProjeto(c, e), tentativas: (c.tentativas || []).slice().reverse(), acordos,
+    mensagens: e.noticias.filter(n => n.privada && n.estado === 'publicada' && (n.para === c.id || n.de === c.id)).map(n => noticiaParaLeitor(n, e)).reverse(),
     missoes: (c.missoes || []).map(m => { const pr = progressoMissao(m, c, e); return { id: m.id, titulo: m.titulo, dificuldade: m.dificuldade, premio: m.premio, texto: comNomesPaises(m.texto, e), estado: pr.estado, progresso: pr.texto }; }), serie: (c.serie || []).slice(-6), proximas: [],
   };
 }

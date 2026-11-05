@@ -74,8 +74,11 @@
       G.registrarAcordo(e, { titulo: 'Treinamento de técnicos', tipo: 'paises', paises: ['p7', 'p1'], efeitos: G.efeitosDoApoio(e, { de: 'p7', para: 'p1', area: 'edu', niveis: 2, preco: 10 }), duracao: 2 });
       G.criarAcordo(e, { titulo: 'Porto secreto', descricao: 'Solmar usa o porto em troca de pagamento.', tipo: 'paises', paises: ['p1', 'p4'], efeitos: { p1: { moedas: 12 }, p4: { moedas: -12, areas: { inf: 1 } } }, duracao: 4, visibilidade: 'oculto' });
       G.criarAcordo(e, { titulo: 'Energia por comida', descricao: 'Kaelor constrói usinas e Nova Atlântida compra sua produção.', tipo: 'paises', paises: ['p1', 'p2'], efeitos: { p1: { moedas: -5, comida: -10 }, p2: { moedas: 15 } }, duracao: 3 });
-      e.noticias.push(G.novaNoticia(e, { titulo: 'Technia anuncia chip nacional', texto: 'Governo promete baratear a produção.', paisId: 'p6', selo: 'Imprensa', fontePais: 'p6', estado: 'publicada' }));
-      e.noticias.push(G.novaNoticia(e, { titulo: 'Dizem que Bastilha esconde um exército', selo: 'Boato', estado: 'publicada' }));
+      e.noticias.push(G.novaNoticia(e, { titulo: 'Technia anuncia chip nacional', chapeu: 'Exclusivo', texto: 'Governo promete baratear a produção e, pela primeira vez, explicar o que é um chip.\n\nEm entrevista, o ministro afirmou que o aparelho é "pequeno, caro e o futuro". Questionado sobre o que faz, respondeu que isso é informação sigilosa.', paisId: 'p6', selo: 'Imprensa', fontePais: 'p6', estado: 'publicada', efeito: { moedas: 5 }, duracao: 3, mostrarEfeito: true }));
+      G.publicarNoticia(e, e.noticias.at(-1));
+      e.noticias.push(G.novaNoticia(e, { titulo: 'Solmar, seu vulcão é só uma montanha com problemas', tipo: 'mensagem', de: 'p2', para: 'p4', selo: 'Mensagem', texto: 'Caros vizinhos,\n\nSoubemos que a montanha de vocês anda quente. Por aqui, a nossa só dá minério e nunca nos chamou para conversar. Se quiserem negociar, tragam o protetor solar.', estado: 'publicada' }));
+      e.noticias.push(G.novaNoticia(e, { titulo: 'Proposta só para vocês', tipo: 'mensagem', de: 'prof', para: 'p1', privada: true, selo: 'Mensagem', texto: 'Alguém anda perguntando quanto custa o seu porto. Achei que vocês gostariam de saber.', estado: 'publicada' }));
+      e.noticias.push(G.novaNoticia(e, { titulo: 'Dizem que Bastilha esconde um exército', selo: 'Boato', chapeu: 'Fofoca', texto: 'Fontes que preferem não se identificar, principalmente porque não existem, garantem ter visto tanques atrás da padaria central.', estado: 'publicada' }));
       G.adicionarMarca(e, 'p4', 'erupcao', 'Vulcão de Solmar volta a soltar fumaça');
       G.adicionarMarca(e, 'p2', 'nevasca', 'Nevasca isola as minas de Kaelor');
       G.adicionarMarca(e, 'p6', 'descoberta', 'Technia anuncia chip nacional');
@@ -107,7 +110,7 @@
     document.getElementById('exemplo').onclick = exemplo;
     document.getElementById('fechar').onclick = () => { const d = ler()?.dados; if (d?.paises) grava(G.fecharComHistorico(d)); };
 
-    if (ler()?.dados?.paises?.[0]?.niveis?.alim == null) exemplo();
+    if (!ler()?.dados?.noticias?.some(n => n.tipo === 'mensagem')) exemplo();
     monta();
   </script>
 </body>

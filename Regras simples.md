@@ -59,7 +59,7 @@ Os grupos combinam entre si e chamam o professor, que registra no sistema.
 - **Fazer um acordo:** pode mudar dinheiro na hora, moedas por rodada, comida e nível de área, por quantas rodadas combinarem. Pode ser secreto. Bloquear uma rota ou cobrar por algo também é um acordo: quem combina são os grupos.
 - **Apoiar outro país em uma área:** quem ajuda paga a manutenção dos níveis que está dando e não pode dar mais níveis do que tem.
 - **Fornecer comida:** quem recebe deixa de pagar essa parte da conta de comida e paga o preço combinado a quem fornece.
-- **Publicar uma notícia:** o grupo manda o texto no formato que quiser e o professor publica no jornal com a fonte "Imprensa de [país]". Vale tudo, inclusive boato, com a moderação do professor.
+- **Publicar uma notícia:** o grupo manda o texto no formato que quiser e o professor publica no jornal com a fonte "Imprensa de [país]". Vale tudo, inclusive boato, com a moderação do professor. Também vale mandar uma mensagem a outro país, aberta no jornal ou só para quem recebe. Se a notícia mudar algo no jogo, o professor decide se os alunos veem o efeito.
 - **Tentar um projeto ou ação arriscada:** o grupo explica a ideia e o professor define, antes de rolar, o custo, a dificuldade e o efeito.
 - **Atacar outro país:** quem perde paga parte do próprio dinheiro ao outro (20%, se o professor não definir outro valor). Empate é do defensor.
   - **Militar:** só contra vizinhos e vira notícia. Dado + Poder militar de cada lado.

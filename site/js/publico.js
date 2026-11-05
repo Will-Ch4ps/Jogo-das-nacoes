@@ -149,12 +149,12 @@ const rotuloDura = r => (r == null ? 'até o fim' : r === 1 ? 'última rodada' :
 const linhaConta = (x, sinalTxt) => h('div', { class: 'conta' + (x.ruim ? ' ruim' : '') },
   h('span', {}, x.rotulo, x.restantes !== undefined && h('em', { class: 'dura' }, rotuloDura(x.restantes))),
   h('strong', {}, `${sinalTxt}${fmt(Math.abs(x.valor))}`));
-const ABAS_FICHA = [['conta', 'Conta'], ['areas', 'Áreas'], ['acordos', 'Acordos'], ['projetos', 'Projetos'], ['missoes', 'Missões'], ['pais', 'Nosso país'], ['guia', 'Como jogar']];
+const ABAS_FICHA = [['conta', 'Conta'], ['areas', 'Áreas'], ['acordos', 'Acordos'], ['projetos', 'Projetos'], ['missoes', 'Missões'], ['mensagens', 'Mensagens'], ['pais', 'Nosso país'], ['guia', 'Como jogar']];
 function fichaPais(f) {
   const area = id => f.areas.find(a => a.id === id);
   const acordos = f.acordos.filter(a => a.origem === 'acordo'), efeitos = f.acordos.filter(a => a.origem === 'efeito'), emProjeto = f.acordos.filter(a => a.origem === 'projeto');
   const aba = ui.fichaAba || 'conta';
-  const contagem = { acordos: acordos.length + efeitos.length, projetos: (f.tentativas || []).length, missoes: (f.missoes || []).filter(m => m.estado === 'cumprida').length };
+  const contagem = { acordos: acordos.length + efeitos.length, projetos: (f.tentativas || []).length, missoes: (f.missoes || []).filter(m => m.estado === 'cumprida').length, mensagens: (f.mensagens || []).length };
   const cartaoCompromisso = a => h('li', { class: 'cartao' },
     h('div', { class: 'cartao-topo' }, h('strong', {}, a.titulo),
       h('span', { class: 'etiquetas' }, a.secreto && h('span', { class: 'etiqueta selo-boato' }, 'Secreto'), h('span', { class: 'etiqueta' }, a.ateRodada == null ? 'Até o fim' : a.restantes === 1 ? 'Última rodada' : `Até a rodada ${a.ateRodada}`))),
@@ -218,6 +218,12 @@ function fichaPais(f) {
         h('div', { class: 'missao-rodape' }, h('span', { class: 'meta' }, m.progresso), h('b', {}, m.estado === 'concluida' ? 'Paga' : `${m.premio} moedas`)),
         m.estado === 'cumprida' && h('p', { class: 'missao-pronta' }, 'Parece cumprida. Chamem o professor!')))) : h('p', { class: 'vazio-txt' }, 'Nenhuma missão por enquanto.'),
     ],
+    mensagens: () => [
+      h('p', { class: 'missoes-sigilo' }, h('strong', {}, 'Mensagens privadas.'), ' Só quem manda e quem recebe veem o que está aqui.'),
+      (f.mensagens || []).length ? h('ul', { class: 'lista' }, f.mensagens.map(n => h('li', {}, h('button', { class: 'cartao mensagem-item', onclick: () => abrirNoticia(n.id) },
+        h('span', { class: 'cartao-topo' }, h('strong', {}, n.titulo), h('span', { class: 'etiqueta' }, `Rodada ${n.rodada}`)),
+        h('span', { class: 'meta' }, `${n.de === f.id ? `Enviada para ${nomeDe(n.para)}` : fonteDe(n)}`))))) : h('p', { class: 'vazio-txt' }, 'Nenhuma mensagem por enquanto.'),
+    ],
     pais: () => [
       dossie(f.id),
       h('h4', {}, 'Para pensar'),
@@ -275,42 +281,75 @@ function cartaoAcordo(a) {
     a.descricao && h('p', {}, a.descricao),
     h('p', { class: 'meta' }, quem));
 }
-// Jornal: lugar próprio para ler as notícias, com manchete, filtros e a fonte de cada texto.
-const fonteDe = n => (n.fontePais ? `Imprensa de ${nomeDe(n.fontePais)}` : n.selo || 'Oficial');
-const classeFonte = n => (n.fontePais ? 'imprensa' : n.selo === 'Boato' ? 'boato' : 'oficial');
-function corpoNoticia(n, longa) {
-  if (!n.texto) return null;
-  if (!longa || n.texto.length <= 280) return h('p', { class: 'noticia-texto' }, n.texto);
-  return h('details', { class: 'noticia-mais' }, h('summary', {}, h('span', { class: 'noticia-texto' }, `${n.texto.slice(0, 220)}…`), h('b', {}, 'Ler tudo')), h('p', { class: 'noticia-texto' }, n.texto));
+// Jornal: a lista mostra manchete e trecho; ao tocar, abre a matéria inteira.
+const fonteDe = n => {
+  if (n.tipo === 'mensagem') return n.de && n.de !== 'prof' ? `Mensagem de ${nomeDe(n.de)}` : 'Mensagem do professor';
+  return n.fontePais ? `Imprensa de ${nomeDe(n.fontePais)}` : n.selo || 'Oficial';
+};
+const classeFonte = n => (n.tipo === 'mensagem' ? 'mensagem' : n.fontePais ? 'imprensa' : n.selo === 'Boato' ? 'boato' : 'oficial');
+const corFonte = n => paisDe(n.fontePais || (n.tipo === 'mensagem' ? n.de : null))?.cor;
+const trecho = (t, max = 120) => { const u = (t || '').replace(/\s+/g, ' ').trim(); return u.length > max ? `${u.slice(0, max).trimEnd()}…` : u; };
+function abrirNoticia(id) {
+  ui.noticiaAberta = id;
+  history.pushState({ artigo: id }, '');
+  render();
+  document.querySelector('.artigo-fechar')?.focus();
 }
+function fecharNoticia() {
+  if (history.state?.artigo) history.back();
+  else { ui.noticiaAberta = null; render(); }
+}
+window.addEventListener('popstate', ev => { ui.noticiaAberta = ev.state?.artigo || null; render(); });
+document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && ui.noticiaAberta) fecharNoticia(); });
+
 function cartaoNoticia(n, principal = false) {
-  const cor = n.fontePais ? paisDe(n.fontePais)?.cor : null;
-  return h(principal ? 'article' : 'li', { class: `noticia ${classeFonte(n)}${principal ? ' principal' : ''}`, style: cor ? `--fonte:${cor}` : null },
-    h('div', { class: 'noticia-topo' }, h('span', { class: `fonte ${classeFonte(n)}` }, fonteDe(n)), h('span', { class: 'meta' }, `Rodada ${n.rodada}`)),
-    h(principal ? 'h3' : 'h4', { class: 'noticia-titulo' }, n.titulo),
-    corpoNoticia(n, !principal),
-    n.paisId && !principal && h('p', { class: 'meta noticia-pais' }, `Sobre ${nomeDe(n.paisId)}`));
+  const cor = corFonte(n), tag = principal ? 'article' : 'li';
+  return h(tag, { class: `nota ${classeFonte(n)}${principal ? ' principal' : ''}`, style: cor ? `--fonte:${cor}` : null },
+    h('button', { class: 'nota-botao', onclick: () => abrirNoticia(n.id) },
+      h('span', { class: 'nota-topo' }, n.chapeu && h('span', { class: 'chapeu' }, n.chapeu), h('span', { class: 'fonte' }, fonteDe(n))),
+      h(principal ? 'h3' : 'h4', { class: 'nota-titulo' }, n.titulo),
+      n.texto && h('span', { class: 'nota-trecho' }, trecho(n.texto, principal ? 170 : 90)),
+      h('span', { class: 'nota-rodape' }, h('span', {}, `Rodada ${n.rodada}`), n.texto && h('span', { class: 'nota-ler' }, 'Ler a matéria'))));
+}
+function artigoAberto() {
+  const n = J.noticias.find(x => x.id === ui.noticiaAberta) || ui.ficha?.mensagens?.find(x => x.id === ui.noticiaAberta);
+  if (!n) return null;
+  const cor = corFonte(n), classe = classeFonte(n);
+  const destino = n.tipo === 'mensagem' && (n.para ? `Para ${nomeDe(n.para)}` : 'Para todos os países');
+  return h('div', { class: 'artigo-tela', onclick: ev => { if (ev.target === ev.currentTarget) fecharNoticia(); } },
+    h('article', { class: `artigo ${classe}`, role: 'dialog', 'aria-modal': 'true', 'aria-label': n.titulo, style: cor ? `--fonte:${cor}` : null },
+      h('button', { class: 'artigo-fechar', onclick: fecharNoticia }, '← Voltar'),
+      h('p', { class: 'artigo-capa' }, `A Voz de ${CONTINENTE.nome} · Rodada ${n.rodada}`),
+      n.chapeu && h('p', { class: 'chapeu' }, n.chapeu),
+      h('h2', {}, n.titulo),
+      h('p', { class: 'artigo-fonte' }, fonteDe(n), destino && ` · ${destino}`, n.privada && ' · Só vocês receberam'),
+      classe === 'boato' && h('p', { class: 'artigo-aviso' }, 'Boato: esta história não foi confirmada por ninguém. Acredite por sua conta e risco.'),
+      n.texto && h('div', { class: 'artigo-corpo' }, n.texto.split(/\n\s*\n/).map(par => h('p', {}, par))),
+      n.consequencia && h('aside', { class: 'artigo-efeito' }, h('h3', {}, 'O que isso causou'), h('p', {}, n.consequencia)),
+      n.paisId && paisDe(n.paisId) && h('button', { class: 'artigo-pais', style: `--cor:${paisDe(n.paisId).cor}`, onclick: () => { ui.noticiaAberta = null; if (history.state?.artigo) history.replaceState(null, ''); escolher(n.paisId, true); } }, `Ver ${nomeDe(n.paisId)} no mapa`)));
 }
 function secaoJornal() {
   const vista = ui.jornalVista || 'noticias', filtroFonte = ui.jornalFonte || 'todas', filtroPais = ui.jornalPais || '';
   const lista = J.noticias.slice().reverse().filter(n =>
-    (filtroFonte === 'todas' || classeFonte(n) === filtroFonte) && (!filtroPais || n.paisId === filtroPais || n.fontePais === filtroPais));
+    (filtroFonte === 'todas' || classeFonte(n) === filtroFonte) && (!filtroPais || n.paisId === filtroPais || n.fontePais === filtroPais || n.de === filtroPais || n.para === filtroPais));
   const [manchete, ...resto] = lista;
   const aba = (id, t) => h('button', { class: 'jornal-aba' + (vista === id ? ' ativa' : ''), onclick: () => { ui.jornalVista = id; render(); } }, t);
   const chip = (id, t) => h('button', { class: 'jornal-filtro' + (filtroFonte === id ? ' ativo' : ''), 'aria-pressed': String(filtroFonte === id), onclick: () => { ui.jornalFonte = id; render(); } }, t);
   // Agrupa por rodada, da mais nova para a mais antiga.
   const porRodada = [...new Set(resto.map(n => n.rodada))].map(r => [r, resto.filter(n => n.rodada === r)]);
   return h('section', { class: 'secao jornal', 'data-aba': 'jornal' },
-    h('header', { class: 'jornal-capa' }, h('p', { class: 'jornal-linha' }, `Rodada ${J.rodada}`), h('h2', {}, `A Voz de ${CONTINENTE.nome}`), h('p', { class: 'jornal-linha' }, 'Notícias, boatos e a imprensa de cada país')),
+    h('header', { class: 'jornal-capa' },
+      h('p', { class: 'jornal-linha' }, h('span', {}, `Rodada ${J.rodada}`), h('span', {}, `${J.noticias.length} ${J.noticias.length === 1 ? 'matéria' : 'matérias'}`)),
+      h('h2', {}, `A Voz de ${CONTINENTE.nome}`)),
     h('div', { class: 'jornal-abas' }, aba('noticias', `Notícias (${J.noticias.length})`), aba('acordos', `Acordos (${J.acordos.length})`)),
     vista === 'acordos'
-      ? (J.acordos.length ? h('ul', { class: 'lista' }, J.acordos.map(cartaoAcordo)) : h('p', { class: 'vazio-txt' }, 'Nenhum acordo público ativo.'))
+      ? (J.acordos.length ? h('ul', { class: 'lista' }, J.acordos.map(cartaoAcordo)) : h('p', { class: 'jornal-vazio' }, 'Nenhum acordo público em vigor.'))
       : [
         h('div', { class: 'jornal-filtros' },
-          chip('todas', 'Tudo'), chip('oficial', 'Oficial'), chip('imprensa', 'Imprensa'), chip('boato', 'Boatos'),
+          chip('todas', 'Tudo'), chip('oficial', 'Oficial'), chip('imprensa', 'Imprensa'), chip('boato', 'Boatos'), chip('mensagem', 'Mensagens'),
           h('label', { class: 'sr', for: 'filtro-pais' }, 'Filtrar por país'),
           h('select', { id: 'filtro-pais', class: 'jornal-select', onchange: ev => { ui.jornalPais = ev.target.value; render(); } }, h('option', { value: '' }, 'Todos os países'), J.paises.map(c => h('option', { value: c.id, selected: c.id === filtroPais }, c.nome)))),
-        manchete ? cartaoNoticia(manchete, true) : h('p', { class: 'vazio-txt' }, J.noticias.length ? 'Nada com esse filtro.' : 'Nenhuma notícia ainda. Tem algo a contar? Mande para o professor.'),
+        manchete ? cartaoNoticia(manchete, true) : h('p', { class: 'jornal-vazio' }, J.noticias.length ? 'Nada com esse filtro.' : 'Nenhuma notícia ainda. Tem algo a contar? Mande para o professor.'),
         porRodada.map(([r, ns]) => h('div', { class: 'jornal-rodada' }, h('h3', {}, `Rodada ${r}`), h('ul', { class: 'jornal-lista' }, ns.map(n => cartaoNoticia(n))))),
         h('p', { class: 'jornal-dica' }, 'Quer publicar algo? Mande o texto para o professor, no formato que quiser.'),
       ]);
@@ -319,7 +358,7 @@ function secaoJornal() {
 function ultimaHora() {
   const n = J.noticias[J.noticias.length - 1];
   if (!n || ui.aba === 'jornal') return null;
-  return h('button', { class: 'ultima-hora', onclick: () => { ui.jornalFonte = 'todas'; ui.jornalPais = ''; ui.jornalVista = 'noticias'; trocaAba('jornal'); } }, h('b', {}, 'Última hora'), h('span', {}, n.titulo));
+  return h('button', { class: 'ultima-hora', onclick: () => abrirNoticia(n.id) }, h('b', {}, n.chapeu || 'Última hora'), h('span', {}, n.titulo));
 }
 // Como jogar: o que acontece em cada rodada e o que pedir ao professor.
 function conteudoGuia() {
@@ -341,7 +380,7 @@ function conteudoGuia() {
       item('Fazer um acordo', 'Pode ser dinheiro por rodada, comida, apoio em uma área ou o que combinarem. Digam com quem, o quê e por quantas rodadas. Pode ser secreto. Quem dá apoio paga a manutenção dos níveis que está dando.'),
       item('Passar dinheiro', 'Uma transferência única para outro país, para ajudar ou pagar por algo.'),
       item('Tentar um projeto', 'Expliquem a ideia: qual problema resolve, como funciona e quem paga a conta. Quanto melhor a ideia, maior a chance no dado.'),
-      item('Publicar no jornal', 'Mandem o texto no formato que quiserem. Pode ser verdade, propaganda ou boato.'),
+      item('Publicar no jornal', 'Mandem o texto no formato que quiserem. Pode ser verdade, propaganda, boato, ou uma mensagem para outro país, aberta ou só para quem recebe.'),
       item('Confirmar uma missão', 'Cada país tem missões secretas, com prêmio em moedas. Quando cumprirem uma, chamem o professor.'),
       item('Atacar', 'O dado decide, e quem perde paga parte do próprio dinheiro ao outro. O militar só vale contra vizinhos e vira notícia; o hacker é secreto.')),
     h('h4', {}, 'O que pode dar errado'),
@@ -387,7 +426,8 @@ function render() {
   if (!c) ui.pais = null;
   // Não redesenha com alguém digitando o código, senão o texto se perde.
   if (document.activeElement?.id === 'codigo' && document.activeElement.value) return;
-  const y = window.scrollY;
+  const y = window.scrollY, rolagemArtigo = document.querySelector('.artigo-tela')?.scrollTop || 0;
+  document.body.classList.toggle('com-artigo', !!ui.noticiaAberta);
   app.replaceChildren(...[
     topo(),
     J.encerrado && h('div', { class: 'faixa-fim' }, `${J.paises.find(p => p.pos === 1)?.nome} venceu!`),
@@ -399,8 +439,11 @@ function render() {
         h('div', { class: 'coluna-sub' }, secaoMeu(), secaoPaises(), c && cartaoPublico(c), secaoRanking()),
         h('div', { class: 'coluna-sub' }, secaoJornal()))),
     navegacao(),
+    ui.noticiaAberta && artigoAberto(),
   ].filter(Boolean));
   window.scrollTo(0, y);
+  const tela = document.querySelector('.artigo-tela');
+  if (tela) tela.scrollTop = rolagemArtigo;
 }
 
 let pendente = null;
