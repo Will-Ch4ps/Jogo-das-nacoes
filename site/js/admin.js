@@ -322,21 +322,31 @@ function abaAcordos() {
 
 /* ---------- notícias ---------- */
 function painelSugestoes() {
-  const todas = G.sugestoesDeNoticias(E), filtro = ui.sugPais || '', crises = todas.filter(x => x.tipo === 'crise').length;
-  const filtradas = filtro ? todas.filter(s => s.paisId === filtro) : todas;
-  const lista = ui.sugTodas ? filtradas : filtradas.slice(0, 4);
+  const todas = G.sugestoesDeNoticias(E), tipo = ui.sugTipo || '', filtro = ui.sugPais || '', crises = todas.filter(x => x.tipo === 'crise').length;
+  const filtradas = todas.filter(s => (!tipo || s.tipo === tipo) && (!filtro || s.paisId === filtro));
+  const lista = ui.sugTodas ? filtradas : filtradas.slice(0, 5);
+  const editarAntes = s => {
+    let id = null;
+    const ok = commit(e => { id = G.resolverSugestao(e, s, { guardar: true, comEfeito: !!s.efeito }).id; });
+    if (ok) { ui.editando = id; render(); window.scrollTo(0, 0); }
+  };
+  const nomeTipo = s => G.TIPOS_SUGESTAO.find(t => t.id === s.tipo).um;
   return h('details', { class: 'painel painel-dobra', open: ui.sugAberto, ontoggle: ev => { ui.sugAberto = ev.target.open; } },
     h('summary', {}, h('h2', {}, `Sugestões do sistema (${todas.length}${crises ? `, ${crises} de crise` : ''})`)),
-    h('p', { class: 'meta', style: 'margin-bottom:8px' }, 'Manchetes prontas para quando uma área entra em crise ou um país chega aos níveis 5 e 10. Use se ajudar.'),
-    todas.length > 4 && h('div', { class: 'form', style: 'margin-bottom:10px' }, campo('Ver só de um país', h('select', { onchange: ev => { ui.sugPais = ev.target.value; render(); } }, h('option', { value: '' }, 'Todos'), opcoesPaises(filtro))),
-      filtradas.length > 4 && h('button', { class: 'btn peq leve', onclick: () => { ui.sugTodas = !ui.sugTodas; render(); } }, ui.sugTodas ? 'Mostrar menos' : `Mostrar todas (${filtradas.length})`)),
+    h('p', { class: 'meta', style: 'margin-bottom:8px' }, 'Textos prontos para soltar na hora que quiser. A lista muda conforme o jogo anda, e os alunos não veem nada daqui até você publicar.'),
+    h('div', { class: 'form', style: 'margin-bottom:10px' },
+      pilulas([{ v: '', t: 'Tudo' }, ...G.TIPOS_SUGESTAO.filter(t => todas.some(s => s.tipo === t.id)).map(t => ({ v: t.id, t: `${t.nome} (${todas.filter(s => s.tipo === t.id).length})` }))], tipo, v => { ui.sugTipo = v; ui.sugTodas = false; }),
+      campo('Ver só de um país', h('select', { onchange: ev => { ui.sugPais = ev.target.value; render(); } }, h('option', { value: '' }, 'Todos'), opcoesPaises(filtro))),
+      filtradas.length > 5 && h('button', { class: 'btn peq leve', onclick: () => { ui.sugTodas = !ui.sugTodas; render(); } }, ui.sugTodas ? 'Mostrar menos' : `Mostrar todas (${filtradas.length})`)),
     lista.length ? h('ul', { class: 'lista' }, lista.map(s => h('li', { class: 'cartao' },
-      h('div', { class: 'cartao-topo' }, h('span', { class: 'area-nome' }, icone(s.marca, 19), h('strong', {}, s.titulo)), h('span', { class: 'etiqueta' }, s.tipo === 'crise' ? 'Crise' : 'Destaque')),
+      h('div', { class: 'cartao-topo' }, h('span', { class: 'area-nome' }, s.marca && icone(s.marca, 19), h('strong', {}, s.titulo)), h('span', { class: 'etiqueta' }, s.selo === 'Boato' ? `Boato · ${nomeTipo(s)}` : nomeTipo(s))),
       h('p', { class: 'meta' }, s.texto),
+      s.nota && h('p', { class: 'meta' }, h('b', {}, 'Só para você: '), s.nota),
       h('div', { class: 'linha-acoes' },
-        h('button', { class: 'btn peq', onclick: () => commit(e => { G.resolverSugestao(e, s, { publicar: true }); }, { msg: 'Notícia publicada.' }) }, 'Publicar'),
-        h('button', { class: 'btn peq leve', onclick: () => commit(e => { G.resolverSugestao(e, s, { publicar: true, comEfeito: true }); }, { msg: 'Publicada, com efeito oculto.' }) }, `Com efeito oculto: ${G.textoEfeito(s.efeito)}`),
-        h('button', { class: 'btn peq leve', onclick: () => commit(e => { G.resolverSugestao(e, s, { publicar: true, comEfeito: true, mostrarEfeito: true }); }, { msg: 'Publicada, com efeito visível.' }) }, 'Com efeito visível'),
+        h('button', { class: 'btn peq', onclick: () => commit(e => { G.resolverSugestao(e, s, { publicar: true }); }, { msg: 'Publicado no jornal.' }) }, s.efeito ? 'Publicar só o texto' : 'Publicar'),
+        s.efeito && h('button', { class: 'btn peq leve', onclick: () => commit(e => { G.resolverSugestao(e, s, { publicar: true, comEfeito: true }); }, { msg: 'Publicado, com efeito oculto.' }) }, `Com efeito oculto: ${G.textoEfeito(s.efeito)}`),
+        s.efeito && h('button', { class: 'btn peq leve', onclick: () => commit(e => { G.resolverSugestao(e, s, { publicar: true, comEfeito: true, mostrarEfeito: true }); }, { msg: 'Publicado, com efeito visível.' }) }, 'Com efeito visível'),
+        h('button', { class: 'btn peq leve', onclick: () => editarAntes(s) }, 'Editar antes'),
         h('button', { class: 'btn peq leve', onclick: () => commit(e => { G.resolverSugestao(e, s, { publicar: false }); }) }, 'Dispensar'))))) : h('p', { class: 'vazio-txt' }, 'Nenhuma sugestão agora.'));
 }
 const CHAPEUS = ['Urgente', 'Exclusivo', 'Economia', 'Política', 'Opinião', 'Fofoca'];
@@ -359,13 +369,16 @@ function abaNoticias() {
     if (n) { F = ui.f.noticia = { ...novaNoticiaForm(), id: n.id, titulo: n.titulo, texto: n.texto, pais: n.paisId || '', marca: n.marca || '', chapeu: n.chapeu || '', tipo: n.tipo || 'noticia', de: n.de || 'prof', para: n.para || '', privada: !!n.privada, mostrarEfeito: !!n.mostrarEfeito, fonte: n.fontePais ? `pais:${n.fontePais}` : n.selo === 'Boato' ? 'Boato' : 'Oficial' }; }
   }
   const mensagem = F.tipo === 'mensagem';
+  const efeitoDaAntiga = F.id ? E.noticias.find(n => n.id === F.id)?.efeito : null;
   const salvar = estado => {
     const { titulo, texto: corpo } = separarTexto(F);
     if (!titulo) { ui.msg = { tipo: 'erro', texto: 'Cole o texto ou escreva a manchete.' }; render(); return; }
     if (mensagem && F.privada && !F.para) { ui.msg = { tipo: 'erro', texto: 'Para uma mensagem privada, escolha quem recebe.' }; render(); return; }
     if (mensagem && F.de === F.para && F.para) { ui.msg = { tipo: 'erro', texto: 'Quem manda e quem recebe precisam ser diferentes.' }; render(); return; }
     const paisId = mensagem ? (F.para || null) : (F.pais || null);
-    const efeito = F.temEfeito ? G.efeitoDeEscolhas(F.efeitos) : null, comEfeito = efeito && Object.keys(efeito).length;
+    const antiga = F.id ? E.noticias.find(n => n.id === F.id) : null;
+    const novoEf = F.temEfeito ? G.efeitoDeEscolhas(F.efeitos) : null, trocouEfeito = novoEf && Object.keys(novoEf).length;
+    const efeito = trocouEfeito ? novoEf : antiga?.efeito, comEfeito = !!efeito;
     if (comEfeito && !paisId && !F.todos) { ui.msg = { tipo: 'erro', texto: 'Para o efeito, escolha o país ou marque "Vale para todos".' }; render(); return; }
     if (F.marca && !paisId) { ui.msg = { tipo: 'erro', texto: 'Para marcar no mapa, escolha o país da notícia.' }; render(); return; }
     const fontePais = !mensagem && F.fonte.startsWith('pais:') ? F.fonte.slice(5) : null;
@@ -373,7 +386,7 @@ function abaNoticias() {
       titulo, texto: corpo, paisId, tipo: F.tipo, chapeu: F.chapeu || null, marca: F.marca || null, fontePais,
       selo: mensagem ? 'Mensagem' : fontePais ? 'Imprensa' : F.fonte,
       de: mensagem ? F.de : null, para: mensagem ? (F.para || null) : null, privada: mensagem && !!F.para && !!F.privada,
-      efeito: comEfeito ? efeito : undefined, duracao: lerDur(F), mostrarEfeito: !!(comEfeito && F.mostrarEfeito),
+      efeito, duracao: trocouEfeito ? lerDur(F) : antiga?.duracao, mostrarEfeito: !!(comEfeito && F.mostrarEfeito),
     };
     const ok = commit(e => {
       let alvo = e.noticias.find(n => n.id === F.id);
@@ -414,10 +427,13 @@ function abaNoticias() {
             h('select', { 'aria-label': 'Imprensa de um país', onchange: ev => { F.fonte = ev.target.value || 'Oficial'; render(); } }, h('option', { value: '' }, 'Imprensa de um país…'), E.paises.map(c => h('option', { value: `pais:${c.id}`, selected: fontePaisAtual === `pais:${c.id}` }, `Imprensa de ${c.nome}`))))),
         campo('Cole aqui o texto, do jeito que mandaram', textoLongo(F, 'texto', { rows: 7, maxlength: 5000, class: 'campo-noticia', placeholder: 'A primeira linha vira a manchete. O resto aparece quando o aluno abrir a matéria.' }), 'largo'),
         campo('Manchete (opcional, se quiser trocar a primeira linha)', texto(F, 'titulo', { maxlength: 140 }), 'largo'),
-        bloco('Etiqueta da matéria (opcional)', pilulas([{ v: '', t: 'Nenhuma' }, ...CHAPEUS.map(c => ({ v: c, t: c }))], F.chapeu, v => { F.chapeu = v; })),
+        bloco('Etiqueta da matéria (opcional)', pilulas([{ v: '', t: 'Nenhuma' }, ...[...new Set([...CHAPEUS, F.chapeu].filter(Boolean))].map(c => ({ v: c, t: c }))], F.chapeu, v => { F.chapeu = v; })),
         !mensagem && campo('Sobre qual país', selecao(F, 'pais', [h('option', { value: '' }, 'Geral'), opcoesPaises(F.pais)])),
         campo('Marcar no mapa', selecao(F, 'marca', [h('option', { value: '' }, 'Não marcar'), G.TIPOS_MARCA.map(t => h('option', { value: t.id, selected: F.marca === t.id }, t.nome))])),
-        marcar(F, 'temEfeito', 'Isto também muda algo no jogo'),
+        efeitoDaAntiga && h('div', { class: 'bloco-efeito' },
+          h('p', { class: 'meta' }, `Esta notícia já tem efeito: ${G.textoEfeito(efeitoDaAntiga)}.`),
+          marcar(F, 'mostrarEfeito', 'Mostrar o efeito aos alunos na matéria')),
+        !efeitoDaAntiga && marcar(F, 'temEfeito', 'Isto também muda algo no jogo'),
         F.temEfeito && h('div', { class: 'bloco-efeito' }, bloco('O que muda?', blocoEfeitos(F.efeitos)),
           G.escolhasTemDuracao(F.efeitos) && blocoDuracao(F),
           h('div', { class: 'frase' }, marcar(F, 'mostrarEfeito', 'Mostrar o efeito aos alunos na matéria'), marcar(F, 'todos', 'Vale para todos os países'))),
@@ -700,7 +716,7 @@ const ABA_RENDER = { missoes: abaMissoes, rodada: abaRodada, dinheiro: abaDinhei
 function render() {
   const y = window.scrollY;
   ui.previa = null;
-  const guardadas = E.noticias.filter(n => n.estado !== 'publicada').length + G.sugestoesDeNoticias(E).length;
+  const guardadas = E.noticias.filter(n => n.estado !== 'publicada').length + G.sugestoesDeNoticias(E).filter(s => s.tipo === 'crise').length;
   const paraConfirmar = G.missoesParaConfirmar(E).length;
   app.replaceChildren(
     topo(),

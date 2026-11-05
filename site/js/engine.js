@@ -1,4 +1,5 @@
 // Regras do Jogo das Nações. Funções puras, sem tela e sem banco.
+import { MANCHETES as M } from './manchetes.js';
 // Três pesos: o preço de compra é igual para todas; muda a manutenção por nível e o tamanho da crise.
 export const PESOS = {
   essencial: { nome: 'Essencial', manut: 3 },
@@ -7,31 +8,18 @@ export const PESOS = {
 };
 // Cada área cuida de uma coisa só, e a crise atinge justamente o que ela cuida.
 // "faz" é o benefício de cada nível; "sem" é o problema quando a manutenção não é paga.
-const area = (id, nome, peso, cuida, faz, sem, crise, destaque, marcaCrise, marcaDestaque) => ({ id, nome, peso, manut: PESOS[peso].manut, cuida, faz, sem, crise, destaque, marcaCrise, marcaDestaque });
+const area = (id, nome, peso, cuida, faz, sem, marcaCrise, marcaDestaque) => ({ id, nome, peso, manut: PESOS[peso].manut, cuida, faz, sem, marcaCrise, marcaDestaque });
 export const AREAS = [
-  area('alim', 'Alimentação', 'essencial', 'comida', 'Cada nível faz a comida custar 10 moedas a menos por rodada', 'Escassez: a comida custa 20 moedas a mais', 'Falta comida nos mercados de [País]', '[País] vira referência em produzir alimentos', 'seca', 'festa'),
-  area('sau', 'Saúde', 'essencial', 'população', 'Cada nível faz a população crescer 1% por rodada', 'Hospitais lotados: a população encolhe 2% por rodada', 'Hospitais de [País] ficam lotados', 'Sistema de saúde de [País] é elogiado', 'epidemia', 'festa'),
-  area('emp', 'Emprego', 'essencial', 'dinheiro', 'Cada nível dá +10 moedas por rodada', 'Greves: −20 moedas por rodada', 'Greves paralisam [País]', 'Desemprego despenca em [País]', 'protesto', 'festa'),
-  area('edu', 'Educação', 'importante', 'ideias', 'Cada nível dá +1 no dado dos projetos', 'Falta gente preparada: −10 moedas por rodada e −1 no dado', 'Escolas de [País] ficam sem professores', 'Universidades de [País] viram destino mundial', 'protesto', 'festa'),
-  area('inf', 'Infraestrutura', 'importante', 'rotas e acordos', 'Cada nível dá +3 moedas por rodada para cada acordo que traz benefício, até 3 acordos', 'Apagões e estradas ruins: −10 moedas por rodada', 'Apagão deixa [País] no escuro', 'Grandes obras ligam [País] ao mundo', 'tempestade', 'obra'),
-  area('est', 'Estabilidade', 'importante', 'imprevistos', 'Cada nível dá +1 no dado de negociações e imprevistos', 'Protestos: −10 moedas por rodada e −1 no dado', 'Protestos tomam as ruas de [País]', '[País] vive um momento de confiança', 'protesto', 'festa'),
-  area('tec', 'Tecnologia', 'estrategica', 'projetos e ataques hacker', 'Cada nível deixa os projetos 5 moedas mais baratos e dá +1 no ataque hacker', 'Projetos 10 moedas mais caros e −1 no ataque hacker', 'Fábricas de [País] param por falta de sistemas', 'Laboratórios de [País] atraem investidores', 'obra', 'descoberta'),
-  area('seg', 'Segurança', 'estrategica', 'proteção do dinheiro', 'Cada nível dá +1 para se defender de ataque hacker', 'Crime: perde 5% do dinheiro por rodada e −1 na defesa', 'Onda de crimes assusta [País]', '[País] vira referência em segurança', 'guerra', 'festa'),
-  area('mil', 'Poder militar', 'estrategica', 'fronteiras', 'Cada nível dá +1 para atacar e se defender em ataque militar', 'Fronteiras frágeis: −1 nesses dados', 'Fronteiras de [País] ficam sem defesa', 'Exército de [País] impressiona os vizinhos', 'guerra', 'festa'),
+  area('alim', 'Alimentação', 'essencial', 'comida', 'Cada nível faz a comida custar 10 moedas a menos por rodada', 'Escassez: a comida custa 20 moedas a mais', 'seca', 'festa'),
+  area('sau', 'Saúde', 'essencial', 'população', 'Cada nível faz a população crescer 1% por rodada', 'Hospitais lotados: a população encolhe 2% por rodada', 'epidemia', 'festa'),
+  area('emp', 'Emprego', 'essencial', 'dinheiro', 'Cada nível dá +10 moedas por rodada', 'Greves: −20 moedas por rodada', 'protesto', 'festa'),
+  area('edu', 'Educação', 'importante', 'ideias', 'Cada nível dá +1 no dado dos projetos', 'Falta gente preparada: −10 moedas por rodada e −1 no dado', 'protesto', 'festa'),
+  area('inf', 'Infraestrutura', 'importante', 'rotas e acordos', 'Cada nível dá +3 moedas por rodada para cada acordo que traz benefício, até 3 acordos', 'Apagões e estradas ruins: −10 moedas por rodada', 'tempestade', 'obra'),
+  area('est', 'Estabilidade', 'importante', 'imprevistos', 'Cada nível dá +1 no dado de negociações e imprevistos', 'Protestos: −10 moedas por rodada e −1 no dado', 'protesto', 'festa'),
+  area('tec', 'Tecnologia', 'estrategica', 'projetos e ataques hacker', 'Cada nível deixa os projetos 5 moedas mais baratos e dá +1 no ataque hacker', 'Projetos 10 moedas mais caros e −1 no ataque hacker', 'obra', 'descoberta'),
+  area('seg', 'Segurança', 'estrategica', 'proteção do dinheiro', 'Cada nível dá +1 para se defender de ataque hacker', 'Crime: perde 5% do dinheiro por rodada e −1 na defesa', 'guerra', 'festa'),
+  area('mil', 'Poder militar', 'estrategica', 'fronteiras', 'Cada nível dá +1 para atacar e se defender em ataque militar', 'Fronteiras frágeis: −1 nesses dados', 'guerra', 'festa'),
 ];
-// Texto das matérias que o sistema sugere: [crise, destaque].
-const MATERIAS = {
-  alim: ['Nos mercados de [País], a fila já dá duas voltas no quarteirão, e o único produto em estoque é a esperança. O governo pede calma à população, de preferência depois do almoço, caso haja almoço.', 'Agrônomos do continente inteiro vieram ver de perto o milagre. Um ministro chegou a chorar diante de um tomate. "É só um tomate", tentaram explicar. Ele não ouviu.'],
-  sau: ['A sala de espera virou ponto de encontro: já tem gente marcando aniversário por lá. Um paciente aguardando atendimento desde a rodada passada foi visto ensinando o novo enfermeiro a usar o estetoscópio.', 'Delegações estrangeiras vieram estudar o sistema e foram embora mais saudáveis do que chegaram. Dois espiões foram descobertos porque pararam para fazer exames de rotina.'],
-  emp: ['Os trabalhadores cruzaram os braços e, segundo testemunhas, já estão cruzando as pernas também. O governo prometeu negociar assim que achar alguém para abrir a porta do ministério, que também está em greve.', 'As filas agora são na porta das empresas, à procura de funcionários. Um desempregado foi visto na praça central e virou atração turística.'],
-  edu: ['A aula de matemática foi cancelada por falta de professor, e a de história virou lembrança. Alunos relatam estar aprendendo muito, principalmente a jogar baralho.', 'Vestibulandos de todo o continente estão se mudando para lá. Os pais estão orgulhosos. O aluguel perto do campus, mais ainda.'],
-  inf: ['Sem luz há dias, a população redescobriu as velas, a conversa e o quanto odeia os vizinhos. A estrada principal agora é considerada, oficialmente, uma trilha de aventura.', 'Ministros cortaram a fita da nova ponte, depois da nova estrada, e depois de mais uma ponte. Faltou fita. Já há licitação para comprar mais.'],
-  est: ['As praças estão cheias, e os cartazes estão cada vez mais criativos. O governo garante que está tudo sob controle, e pediu para ninguém reparar na fumaça atrás do palácio.', 'As pesquisas mostram que o povo confia no governo, um fenômeno tão raro que cientistas pediram para repetir a pergunta. Deu o mesmo resultado.'],
-  tec: ['O sistema caiu, e ninguém sabe onde está o técnico, porque o sistema de localizar técnicos também caiu. Funcionários foram orientados a desligar e ligar de novo. O país inteiro.', 'Investidores fazem fila para conhecer os laboratórios. Ninguém entendeu direito o que eles fazem, mas todos concordam que parece muito caro, e portanto muito bom.'],
-  seg: ['A polícia pede que os moradores tranquem bem as portas, depois que levaram a porta da delegacia. Em nota, o governo afirma que a situação é séria, e que devolvam a porta.', 'A criminalidade caiu tanto que os ladrões locais pediram seguro-desemprego. O pedido foi negado, e o autor foi preso na saída, por precaução.'],
-  mil: ['O último soldado da fronteira pediu licença para ir ao banheiro, e não voltou. Em seu lugar, o governo colocou um espantalho de uniforme, que já foi promovido duas vezes.', 'A parada militar durou seis horas, e os vizinhos juram que assistiram só por curiosidade. Vários telefonaram logo depois, para perguntar como anda a amizade.'],
-};
-const materia = (area, i, nome) => MATERIAS[area][i].replaceAll('[País]', nome);
 export const NIVEL_MAX = 10;
 const nomeArea = id => AREAS.find(a => a.id === id)?.nome || id;
 
@@ -260,26 +248,141 @@ export function publicarNoticia(e, n) {
   if (n.marca && !n.marcaAplicada && n.paisId) { adicionarMarca(e, n.paisId, n.marca, n.titulo); n.marcaAplicada = true; }
   return n;
 }
-// Notícias prontas para o professor soltar quando uma área fica sem manutenção ou um país chega aos níveis 5 e 10.
-export function sugestoesDeNoticias(e) {
-  const feitas = new Set(e.sugestoesFeitas || []), out = [];
-  for (const c of e.paises) {
-    for (const a of AREAS) {
-      const real = nivelReal(c, a.id, e);
-      const rodadasSem = c.semManutencao?.[a.id] || 0;
-      if (rodadasSem > 0) out.push({ chave: `${c.id}:${a.id}:crise:${e.rodada - rodadasSem}`, paisId: c.id, tipo: 'crise', titulo: a.crise.replace('[País]', c.nome), texto: materia(a.id, 0, c.nome), chapeu: 'Crise', marca: a.marcaCrise, efeito: { moedasAgora: -15 } });
-      for (const marco of [5, 10]) if (real >= marco && (c.niveisIniciais?.[a.id] ?? 0) < marco) out.push({ chave: `${c.id}:${a.id}:destaque:${marco}`, paisId: c.id, tipo: 'destaque', titulo: a.destaque.replace('[País]', c.nome), texto: materia(a.id, 1, c.nome), chapeu: 'Destaque', marca: a.marcaDestaque, efeito: { moedasAgora: marco === 10 ? 40 : 20 } });
+// Sorteio estável: a mesma chave dá sempre o mesmo resultado, então a sugestão não muda a cada atualização da tela.
+const sorteio = (chave, n) => { let h = 7; for (const ch of chave) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return h % n; };
+const preenche = (t, v) => t.replace(/\[(País|A|B|Area|Titulo)\]/g, (_, k) => v[k] ?? '');
+const texto2 = (t, x, v) => ({ titulo: preenche(t, v), texto: preenche(x, v) });
+const materia = (chave, banco, v) => { const [t, x] = banco[sorteio(chave, banco.length)]; return texto2(t, x, v); };
+export const TIPOS_SUGESTAO = [
+  { id: 'crise', nome: 'Crises', um: 'Crise' }, { id: 'acordo', nome: 'Acordos', um: 'Acordo' }, { id: 'efeito', nome: 'Efeitos', um: 'Efeito' },
+  { id: 'ranking', nome: 'Ranking', um: 'Ranking' }, { id: 'destaque', nome: 'Destaques', um: 'Destaque' },
+  { id: 'agita', nome: 'Para agitar', um: 'Para agitar' }, { id: 'variedade', nome: 'Variedades', um: 'Variedades' },
+];
+const bomParaOPais = f => Number(f.moedas || 0) + Object.values(f.areas || {}).reduce((t, n) => t + n, 0) - Number(f.comida || 0) > 0;
+
+function sugestoesDeAcordos(e, nome) {
+  const out = [];
+  for (const a of e.acordos) {
+    if (a.tipo === 'global' || (a.origem || 'acordo') !== 'acordo' || (a.paises || []).length < 2) continue;
+    const [p1, ...resto] = a.paises, v = { A: nome(p1), B: resto.map(nome).join(', ') }, base = { tipo: 'acordo', paisId: p1, chapeu: 'Política' };
+    if (a.estado === 'ativo' && a.inicio >= e.rodada - 1) {
+      if (a.visibilidade === 'oculto') {
+        out.push({ ...base, chave: `acordo:${a.id}`, selo: 'Boato', chapeu: 'Fofoca', nota: 'Este acordo é secreto. Soltar o boato conta que os dois andam conversando, mas não o que combinaram.', ...materia(a.id, M.acordo.secreto, v) });
+        continue;
+      }
+      const recebeArea = a.paises.find(id => Object.values(a.efeitos?.[id]?.areas || {}).some(n => n > 0));
+      const recebeComida = a.paises.find(id => Number(a.efeitos?.[id]?.comida || 0) < 0);
+      const outro = id => a.paises.find(x => x !== id);
+      if (recebeArea) {
+        const area = Object.entries(a.efeitos[recebeArea].areas).find(([, n]) => n > 0)[0];
+        out.push({ ...base, chave: `acordo:${a.id}`, paisId: recebeArea, ...materia(a.id, M.acordo.apoio, { A: nome(outro(recebeArea)), B: nome(recebeArea), Area: nomeArea(area) }) });
+      } else if (recebeComida) {
+        out.push({ ...base, chave: `acordo:${a.id}`, paisId: recebeComida, ...materia(a.id, M.acordo.comida, { A: nome(outro(recebeComida)), B: nome(recebeComida) }) });
+      } else out.push({ ...base, chave: `acordo:${a.id}`, ...materia(a.id, M.acordo.novo, v) });
+    }
+    if (a.visibilidade === 'oculto') continue; // O fim de um acordo secreto não vira manchete.
+    if (a.estado === 'ativo' && a.restantes === 1 && a.inicio < e.rodada) out.push({ ...base, chave: `acordofim:${a.id}`, ...materia(a.id, M.acordo.fim, v) });
+    if (a.estado === 'encerrado' && a.duracao != null && a.inicio + a.duracao === e.rodada) out.push({ ...base, chave: `acordoacabou:${a.id}`, ...materia(a.id, M.acordo.acabou, v) });
+  }
+  return out;
+}
+function sugestoesDeEfeitos(e, nome) {
+  const out = [], grupos = new Map();
+  for (const a of e.acordos) {
+    if ((a.origem || 'acordo') === 'acordo' || a.estado !== 'ativo') continue;
+    const k = `${a.titulo}|${a.inicio}`;
+    grupos.set(k, [...(grupos.get(k) || []), a]);
+  }
+  for (const [k, lista] of grupos) {
+    const a = lista[0], geral = lista.length >= 3 || a.tipo === 'global', noFim = a.restantes === 1 && a.inicio < e.rodada;
+    if (geral) {
+      if (noFim) out.push({ tipo: 'efeito', chave: `efeitofim:${k}`, paisId: null, chapeu: 'Exclusivo', ...materia(k, M.efeito.geralFim, { Titulo: a.titulo }) });
+      continue;
+    }
+    const ja = e.noticias.some(n => n.titulo === a.titulo && n.estado === 'publicada');
+    for (const b of lista) {
+      const id = b.paises[0], v = { 'País': nome(id) }, bom = bomParaOPais(b.efeitos?.[id] || {});
+      if (b.inicio >= e.rodada - 1 && !ja) out.push({ tipo: 'efeito', chave: `efeito:${b.id}`, paisId: id, chapeu: bom ? 'Exclusivo' : 'Urgente', ...materia(b.id, bom ? M.efeito.bom : M.efeito.ruim, v) });
+      if (noFim) out.push({ tipo: 'efeito', chave: `efeitofim:${b.id}`, paisId: id, chapeu: 'Exclusivo', ...materia(b.id, bom ? M.efeito.bomFim : M.efeito.ruimFim, v) });
     }
   }
-  // Crises primeiro: são as que o professor mais precisa ver.
-  return out.filter(s => !feitas.has(s.chave)).sort((a, b) => (a.tipo === 'crise' ? 0 : 1) - (b.tipo === 'crise' ? 0 : 1));
+  return out;
 }
-export function resolverSugestao(e, s, { publicar, comEfeito, mostrarEfeito }) {
+function sugestoesDeRanking(e, nome) {
+  if (e.rodada < 2 || e.paises.length < 2) return [];
+  const out = [], r = ranking(e), add = (tipo, chave, id, banco, chapeu = 'Economia') => out.push({ tipo: 'ranking', chave, paisId: id, chapeu, ...materia(chave, banco, { 'País': nome(id) }) });
+  for (const it of r) {
+    const ant = e.posAnterior?.[it.id];
+    if (!ant) continue;
+    if (it.pos === 1 && ant.pos !== 1) add('lider', `lider:${it.id}:${e.rodada}`, it.id, M.ranking.lider, 'Urgente');
+    else if (ant.pos - it.pos >= 3) add('sobe', `sobe:${it.id}:${e.rodada}`, it.id, M.ranking.sobe);
+    else if (it.pos - ant.pos >= 3) add('cai', `cai:${it.id}:${e.rodada}`, it.id, M.ranking.cai);
+  }
+  if (e.rodada >= 3) {
+    add('lanterna', `lanterna:${r.at(-1).id}`, r.at(-1).id, M.ranking.lanterna);
+    const media = e.paises.reduce((t, c) => t + c.moedas, 0) / e.paises.length, rico = e.paises.slice().sort((a, b) => b.moedas - a.moedas)[0];
+    if (rico.moedas >= 200 && rico.moedas >= media * 1.6) add('cofre', `cofre:${rico.id}`, rico.id, M.ranking.cofre);
+    const entre = c => acordosDoPais(e, c.id).filter(a => a.tipo !== 'global' && (a.origem || 'acordo') === 'acordo').length;
+    const sozinhos = e.paises.filter(c => entre(c) === 0);
+    if (sozinhos.length) { const c = sozinhos[sorteio(`sozinho:${e.rodada}`, sozinhos.length)]; add('sozinho', `sozinho:${c.id}`, c.id, M.ranking.sozinho, 'Fofoca'); }
+    const popular = e.paises.find(c => entre(c) >= 3);
+    if (popular) add('popular', `popular:${popular.id}`, popular.id, M.ranking.popular, 'Fofoca');
+  }
+  return out;
+}
+// Duas de cada por rodada, sem repetir no jogo: assim a lista muda sem entupir.
+function doBanco(e, banco, prefixo, feitas) {
+  const livres = banco.map((b, i) => ({ b, i })).filter(({ b, i }) => !feitas.has(`${prefixo}:${i}`) && !(['lider', 'lanterna'].includes(b.alvo) && e.rodada < 2));
+  if (!livres.length) return [];
+  const ini = sorteio(`${prefixo}:${e.rodada}`, livres.length);
+  return [livres[ini], livres[(ini + 1) % livres.length]].filter((x, i, l) => l.indexOf(x) === i);
+}
+function sugestoesSoltas(e, nome, feitas) {
+  const r = ranking(e), alvoDe = (b, chave) => {
+    if (b.alvo === 'todos') return null;
+    if (b.alvo === 'lider') return r[0].id;
+    if (b.alvo === 'lanterna') return r.at(-1).id;
+    return e.paises[sorteio(`${chave}:${e.rodada}`, e.paises.length)].id;
+  };
+  const agita = doBanco(e, M.agita, 'agita', feitas).map(({ b, i }) => {
+    const chave = `agita:${i}`, paisId = alvoDe(b, chave);
+    return { tipo: 'agita', chave, paisId, chapeu: b.chapeu, efeito: b.efeito, duracao: b.duracao, nota: b.nota, ...texto2(b.t, b.x, { 'País': paisId ? nome(paisId) : '' }) };
+  });
+  const variedade = doBanco(e, M.variedade, 'variedade', feitas).map(({ b, i }) => {
+    const chave = `variedade:${i}`, id = e.paises[sorteio(`${chave}:${e.rodada}`, e.paises.length)].id;
+    return { tipo: 'variedade', chave, paisId: null, selo: b.selo, chapeu: b.chapeu || 'Variedades', ...texto2(b.t, b.x, { 'País': nome(id) }) };
+  });
+  return [...agita, ...variedade];
+}
+// Notícias prontas para o professor soltar quando quiser. Mudam conforme o jogo anda.
+export function sugestoesDeNoticias(e) {
+  const feitas = new Set(e.sugestoesFeitas || []), lista = [], nome = id => paisPorId(e, id)?.nome || '';
+  for (const c of e.paises) {
+    for (const a of AREAS) {
+      const real = nivelReal(c, a.id, e), v = { 'País': c.nome }, rodadasSem = c.semManutencao?.[a.id] || 0;
+      if (rodadasSem > 0) {
+        const chave = `${c.id}:${a.id}:crise:${e.rodada - rodadasSem}`;
+        lista.push({ chave, paisId: c.id, tipo: 'crise', chapeu: 'Crise', marca: a.marcaCrise, efeito: { moedasAgora: -15 }, ...materia(chave, M.areas[a.id].crise, v) });
+      }
+      for (const marco of [5, 10]) if (real >= marco && (c.niveisIniciais?.[a.id] ?? 0) < marco) {
+        const chave = `${c.id}:${a.id}:destaque:${marco}`;
+        lista.push({ chave, paisId: c.id, tipo: 'destaque', chapeu: 'Destaque', marca: a.marcaDestaque, efeito: { moedasAgora: marco === 10 ? 40 : 20 }, ...materia(chave, M.areas[a.id].destaque, v) });
+      }
+    }
+  }
+  lista.push(...sugestoesDeAcordos(e, nome), ...sugestoesDeEfeitos(e, nome), ...sugestoesDeRanking(e, nome), ...sugestoesSoltas(e, nome, feitas));
+  const livres = lista.filter(s => !feitas.has(s.chave));
+  // Uma de cada tipo por vez, começando pelas crises: a lista curta já mostra de tudo.
+  const grupos = TIPOS_SUGESTAO.map(t => livres.filter(s => s.tipo === t.id)), out = [];
+  for (let i = 0; out.length < livres.length; i++) for (const g of grupos) if (g[i]) out.push(g[i]);
+  return out;
+}
+export function resolverSugestao(e, s, { publicar, guardar, comEfeito, mostrarEfeito }) {
   e.sugestoesFeitas = [...(e.sugestoesFeitas || []), s.chave];
-  if (!publicar) return null;
-  const n = novaNoticia(e, { titulo: s.titulo, texto: s.texto, chapeu: s.chapeu, paisId: s.paisId, origem: 'sugestao', marca: s.marca, efeito: comEfeito ? s.efeito : undefined, mostrarEfeito: !!mostrarEfeito });
+  if (!publicar && !guardar) return null;
+  const n = novaNoticia(e, { titulo: s.titulo, texto: s.texto, chapeu: s.chapeu, paisId: s.paisId, selo: s.selo || 'Oficial', origem: 'sugestao', marca: s.marca, efeito: comEfeito ? s.efeito : undefined, duracao: comEfeito ? s.duracao : undefined, mostrarEfeito: !!mostrarEfeito });
   e.noticias.push(n);
-  return publicarNoticia(e, n);
+  return guardar ? n : publicarNoticia(e, n);
 }
 
 // O que o leitor recebe. O efeito só vai junto se o professor marcou para mostrar: oculto nem sai do banco.

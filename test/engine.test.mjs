@@ -103,7 +103,7 @@ test('sugestões: crise e destaque aparecem uma vez e a notícia pode ter efeito
   const lista = G.sugestoesDeNoticias(s);
   const crise = lista.find(x => x.tipo === 'crise');
   assert.equal(lista.filter(x => x.tipo === 'crise').length, 1);
-  assert.match(crise.titulo, /Greves/);
+  assert.match(crise.titulo, /greve/i);
   assert.equal(lista.filter(x => x.tipo === 'destaque').length, 8);
   G.resolverSugestao(s, crise, { publicar: true, comEfeito: true });
   assert.equal(s.paises[0].moedas, 85);
@@ -132,7 +132,7 @@ test('área sem manutenção entra em crise e vira sugestão na rodada seguinte'
   s = G.fecharRodada(s);
   const sug = G.sugestoesDeNoticias(s).filter(x => x.tipo === 'crise');
   assert.equal(sug.length, 1);
-  assert.match(sug[0].titulo, /Protestos/);
+  assert.match(sug[0].chave, /:est:crise:/);
   assert.deepEqual(G.partePublica(s).paises[0].problemas, ['est']);
   G.resolverSugestao(s, sug[0], { publicar: false });
   s = G.fecharRodada(s);
@@ -250,6 +250,89 @@ test('sugestões do sistema já vêm com texto de matéria, com o nome do país'
   const n = G.partePublica(s).noticias[0];
   assert.equal(n.texto, sug.texto);
   assert.match(n.consequencia, /−15 moedas/);
+});
+
+test('sugestões de acordo: novo, boato do secreto, reta final e fim', () => {
+  const s = com(modelo(), outro());
+  s.rodada = 2;
+  const pub = G.registrarAcordo(s, { titulo: 'x', tipo: 'paises', paises: ['m', 'o'], efeitos: {}, duracao: 2 });
+  const sec = G.registrarAcordo(s, { titulo: 'SEGREDO', tipo: 'paises', paises: ['m', 'o'], efeitos: {}, duracao: 2, visibilidade: 'oculto' });
+  const de = (l, a) => l.find(x => x.chave === a);
+  let l = G.sugestoesDeNoticias(s);
+  assert.equal(de(l, `acordo:${pub.id}`).tipo, 'acordo');
+  assert.match(de(l, `acordo:${pub.id}`).titulo, /Modelo|Outro/);
+  const boato = de(l, `acordo:${sec.id}`);
+  assert.equal(boato.selo, 'Boato');
+  assert.ok(boato.nota);
+  assert.ok(!JSON.stringify(boato).includes('SEGREDO')); // conta que conversam, não o que combinaram
+  G.resolverSugestao(s, boato, { publicar: true });
+  assert.equal(G.partePublica(s).noticias[0].selo, 'Boato');
+  let f = G.fecharRodada(s);
+  l = G.sugestoesDeNoticias(f);
+  assert.ok(de(l, `acordofim:${pub.id}`));
+  assert.ok(!de(l, `acordofim:${sec.id}`)); // o fim de acordo secreto não vira manchete
+  f = G.fecharRodada(f);
+  assert.ok(de(G.sugestoesDeNoticias(f), `acordoacabou:${pub.id}`));
+  assert.ok(!de(G.sugestoesDeNoticias(f), `acordoacabou:${sec.id}`));
+});
+
+test('sugestões de efeito: não repete o que já saiu e avisa quando está acabando', () => {
+  const s = com(modelo(), outro());
+  G.aplicarEfeito(s, ['m'], { moedas: 5 }, { titulo: 'Sorte', duracao: 2 });
+  const efeitos = e => G.sugestoesDeNoticias(e).filter(x => x.tipo === 'efeito');
+  assert.equal(efeitos(s).length, 1);
+  assert.match(efeitos(s)[0].titulo, /Modelo/);
+  s.noticias.push(G.novaNoticia(s, { titulo: 'Sorte', estado: 'publicada' }));
+  assert.equal(efeitos(s).length, 0); // já virou notícia
+  const f = G.fecharRodada(s);
+  assert.ok(efeitos(f).some(x => x.chave.startsWith('efeitofim:')));
+});
+
+test('sugestões de ranking: novo líder, grandes quedas e quem está sozinho', () => {
+  const s = novo();
+  assert.equal(G.sugestoesDeNoticias(s).filter(x => x.tipo === 'ranking').length, 0); // na primeira rodada, não
+  s.rodada = 3;
+  const r = G.ranking(s), ultimo = r.at(-1).id, lider = r[0].id;
+  s.posAnterior = Object.fromEntries(r.map(x => [x.id, { pos: x.id === lider ? 2 : x.id === r[1].id ? 1 : x.pos }]));
+  const l = G.sugestoesDeNoticias(s).filter(x => x.tipo === 'ranking');
+  assert.ok(l.some(x => x.chave === `lider:${lider}:3`));
+  assert.ok(l.some(x => x.chave === `lanterna:${ultimo}`));
+  assert.equal(l.filter(x => x.chave.startsWith('sozinho:')).length, 1); // um só por rodada
+});
+
+test('para agitar e variedades: duas por rodada, sem repetir no jogo, e os textos saem completos', () => {
+  const s = novo();
+  s.rodada = 2;
+  const vistas = new Set();
+  for (let i = 0; i < 40; i++) {
+    const l = G.sugestoesDeNoticias(s).filter(x => x.tipo === 'agita' || x.tipo === 'variedade');
+    if (!l.length) break;
+    assert.ok(l.filter(x => x.tipo === 'agita').length <= 2);
+    assert.ok(l.filter(x => x.tipo === 'variedade').length <= 2);
+    for (const x of l) {
+      assert.ok(!vistas.has(x.chave), x.chave);
+      vistas.add(x.chave);
+      assert.ok(!/\[/.test(x.titulo + x.texto), x.titulo);
+      G.resolverSugestao(s, x, { publicar: false });
+    }
+    s.rodada += 1;
+  }
+  assert.ok(vistas.size >= 30);
+  assert.equal(G.sugestoesDeNoticias(s).filter(x => x.tipo === 'agita' || x.tipo === 'variedade').length, 0); // acabou o banco
+});
+
+test('para agitar com efeito por tempo: aplica pelo tempo combinado, e no líder quando é para ele', () => {
+  const s = novo();
+  s.rodada = 2;
+  s.sugestoesFeitas = [];
+  let sug;
+  for (let i = 0; i < 40 && !sug; i++) { sug = G.sugestoesDeNoticias(s).find(x => x.tipo === 'agita' && x.duracao); if (!sug) { for (const x of G.sugestoesDeNoticias(s).filter(y => y.tipo === 'agita')) G.resolverSugestao(s, x, { publicar: false }); } }
+  assert.ok(sug);
+  G.resolverSugestao(s, sug, { publicar: true, comEfeito: true, mostrarEfeito: true });
+  const a = s.acordos.at(-1);
+  assert.equal(a.restantes, sug.duracao);
+  assert.equal(a.paises[0], sug.paisId);
+  assert.match(G.partePublica(s).noticias.at(-1).consequencia, /por 2 rodadas|por 3 rodadas/);
 });
 
 test('notícia com efeito aplica uma vez só', () => {
