@@ -425,7 +425,7 @@ function fichaPais(f) {
           h('tbody', {}, f.serie.slice().reverse().map(s => h('tr', {}, h('td', {}, s.r), h('td', {}, fmt(s.moedas)), h('td', {}, fmt(Math.round(s.pop))), h('td', {}, `${s.pos}º`))))))),
     ],
     areas: () => [
-      h('p', { class: 'meta explica' }, `Comprar sobe o nível, e custa igual em todas as áreas. A manutenção é por rodada e depende do peso: essencial custa 3 por nível, importante 2 e estratégica 1. Sem pagar, a área entra em crise e, a cada ${f.rodadasParaPerderNivel} rodadas sem pagar, perde um nível. Os níveis 5 e 10 valem em dobro.`),
+      h('p', { class: 'meta explica' }, `Comprar sobe o nível, e custa igual em todas as áreas. A manutenção é por rodada e depende do peso: essencial custa 3 por nível, importante 2 e estratégica 1. Sem pagar, a área entra em crise e, a cada ${f.rodadasParaPerderNivel} rodadas sem pagar, perde um nível. Os níveis 5 e 10 valem em dobro. Acima do 10, o nível só serve para emprestar.`),
       areasDoPais(Object.fromEntries(f.areas.map(a => [a.id, a.real])), { comprados: Object.fromEntries(f.areas.map(a => [a.id, a.nivel])), problemas: f.areas.filter(a => a.problema).map(a => a.id), extra: a => {
         const d = area(a.id), semPagar = d.manut.estado !== 'paga';
         return h('div', { class: 'area-ficha' },
@@ -450,7 +450,7 @@ function fichaPais(f) {
       (f.tentativas || []).length ? h('ul', { class: 'lista' }, f.tentativas.map(t => h('li', { class: 'cartao' },
         h('div', { class: 'cartao-topo' }, h('strong', {}, t.titulo), h('span', { class: 'etiqueta' }, `Rodada ${t.rodada}`)),
         h('p', {}, `${t.resultado}: tirou ${t.dado} no dado, total ${t.total}.`),
-        h('p', { class: 'meta' }, `${t.efeito || 'Nada mudou.'}${t.custo ? ` Custou ${t.custo} moedas.` : ''}`)))) : h('p', { class: 'vazio-txt' }, 'Nenhuma tentativa ainda.'),
+        h('p', { class: 'meta' }, `${t.efeito ? `${t.efeito}.` : 'Nada mudou.'}${t.custo ? ` Custou ${t.custo} moedas.` : ''}`)))) : h('p', { class: 'vazio-txt' }, 'Nenhuma tentativa ainda.'),
     ],
     missoes: () => [
       h('p', { class: 'missoes-sigilo' }, h('strong', {}, 'Só o seu grupo vê isto.'), ' Cumpra e chame o professor: ele confirma e paga o prêmio. Os outros países têm as próprias missões, e não sabem das suas.'),
@@ -615,14 +615,14 @@ function conteudoGuia() {
       item('Leiam o jornal', 'As notícias mostram quem está em crise, quem cresceu e o que está mudando no continente.'),
       item('Decidam juntos', 'O que vale mais agora: subir uma área, fechar um acordo, tentar um projeto?'),
       item('Negociem', 'Um representante pode visitar as salas dos outros países e combinar o que quiser.'),
-      item('Mandem o pedido', 'Em "Meu país", na aba Pedidos. Nada vale até o professor aprovar.')),
+      item('Mandem o pedido', 'Em "Meu país", na aba Pedidos, quando o professor abrir a janela. Nada vale até o professor aprovar. Pedido recusado ou cancelado devolve a ação.')),
     h('h4', {}, 'O que dá para pedir'),
     h('ul', { class: 'guia-lista' },
-      item('Subir uma área', 'Usa 1 ação. Custa uma vez, e a área passa a render mais. Todo nível aumenta a manutenção. Acima do 10 não rende mais, mas serve para emprestar sem perder força.'),
+      item('Subir uma área', 'Usem o + e o −: vários níveis na mesma área gastam 1 ação só. Custa uma vez, e a área passa a render mais. Todo nível aumenta a manutenção. Dá para comprar até o 15: acima do 10 não rende mais, mas serve para emprestar sem perder força.'),
       item('Cortar uma manutenção', 'Usa 1 ação. Sobra dinheiro agora, mas a área entra em crise na rodada seguinte, e depois perde níveis.'),
-      item('Fazer um acordo', 'Quem monta usa 1 ação; o outro país só aceita. Pode ser dinheiro por rodada, comida, empréstimo de níveis ou o que combinarem. Pode ser secreto. Quem empresta perde a força daqueles níveis enquanto durar e continua pagando a manutenção normal.'),
+      item('Fazer um acordo', 'Quem monta usa 1 ação; o outro país só aceita. Pode ser dinheiro por rodada, comida, empréstimo de níveis ou o que combinarem. Pode ser secreto. Quem empresta perde a força daqueles níveis enquanto durar e continua pagando a manutenção normal. Antes de mandar ou aceitar, a tela mostra o que muda na conta.'),
       item('Passar dinheiro', 'Usa 1 ação. Uma transferência única para outro país, para ajudar ou pagar por algo.'),
-      item('Tentar um projeto', 'Usa 1 ação. Mandem o nome, a ideia e o que esperam ganhar na aba Pedidos. Quanto melhor a ideia, maior a chance no dado.'),
+      item('Tentar um projeto', 'Usa 1 ação. Mandem o nome, a ideia e o que esperam ganhar na aba Pedidos. O professor julga a ideia e rola o dado. O preço é cobrado mesmo se der errado.'),
       item('Publicar no jornal', 'Quando a janela do jornal abrir, mandem o texto na aba Pedidos. Não gasta ação. Pode ser verdade, propaganda, boato, ou uma mensagem para outro país, aberta ou só para quem recebe.'),
       item('Confirmar uma missão', 'Cada país tem missões secretas, com prêmio em moedas. Quando cumprirem uma, chamem o professor.'),
       item('Atacar', 'Chamem o professor. O dado decide, e quem perde paga parte do próprio dinheiro ao outro. O militar só vale contra vizinhos e vira notícia; o hacker é secreto.')),
