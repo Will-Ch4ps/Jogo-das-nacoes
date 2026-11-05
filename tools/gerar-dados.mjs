@@ -5,21 +5,21 @@ import { HISTORIAS, CONTINENTE } from './historias.mjs';
 
 const LARG = 1000, ALT = 720;
 const P = [
-  // id, perfil, x, y, cor, pessoas (mil), níveis [emp, edu, sau, tec, seg, mil, inf, est] (sempre somam 16)
-  ['p1', 'Porto comercial', 195, 170, '#3f8fc4', 100, [3, 2, 2, 2, 1, 1, 4, 1]],
-  ['p2', 'Serra mineradora', 410, 125, '#b9794f', 95, [3, 1, 2, 1, 2, 4, 2, 1]],
-  ['p3', 'Vale industrial', 655, 125, '#8b95a5', 110, [4, 2, 1, 4, 1, 1, 2, 1]],
-  ['p4', 'Costa vulcânica', 845, 235, '#2cb5b0', 90, [3, 2, 3, 1, 1, 1, 2, 3]],
-  ['p5', 'Grande metrópole', 140, 370, '#d6566f', 110, [4, 2, 1, 2, 2, 2, 2, 1]],
-  ['p6', 'Capital tecnológica', 370, 325, '#8a6be0', 90, [2, 2, 2, 5, 1, 1, 1, 2]],
-  ['p7', 'Planalto universitário', 600, 335, '#7fae3f', 100, [2, 5, 2, 3, 1, 1, 1, 1]],
-  ['p8', 'Fronteira militar', 830, 410, '#a39440', 100, [2, 1, 2, 1, 3, 5, 1, 1]],
-  ['p9', 'Planície agrícola', 215, 555, '#d9a028', 110, [3, 1, 2, 1, 2, 2, 4, 1]],
-  ['p10', 'Floresta protegida', 430, 535, '#1e9a80', 90, [1, 2, 5, 1, 1, 1, 2, 3]],
-  ['p11', 'Litoral pesqueiro', 640, 560, '#4a73e0', 105, [3, 1, 3, 1, 2, 2, 3, 1]],
-  ['p12', 'Deserto energético', 850, 580, '#e0733a', 90, [3, 2, 1, 4, 2, 2, 1, 1]],
+  // id, perfil, x, y, cor, pessoas (mil), níveis [emp, edu, sau, tec, seg, mil, alim, inf, est] (sempre somam 18)
+  ['p1', 'Porto comercial', 195, 170, '#3f8fc4', 100, [3, 2, 2, 2, 1, 1, 2, 4, 1]],
+  ['p2', 'Serra mineradora', 410, 125, '#b9794f', 95, [3, 1, 2, 1, 2, 4, 1, 3, 1]],
+  ['p3', 'Vale industrial', 655, 125, '#8b95a5', 110, [4, 2, 1, 4, 1, 1, 1, 3, 1]],
+  ['p4', 'Costa vulcânica', 845, 235, '#2cb5b0', 90, [3, 2, 3, 1, 1, 1, 2, 2, 3]],
+  ['p5', 'Grande metrópole', 140, 370, '#d6566f', 110, [4, 2, 1, 2, 2, 2, 1, 3, 1]],
+  ['p6', 'Capital tecnológica', 370, 325, '#8a6be0', 90, [2, 2, 2, 5, 1, 1, 1, 2, 2]],
+  ['p7', 'Planalto universitário', 600, 335, '#7fae3f', 100, [2, 5, 2, 3, 1, 1, 1, 2, 1]],
+  ['p8', 'Fronteira militar', 830, 410, '#a39440', 100, [2, 1, 2, 1, 3, 5, 2, 1, 1]],
+  ['p9', 'Planície agrícola', 215, 555, '#d9a028', 110, [3, 1, 2, 1, 2, 2, 5, 1, 1]],
+  ['p10', 'Floresta protegida', 430, 535, '#1e9a80', 90, [1, 2, 5, 1, 1, 1, 2, 2, 3]],
+  ['p11', 'Litoral pesqueiro', 640, 560, '#4a73e0', 105, [3, 1, 3, 1, 2, 2, 4, 1, 1]],
+  ['p12', 'Deserto energético', 850, 580, '#e0733a', 90, [3, 2, 1, 4, 2, 2, 1, 2, 1]],
 ];
-const AREAS = ['emp', 'edu', 'sau', 'tec', 'seg', 'mil', 'inf', 'est'];
+const AREAS = ['emp', 'edu', 'sau', 'tec', 'seg', 'mil', 'alim', 'inf', 'est'];
 
 function rng(seed) { let s = seed >>> 0; return () => { s = (s + 0x6D2B79F5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const hash = str => [...str].reduce((h, c) => (Math.imul(h, 31) + c.charCodeAt(0)) >>> 0, 7);
@@ -246,7 +246,7 @@ const paises = P.map((p, i) => {
   const [id, perfil, , , cor, pop, nv] = p;
   const niveis = Object.fromEntries(AREAS.map((a, k) => [a, nv[k]]));
   // Começo justo: depois da comida e da manutenção, todos sobram 30 moedas por rodada e têm a mesma riqueza. Mais gente, menos dinheiro em caixa.
-  const comida = pop - forca(niveis.inf) * 5;
+  const comida = pop - forca(niveis.alim) * 10;
   const manutencao = AREAS_JOGO.reduce((t, a) => t + niveis[a.id] * a.manut, 0);
   const renda = comida + manutencao + SOBRA_INICIAL - forca(niveis.emp) * 10;
   const moedas = RIQUEZA_INICIAL - pop * 5;

@@ -512,3 +512,9 @@ select option { background: #0c1a25; color: var(--texto); }
 .grupo-missao + .grupo-missao { margin-top: 14px; }
 .grupo-missao h3 { font-size: 16px; margin-bottom: 6px; }
 .missao-admin.cumprida { border-color: var(--ouro); }
+
+/* Peso das áreas */
+.peso { font-weight: 700; }
+.peso.essencial { color: var(--ouro); }
+.peso.importante { color: var(--acento); }
+.peso.estrategica { color: #b6a7ee; }

@@ -1,6 +1,6 @@
 // Peças de tela usadas na página pública e no admin. Texto sempre entra como texto, nunca como HTML.
 import { MAPA, ROTAS } from './dados.js';
-import { AREAS, NIVEL_MAX, TIPOS_MARCA } from './engine.js';
+import { AREAS, NIVEL_MAX, PESOS, TIPOS_MARCA } from './engine.js';
 
 export function h(tag, attrs = {}, ...filhos) {
   const el = document.createElement(tag);
@@ -46,6 +46,7 @@ const ICONES = {
   dado: 'M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Zm3.5 4.5h.01M15.5 8.5h.01M12 12h.01M8.5 15.5h.01M15.5 15.5h.01',
   fechar: 'M6 6l12 12M18 6 6 18',
   emp: 'M4 8h16v11H4V8Zm5 0V5h6v3M4 13h16',
+  alim: 'M12 21c-4-3-7-7-7-11a4 4 0 0 1 7-2.600A4 4 0 0 1 19 10c0 4-3 8-7 11Zm0-14c0-2 1-3.500 3-4',
   edu: 'M12 7c-2-1.5-5-2-8-2v13c3 0 6 .5 8 2 2-1.500 5-2 8-2V5c-3 0-6 .5-8 2Zm0 0v13',
   sau: 'M9 4h6v5h5v6h-5v5H9v-5H4V9h5V4Z',
   tec: 'M7 7h10v10H7V7Zm3-3v3m4-3v3m-4 10v3m4-3v3M4 10h3m-3 4h3m10-4h3m-3 4h3',
@@ -84,12 +85,12 @@ export function nivelVisual(real, comprado = real) {
 // problemas: áreas sem manutenção. extra: o que só o próprio grupo vê.
 export function areasDoPais(niveis, { compacto = false, problemas = [], extra, comprados } = {}) {
   return h('ul', { class: 'areas' + (compacto ? ' compactas' : '') }, AREAS.map(a => {
-    const comProblema = problemas.includes(a.id);
+    const comProblema = problemas.includes(a.id), nivel = niveis[a.id] ?? 0;
     return h('li', { class: comProblema ? 'com-problema' : '' },
       h('div', { class: 'area-linha' },
         h('span', { class: 'area-nome' }, icone(a.id, 19), h('strong', {}, a.nome), comProblema && compacto && h('span', { class: 'etiqueta aviso' }, 'Em crise')),
-        h('span', { class: 'area-nivel' }, nivelVisual(niveis[a.id], comprados ? comprados[a.id] : niveis[a.id]), h('b', {}, niveis[a.id]))),
-      !compacto && h('p', { class: 'meta' }, a.faz),
+        h('span', { class: 'area-nivel' }, nivelVisual(nivel, comprados ? comprados[a.id] : nivel), h('b', {}, nivel))),
+      !compacto && h('p', { class: 'meta' }, h('span', { class: `peso ${a.peso}` }, PESOS[a.peso].nome), ` · ${a.faz}`),
       comProblema && !compacto && h('p', { class: 'area-crise' }, a.sem),
       extra?.(a));
   }));

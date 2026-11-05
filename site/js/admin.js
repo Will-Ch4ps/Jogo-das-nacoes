@@ -193,7 +193,7 @@ function abaDinheiro() {
         const nivel = c.niveis[a.id], real = G.nivelReal(c, a.id, E), custo = G.custoSubir(nivel, E.params), max = nivel >= G.NIVEL_MAX, linha = conta.linhas.find(l => l.area === a.id), cortada = !!c.cortadas?.[a.id];
         return h('div', { class: 'linha-area' },
           h('span', { class: 'area-nome' }, icone(a.id, 19), h('span', {}, h('strong', {}, `${a.nome}: nível ${nivel}`), real !== nivel && h('b', { class: 'real' }, ` · vale ${real} agora`),
-            h('small', {}, `Manutenção: ${linha.valor} por rodada${G.problema(c, a.id) ? ' · em crise' : ''}${linha.estado === 'sem dinheiro' ? ' · falta dinheiro' : ''}`))),
+            h('small', {}, `${G.PESOS[a.peso].nome} · manutenção: ${linha.valor} por rodada${G.problema(c, a.id) ? ' · em crise' : ''}${linha.estado === 'sem dinheiro' ? ' · falta dinheiro' : ''}`))),
           h('span', { class: 'acoes' },
             h('button', { class: 'btn peq', disabled: max || custo > c.moedas, onclick: () => commit(e => G.subirNivel(e, c.id, a.id), { msg: `${c.nome} subiu ${a.nome} para o nível ${nivel + 1}.` }) }, max ? 'Máximo' : `Subir por ${custo}`),
             h('button', { class: 'btn peq leve', onclick: () => commit(e => G.cortarManutencao(e, c.id, a.id, !cortada), { msg: cortada ? `${c.nome} voltou a pagar ${a.nome}.` : `${c.nome} cortou a manutenção de ${a.nome}.` }) }, cortada ? 'Voltar a pagar' : 'Cortar manutenção')));
@@ -212,6 +212,10 @@ function abaDinheiro() {
 const VALORES = { pagamento: [5, 10, 20], comida: [10, 20, 40] };
 const novoAcordo = () => ({ modelo: 'pagamento', a: E.paises[0]?.id, b: E.paises[1]?.id, tam: 1, valor: '', unica: '', qtdComida: 1, preco: 'igual', area: 'emp', niveis: 1, precoApoio: 0, titulo: '', desc: '', dur: 3, secreto: false, todos: false, paises: {}, efeitos: {} });
 const n0 = v => Number(v || 0);
+// Na prévia, um apoio impossível não pode travar a tela: o erro só aparece ao registrar.
+function efeitosApoio(F) {
+  try { return G.efeitosDoApoio(E, { de: F.a, para: F.b, area: F.area, niveis: F.niveis, preco: n0(F.precoApoio) }); } catch { return { [F.a]: {}, [F.b]: { areas: { [F.area]: Number(F.niveis) } } }; }
+}
 // Transforma o que foi escolhido na tela no acordo que o jogo registra.
 function montarAcordo(F) {
   const A = nomeDe(F.a), B = nomeDe(F.b);
@@ -231,8 +235,8 @@ function montarAcordo(F) {
     const q = VALORES.comida[F.qtdComida], p = { gratis: 0, metade: Math.round(q / 2), igual: q, lucro: Math.round(q * 1.5) }[F.preco];
     return { ...base, ...par, titulo: F.titulo.trim() || `Comida de ${A} para ${B}`, efeitos: { [F.a]: { moedas: p }, [F.b]: { moedas: -p, comida: -q } } };
   }
-  const p = n0(F.precoApoio), nomeA = G.AREAS.find(x => x.id === F.area).nome;
-  return { ...base, descricao: base.descricao || `${A} apoia ${nomeA} de ${B}: +${F.niveis} ${Number(F.niveis) === 1 ? 'nível' : 'níveis'} enquanto durar.`, ...par, titulo: F.titulo.trim() || `${A} apoia ${nomeA} de ${B}`, efeitos: { [F.a]: p ? { moedas: p } : {}, [F.b]: { areas: { [F.area]: Number(F.niveis) }, ...(p ? { moedas: -p } : {}) } } };
+  const nomeA = G.AREAS.find(x => x.id === F.area).nome;
+  return { ...base, descricao: base.descricao || `${A} apoia ${nomeA} de ${B}: +${F.niveis} ${Number(F.niveis) === 1 ? 'nível' : 'níveis'} enquanto durar.`, ...par, titulo: F.titulo.trim() || `${A} apoia ${nomeA} de ${B}`, efeitos: efeitosApoio(F) };
 }
 function abaAcordos() {
   const F = form('acordo', novoAcordo);
@@ -276,7 +280,8 @@ function abaAcordos() {
     const fica = apoio && G.comoFicaArea(apoio, F.area, Number(F.niveis), E);
     return [
       fica && h('p', {}, h('b', {}, `${G.AREAS.find(a => a.id === F.area).nome} de ${apoio.nome}: nível ${fica.de} → ${fica.para}. `), `Hoje: ${fica.hoje}. Com o apoio: ${fica.comApoio}.`),
-      ...linhas.map(([n, ef]) => h('p', {}, h('b', {}, `${n}: `), G.textoEfeito(ef) || (F.modelo === 'apoio' ? 'dá o apoio, sem mudar as próprias contas' : 'nada muda nos números'))),
+      ...linhas.map(([n, ef]) => h('p', {}, h('b', {}, `${n}: `), G.textoEfeito(ef) || 'nada muda nos números')),
+      apoio && h('p', { class: 'meta' }, `Quem ajuda paga ${G.custoApoio(F.area, F.niveis, E.params)} moedas por rodada: a manutenção dos níveis que está dando.`),
       h('p', { class: 'meta' }, `Vale ${tempo}, a partir desta rodada.`)].filter(Boolean);
   });
   const cartaoEf = (a, id) => G.textoEfeito(a.tipo === 'global' ? a.efeitos['*'] : a.efeitos[id]) || 'só combinado, sem número';
@@ -291,6 +296,7 @@ function abaAcordos() {
   const registrar = () => {
     const d = montarAcordo(F);
     if (F.modelo !== 'livre' && !duoOk) { ui.msg = { tipo: 'erro', texto: 'Escolha dois países diferentes.' }; render(); return; }
+    if (F.modelo === 'apoio') { try { G.efeitosDoApoio(E, { de: F.a, para: F.b, area: F.area, niveis: F.niveis, preco: n0(F.precoApoio) }); } catch (err) { ui.msg = { tipo: 'erro', texto: err.message }; render(); return; } }
     if (F.modelo === 'livre' && !F.todos && d.paises.length < 2) { ui.msg = { tipo: 'erro', texto: 'Escolha pelo menos dois países.' }; render(); return; }
     if (!d.titulo) { ui.msg = { tipo: 'erro', texto: 'Dê um nome ao acordo.' }; render(); return; }
     const ok = commit(e => {
@@ -424,7 +430,7 @@ function painelMarcas() {
 /* ---------- dado: modelos prontos, sem precisar adivinhar números ---------- */
 const MODELOS_DADO = {
   projeto: { nome: 'Projeto de ideia', d: 'rende por rodada', titulo: 'Projeto', area: 'edu', dif: 11, efeitos: () => [novoEfeito('ganhaRodada')], dur: '', noticia: true },
-  obra: { nome: 'Grande obra', d: 'sobe nível de vez', titulo: 'Grande obra', area: 'inf', dif: 11, custo: 40, efeitos: () => [novoEfeito('nivelGanha', { tamanho: 0, area: 'inf' })], noticia: true },
+  obra: { nome: 'Grande obra', d: 'sobe nível de vez', titulo: 'Grande obra', area: 'edu', dif: 11, custo: 40, efeitos: () => [novoEfeito('nivelGanha', { tamanho: 0, area: 'inf' })], noticia: true },
   negociacao: { nome: 'Negociação arriscada', d: 'dinheiro na hora', titulo: 'Negociação', area: 'est', dif: 11, custo: 0, efeitos: () => [novoEfeito('ganhaAgora')] },
   campanha: { nome: 'Campanha', d: 'melhora uma área', titulo: 'Campanha', area: 'sau', dif: 8, custo: 20, efeitos: () => [novoEfeito('areaMelhora', { tamanho: 0, area: 'sau' })], dur: 3 },
   espionagem: { nome: 'Espionagem', d: 'em segredo', titulo: 'Espionagem', area: 'tec', dif: 15, custo: 20, efeitos: () => [novoEfeito('ganhaAgora')], secreto: true, exibir: false },
@@ -646,7 +652,7 @@ function abaPaises() {
 }
 
 function abaAjustes() {
-  const lista = [['duracaoMin', 'Minutos por rodada'], ['valorPessoa', 'Moedas por mil pessoas na riqueza'], ['manutencaoPct', 'Manutenção (% do valor normal)'], ['rodadasParaPerderNivel', 'Rodadas sem manutenção para perder 1 nível'], ['moedasPorEmprego', 'Moedas por nível de Emprego'], ['crescimentoPorSaude', '% de crescimento por nível de Saúde'], ['economiaInfra', 'Economia na comida por nível de Infraestrutura'], ['descontoTecnologia', 'Desconto no projeto por nível de Tecnologia'], ['multaEmprego', 'Em crise, greves: moedas por rodada'], ['multaEducacao', 'Em crise, falta de profissionais: moedas por rodada'], ['perdaSaude', 'Em crise, Saúde: % de pessoas perdidas por rodada'], ['multaTecnologia', 'Em crise, Tecnologia: projeto mais caro em'], ['crimePct', 'Em crise, crime: % do dinheiro por rodada'], ['multaInfra', 'Em crise, apagões: moedas por rodada'], ['multaEstabilidade', 'Em crise, protestos: moedas por rodada'], ['perdaFome', '% de pessoas perdidas na fome'], ['precoNivel', 'Preço base do nível'], ['custoProjeto', 'Preço do primeiro projeto'], ['premioAtaque', '% do dinheiro que quem perde o ataque paga']];
+  const lista = [['duracaoMin', 'Minutos por rodada'], ['valorPessoa', 'Moedas por mil pessoas na riqueza'], ['manutencaoPct', 'Manutenção (% do valor normal)'], ['rodadasParaPerderNivel', 'Rodadas sem manutenção para perder 1 nível'], ['moedasPorEmprego', 'Moedas por nível de Emprego'], ['crescimentoPorSaude', '% de crescimento por nível de Saúde'], ['economiaAlimentacao', 'Economia na comida por nível de Alimentação'], ['moedasPorAcordo', 'Infraestrutura: moedas por nível, por acordo'], ['maxAcordosInfra', 'Infraestrutura: máximo de acordos que contam'], ['descontoTecnologia', 'Desconto no projeto por nível de Tecnologia'], ['multaEssencial', 'Crise em área essencial: moedas por rodada'], ['multaImportante', 'Crise em área importante: moedas por rodada'], ['perdaSaude', 'Crise na Saúde: % de pessoas perdidas por rodada'], ['multaTecnologia', 'Em crise, Tecnologia: projeto mais caro em'], ['crimePct', 'Em crise, crime: % do dinheiro por rodada'],  ['perdaFome', '% de pessoas perdidas na fome'], ['precoNivel', 'Preço base do nível'], ['custoProjeto', 'Preço do primeiro projeto'], ['premioAtaque', '% do dinheiro que quem perde o ataque paga']];
   const exportar = () => {
     const url = URL.createObjectURL(new Blob([JSON.stringify(E, null, 2)], { type: 'application/json' }));
     h('a', { href: url, download: `jogo-das-nacoes-rodada-${E.rodada}.json` }).click();
@@ -706,6 +712,7 @@ function iniciar(dados) {
   G.garantirMissoes(E, MISSOES);
   // Partida salva por uma versão anterior: completa os valores novos e troca a lista de eventos.
   E.params = { ...G.PARAMS_INICIAIS, ...E.params };
+  for (const c of E.paises) if (c.niveis.alim == null) { c.niveis.alim = c.niveis.inf ?? 2; c.niveis.inf = 2; }
   if (!vazio && E.eventos.some(ev => !ev.efeito)) E.eventos = structuredClone(EVENTOS_INICIAIS);
   G.garantirCodigos(E);
   if (vazio || semCodigo) { save.sujo = true; loopSalvar(); }

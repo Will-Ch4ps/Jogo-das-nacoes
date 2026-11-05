@@ -18,30 +18,34 @@ O código só libera a visualização. O grupo decide e um representante leva a 
 
 ## Toda rodada
 1. O país recebe o dinheiro de **Entra**.
-2. Paga a **Comida**: 1 moeda por mil pessoas, menos a economia da Infraestrutura e o que for coberto por acordos.
+2. Paga a **Comida**: 1 moeda por mil pessoas, menos a economia da Alimentação e o que for coberto por acordos.
 3. Paga a **Manutenção** das áreas, com o que sobrar.
 4. A população cresce conforme a Saúde.
 
 **Faltou dinheiro para a comida?** O dinheiro zera e o país perde 10% das pessoas.
 
-## Áreas: investimento e manutenção
+## Áreas: investimento, manutenção e peso
 Vão do nível 1 ao 10. **Os níveis 5 e 10 valem em dobro.** Cada área tem duas contas separadas:
 
-- **Investimento:** subir um nível custa o próximo nível × 10 moedas (do 2 para o 3 custa 30), uma vez só.
-- **Manutenção:** cada nível comprado tem uma despesa por rodada, cobrada automaticamente depois da comida e dos acordos.
+- **Investimento:** subir um nível custa o próximo nível × 10 moedas (do 2 para o 3 custa 30), igual em todas as áreas, uma vez só.
+- **Manutenção:** cada nível comprado tem uma despesa por rodada, conforme o peso da área. É cobrada depois da comida e dos acordos.
 
 **Sem pagar a manutenção**, por falta de dinheiro ou porque o grupo decidiu cortar, a área entra em crise a partir da rodada seguinte. A cada 2 rodadas sem pagar, ela perde 1 nível comprado. A manutenção nunca causa fome: ela usa só o que sobrar. Voltando a pagar, a crise acaba.
 
-| Área | Cuida de | Benefício por nível | Manutenção por nível | Em crise |
-| --- | --- | --- | --- | --- |
-| Emprego | Dinheiro | +10 moedas por rodada | 2 | Greves: −15 moedas por rodada |
-| Educação | Ideias | +1 no dado dos projetos | 2 | −10 moedas por rodada e −1 no dado |
-| Saúde | População | Cresce 1% por rodada | 3 | Não cresce e encolhe 1% por rodada |
-| Tecnologia | Projetos e hackers | Projeto 5 moedas mais barato e +1 no ataque hacker | 2 | Projeto 10 moedas mais caro e −1 no ataque |
-| Segurança | Proteção do dinheiro | +1 para se defender de hacker | 2 | Crime: perde 5% do dinheiro por rodada e −1 na defesa |
-| Poder militar | Fronteiras | +1 para atacar e se defender em ataque militar | 3 | −1 nesses dados |
-| Infraestrutura | Comida | Comida 5 moedas mais barata | 3 | Apagões: +10 moedas por rodada |
-| Estabilidade | Imprevistos | +1 no dado de negociações e imprevistos | 1 | Protestos: −10 moedas por rodada e −1 no dado |
+| Peso | Área | Cuida de | Benefício por nível | Manutenção por nível | Em crise |
+| --- | --- | --- | --- | --- | --- |
+| Essencial | Alimentação | Comida | Comida 10 moedas mais barata | 3 | Escassez: −20 moedas por rodada |
+| Essencial | Saúde | População | Cresce 1% por rodada | 3 | Não cresce e encolhe 2% por rodada |
+| Essencial | Emprego | Dinheiro | +10 moedas por rodada | 3 | Greves: −20 moedas por rodada |
+| Importante | Educação | Ideias | +1 no dado dos projetos | 2 | −10 moedas por rodada e −1 no dado |
+| Importante | Infraestrutura | Rotas e acordos | +3 moedas por rodada para cada acordo que traz benefício ao país, até 3 acordos | 2 | Apagões: −10 moedas por rodada |
+| Importante | Estabilidade | Imprevistos | +1 no dado de negociações e imprevistos | 2 | Protestos: −10 moedas por rodada e −1 no dado |
+| Estratégica | Tecnologia | Projetos e hackers | Projeto 5 moedas mais barato e +1 no ataque hacker | 1 | Projeto 10 moedas mais caro e −1 no ataque |
+| Estratégica | Segurança | Proteção do dinheiro | +1 para se defender de hacker | 1 | Crime: perde 5% do dinheiro por rodada e −1 na defesa |
+| Estratégica | Poder militar | Fronteiras | +1 para atacar e se defender em ataque militar | 1 | −1 nesses dados |
+
+## Comida e população
+A conta de comida é 1 moeda por mil pessoas: quanto mais gente, mais cara. Alimentação e acordos reduzem essa conta. **Fome** é o que acontece quando o dinheiro não cobre a comida: o país perde 10% das pessoas, zera o dinheiro e não paga nenhuma manutenção naquela rodada, então as áreas entram em crise na rodada seguinte.
 
 ## Os países
 Cada país tem história, clima, ponto forte, ponto fraco e desafio, visíveis para todos na tela **Países**. Quem pode ajudar, cada grupo descobre investigando. As dicas e as missões ficam só na ficha do próprio país. Todos começam com a mesma riqueza e o mesmo total de níveis, só que distribuídos de um jeito diferente.
@@ -53,6 +57,7 @@ Os grupos combinam entre si e chamam o professor, que registra no sistema.
 - **Cortar ou retomar a manutenção** de uma área, para sobrar dinheiro por um tempo.
 - **Transferir dinheiro** para outro país.
 - **Fazer um acordo:** pode mudar dinheiro na hora, moedas por rodada, comida e nível de área, por quantas rodadas combinarem. Pode ser secreto. Bloquear uma rota ou cobrar por algo também é um acordo: quem combina são os grupos.
+- **Apoiar outro país em uma área:** quem ajuda paga a manutenção dos níveis que está dando e não pode dar mais níveis do que tem.
 - **Fornecer comida:** quem recebe deixa de pagar essa parte da conta de comida e paga o preço combinado a quem fornece.
 - **Publicar uma notícia:** o grupo manda o texto no formato que quiser e o professor publica no jornal com a fonte "Imprensa de [país]". Vale tudo, inclusive boato, com a moderação do professor.
 - **Tentar um projeto ou ação arriscada:** o grupo explica a ideia e o professor define, antes de rolar, o custo, a dificuldade e o efeito.

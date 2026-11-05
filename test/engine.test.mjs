@@ -10,7 +10,8 @@ const niveis = (n = 2) => Object.fromEntries(G.AREAS.map(a => [a.id, n]));
 // Em nível 2, a manutenção total é 36 moedas. Com manutenção zerada nos testes de conta, os números ficam simples.
 const modelo = (extra = {}) => ({ id: 'm', nome: 'Modelo', moedas: 50, pop: 100, renda: 90, niveis: niveis(), serie: [], vizinhos: ['o'], ...extra });
 const outro = (extra = {}) => modelo({ id: 'o', nome: 'Outro', vizinhos: ['m'], ...extra });
-const com = (...paises) => { const e = { ...novo(), paises }; e.params = { ...e.params, manutencaoPct: 0 }; return e; };
+// Testes de conta: sem manutenção e sem renda da Infraestrutura, e com a comida mais simples, para os números ficarem claros.
+const com = (...paises) => { const e = { ...novo(), paises }; e.params = { ...e.params, manutencaoPct: 0, moedasPorAcordo: 0, economiaAlimentacao: 5 }; return e; };
 const comManut = (...paises) => ({ ...novo(), paises });
 
 test('fechamento: entra, paga comida, sobra e população cresce', () => {
@@ -37,8 +38,10 @@ test('manutenção: cobra por nível comprado e entra na conta da rodada', () =>
   const s = comManut(modelo({ moedas: 100 })); // todas as áreas em nível 2
   const ef = G.calcular(s.paises[0], s);
   assert.equal(ef.manutencao.total, 36); // soma dos pesos (18) x 2
-  assert.equal(ef.sobra, 110 - 90 - 36);
-  assert.equal(G.custoManutencao(s.paises[0], 'mil', s.params), 6);
+  assert.equal(ef.sobra, 110 - 80 - 36);
+  assert.equal(G.custoManutencao(s.paises[0], 'emp', s.params), 6); // essencial
+  assert.equal(G.custoManutencao(s.paises[0], 'edu', s.params), 4); // importante
+  assert.equal(G.custoManutencao(s.paises[0], 'mil', s.params), 2); // estratégica
   G.registrarAcordo(s, { titulo: 't', tipo: 'paises', paises: ['m'], efeitos: { m: { areas: { emp: 3 } } }, duracao: 2 });
   assert.equal(G.calcular(s.paises[0], s).manutencao.total, 36); // bônus de acordo não paga manutenção
 });
@@ -46,7 +49,7 @@ test('manutenção: cobra por nível comprado e entra na conta da rodada', () =>
 test('sem manutenção: entra em crise na rodada seguinte, e a cada 2 rodadas perde nível', () => {
   let s = comManut(modelo({ moedas: 500, renda: 300 }));
   G.cortarManutencao(s, 'm', 'est', true);
-  assert.equal(G.calcular(s.paises[0], s).manutencao.total, 34); // sem Estabilidade (1 x 2)
+  assert.equal(G.calcular(s.paises[0], s).manutencao.total, 32); // sem Estabilidade (2 x 2)
   assert.equal(G.calcular(s.paises[0], s).totalPerdas, 0);
   s = G.fecharRodada(s);
   assert.equal(G.problema(s.paises[0], 'est'), 1);
@@ -63,7 +66,7 @@ test('sem manutenção: entra em crise na rodada seguinte, e a cada 2 rodadas pe
 });
 
 test('manutenção usa só o que sobra e nunca causa fome', () => {
-  const m = modelo({ moedas: 0, renda: 90 }); // sobram 20 depois da comida
+  const m = modelo({ moedas: 0, renda: 80 }); // sobram 20 depois da comida
   const s = comManut(m);
   const ef = G.calcular(m, s);
   assert.ok(ef.manutencao.total <= 20);
@@ -75,11 +78,11 @@ test('manutenção usa só o que sobra e nunca causa fome', () => {
 });
 
 test('área em crise dá o prejuízo certo em cada uma', () => {
-  const s = com(modelo({ moedas: 100, semManutencao: { emp: 1, edu: 1, seg: 1, inf: 1, est: 1, sau: 1 } }));
+  const s = com(modelo({ moedas: 100, semManutencao: { alim: 1, emp: 1, edu: 1, seg: 1, inf: 1, est: 1, sau: 1 } }));
   const perdas = Object.fromEntries(G.perdasDoPais(s.paises[0], s).map(x => [x.area, x.valor]));
-  assert.deepEqual(perdas, { emp: 15, edu: 10, seg: 5, inf: 10, est: 10 });
+  assert.deepEqual(perdas, { alim: 20, emp: 20, edu: 10, inf: 10, est: 10, seg: 5 });
   assert.equal(G.efetivo(s.paises[0], 'est', s), 1);
-  assert.equal(G.fecharRodada(s).paises[0].pop, 99); // Saúde em crise encolhe 1%
+  assert.equal(G.fecharRodada(s).paises[0].pop, 98); // Saúde em crise encolhe 2%
 });
 
 test('escolhas prontas viram efeito: tamanho, valor próprio e área', () => {
@@ -101,7 +104,7 @@ test('sugestões: crise e destaque aparecem uma vez e a notícia pode ter efeito
   const crise = lista.find(x => x.tipo === 'crise');
   assert.equal(lista.filter(x => x.tipo === 'crise').length, 1);
   assert.match(crise.titulo, /Greves/);
-  assert.equal(lista.filter(x => x.tipo === 'destaque').length, 7);
+  assert.equal(lista.filter(x => x.tipo === 'destaque').length, 8);
   G.resolverSugestao(s, crise, { publicar: true, comEfeito: true });
   assert.equal(s.paises[0].moedas, 85);
   assert.equal(s.marcas.length, 1);
@@ -134,6 +137,59 @@ test('área sem manutenção entra em crise e vira sugestão na rodada seguinte'
   G.resolverSugestao(s, sug[0], { publicar: false });
   s = G.fecharRodada(s);
   assert.equal(G.sugestoesDeNoticias(s).filter(x => x.tipo === 'crise').length, 0); // a mesma crise não repete
+});
+
+test('três pesos: cada área tem um, e a manutenção segue o peso', () => {
+  assert.equal(G.AREAS.length, 9);
+  for (const peso of Object.keys(G.PESOS)) assert.equal(G.AREAS.filter(a => a.peso === peso).length, 3, peso);
+  for (const a of G.AREAS) assert.equal(a.manut, G.PESOS[a.peso].manut, a.id);
+  assert.deepEqual(G.AREAS.filter(a => a.peso === 'essencial').map(a => a.id).sort(), ['alim', 'emp', 'sau']);
+});
+
+test('Alimentação reduz a conta de comida com os valores reais', () => {
+  const s = comManut(modelo({ niveis: { ...niveis(), alim: 5 } }));
+  assert.equal(G.contaComida(s.paises[0], s).total, 100 - 60); // nível 5 vale 6
+  assert.match(G.contaComida(s.paises[0], s).linhas[1].rotulo, /Alimentação nível 5/);
+});
+
+test('Infraestrutura só rende sobre acordos que trazem benefício, até 3', () => {
+  const s = comManut(modelo(), outro());
+  const antes = G.calcular(s.paises[0], s).entra;
+  const acordo = efeitos => G.registrarAcordo(s, { titulo: 'x', tipo: 'paises', paises: ['m', 'o'], efeitos, duracao: 2 });
+  acordo({});
+  assert.equal(G.acordosAtivos(s.paises[0], s), 0); // acordo vazio não rende
+  acordo({ m: { moedas: -5 }, o: { moedas: 5 } });
+  assert.equal(G.acordosAtivos(s.paises[0], s), 0); // quem só paga também não
+  assert.equal(G.acordosAtivos(s.paises[1], s), 1); // quem recebe, sim
+  acordo({ m: { comida: -10 } });
+  assert.equal(G.acordosAtivos(s.paises[0], s), 1);
+  assert.equal(G.calcular(s.paises[0], s).entra, antes - 5 + 6); // nível 2 x 3 moedas
+  G.aplicarEfeito(s, ['m'], { moedas: 1 }, { titulo: 'evento', duracao: 2 });
+  assert.equal(G.acordosAtivos(s.paises[0], s), 1); // efeito de evento não conta
+  assert.ok(G.visaoDoPais(s.paises[0], s).entradas.some(x => /Infraestrutura: 1 acordo/.test(x.rotulo)));
+  acordo({ m: { moedas: 1 } }); acordo({ m: { moedas: 1 } }); acordo({ m: { moedas: 1 } });
+  assert.equal(G.acordosAtivos(s.paises[0], s), 3); // limite
+});
+
+test('fome: a conta de comida cresce com a população e a fome derruba a manutenção', () => {
+  const s = comManut(modelo({ moedas: 0, renda: 10 }));
+  const f = G.fecharRodada(s);
+  assert.equal(f.resumo.itens[0].fome, true);
+  assert.equal(f.paises[0].pop, 90);
+  assert.equal(f.resumo.itens[0].semPagar.length, 9); // nenhuma manutenção paga
+  assert.equal(G.contaComida(f.paises[0], f).linhas[0].valor, 90);
+});
+
+test('apoio custa a quem ajuda e não pode passar do nível dele', () => {
+  const s = comManut(modelo({ moedas: 100 }), outro({ moedas: 100 }));
+  const ajudaAntes = G.calcular(s.paises[0], s).sobra;
+  const efeitos = G.efeitosDoApoio(s, { de: 'm', para: 'o', area: 'emp', niveis: 2 });
+  assert.deepEqual(efeitos.m, { moedas: -6 }); // 2 níveis x manutenção 3
+  assert.deepEqual(efeitos.o, { areas: { emp: 2 } });
+  G.registrarAcordo(s, { titulo: 'Apoio', tipo: 'paises', paises: ['m', 'o'], efeitos, duracao: 2 });
+  assert.equal(G.calcular(s.paises[0], s).sobra, ajudaAntes - 6); // quem ajuda paga de verdade
+  assert.throws(() => G.efeitosDoApoio(s, { de: 'm', para: 'o', area: 'emp', niveis: 3 }), /não pode dar 3 níveis/);
+  assert.deepEqual(G.efeitosDoApoio(s, { de: 'm', para: 'o', area: 'mil', niveis: 1, preco: 10 }).m, { moedas: 9 });
 });
 
 test('apoio em uma área sobe o nível, sem mexer no dinheiro se for de graça', () => {
@@ -240,13 +296,13 @@ test('chance do dado conta só os números que dão certo', () => {
 
 test('ação com dado: cobra o custo definido e aplica o efeito sozinho', () => {
   const s = com(modelo({ moedas: 100 }));
-  const r = G.acaoDado(s, { paisId: 'm', titulo: 'Fazenda', lados: 20, area: 'edu', bonusExtra: 1, dificuldade: 10, custo: 30, efeito: { moedas: 10, comida: -20, areas: { inf: 1 } }, duracao: 3 }, () => 7);
+  const r = G.acaoDado(s, { paisId: 'm', titulo: 'Fazenda', lados: 20, area: 'edu', bonusExtra: 1, dificuldade: 10, custo: 30, efeito: { moedas: 10, comida: -20, areas: { alim: 1 } }, duracao: 3 }, () => 7);
   assert.equal(r.total, 10);
   assert.equal(r.mult, 1);
   assert.equal(s.paises[0].moedas, 70);
   const ef = G.calcular(s.paises[0], s);
   assert.equal(ef.entra, 120);
-  assert.equal(ef.comida, 100 - 15 - 20); // Infraestrutura real 3
+  assert.equal(ef.comida, 100 - 15 - 20); // Alimentação real 3
   assert.equal(s.acordos[0].restantes, 3);
   assert.equal(s.acordos[0].origem, 'projeto');
   assert.equal(G.partePublica(s).acordos.length, 0);
@@ -443,7 +499,7 @@ test('ficha avisa quanto vai faltar', () => {
   assert.equal(v.fimDaRodada, 0);
 });
 
-test('12 países justos: mesma riqueza, mesma sobra depois da manutenção, níveis somam 16 e todos têm vizinhos', () => {
+test('12 países justos: mesma riqueza, mesma sobra depois da manutenção, níveis somam 18 e todos têm vizinhos', () => {
   const s = novo();
   assert.equal(s.paises.length, 12);
   assert.equal(MAPA.paises.length, 12);
@@ -451,7 +507,7 @@ test('12 países justos: mesma riqueza, mesma sobra depois da manutenção, nív
     assert.equal(G.calcular(c, s).sobra, 30, c.perfil);
     assert.equal(G.riqueza(c, s.params), 600, c.perfil);
     assert.equal(Object.keys(c.niveis).length, G.AREAS.length, c.perfil);
-    assert.equal(Object.values(c.niveis).reduce((a, b) => a + b), 16, c.perfil);
+    assert.equal(Object.values(c.niveis).reduce((a, b) => a + b), 18, c.perfil);
     assert.ok(c.renda > 0, c.perfil);
     assert.ok(c.vizinhos.length >= 2, `${c.perfil} tem ${c.vizinhos.length} vizinhos`);
     for (const v of c.vizinhos) assert.ok(s.paises.find(x => x.id === v).vizinhos.includes(c.id));

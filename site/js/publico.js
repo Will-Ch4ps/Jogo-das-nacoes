@@ -183,7 +183,7 @@ function fichaPais(f) {
           h('tbody', {}, f.serie.slice().reverse().map(s => h('tr', {}, h('td', {}, s.r), h('td', {}, fmt(s.moedas)), h('td', {}, fmt(Math.round(s.pop))), h('td', {}, `${s.pos}º`))))))),
     ],
     areas: () => [
-      h('p', { class: 'meta explica' }, `Comprar sobe o nível. A manutenção é a despesa por rodada: sem pagar, a área entra em crise e, a cada ${f.rodadasParaPerderNivel} rodadas sem pagar, perde um nível. Os níveis 5 e 10 valem em dobro.`),
+      h('p', { class: 'meta explica' }, `Comprar sobe o nível, e custa igual em todas as áreas. A manutenção é por rodada e depende do peso: essencial custa 3 por nível, importante 2 e estratégica 1. Sem pagar, a área entra em crise e, a cada ${f.rodadasParaPerderNivel} rodadas sem pagar, perde um nível. Os níveis 5 e 10 valem em dobro.`),
       areasDoPais(Object.fromEntries(f.areas.map(a => [a.id, a.real])), { comprados: Object.fromEntries(f.areas.map(a => [a.id, a.nivel])), problemas: f.areas.filter(a => a.problema).map(a => a.id), extra: a => {
         const d = area(a.id), semPagar = d.manut.estado !== 'paga';
         return h('div', { class: 'area-ficha' },
@@ -338,7 +338,7 @@ function conteudoGuia() {
     h('ul', { class: 'guia-lista' },
       item('Subir uma área', 'Custa uma vez, e a área passa a render mais. Todo nível aumenta a manutenção.'),
       item('Cortar uma manutenção', 'Sobra dinheiro agora, mas a área entra em crise na rodada seguinte, e depois perde níveis.'),
-      item('Fazer um acordo', 'Pode ser dinheiro por rodada, comida, apoio em uma área ou o que combinarem. Digam com quem, o quê e por quantas rodadas. Pode ser secreto.'),
+      item('Fazer um acordo', 'Pode ser dinheiro por rodada, comida, apoio em uma área ou o que combinarem. Digam com quem, o quê e por quantas rodadas. Pode ser secreto. Quem dá apoio paga a manutenção dos níveis que está dando.'),
       item('Passar dinheiro', 'Uma transferência única para outro país, para ajudar ou pagar por algo.'),
       item('Tentar um projeto', 'Expliquem a ideia: qual problema resolve, como funciona e quem paga a conta. Quanto melhor a ideia, maior a chance no dado.'),
       item('Publicar no jornal', 'Mandem o texto no formato que quiserem. Pode ser verdade, propaganda ou boato.'),
@@ -346,8 +346,8 @@ function conteudoGuia() {
       item('Atacar', 'O dado decide, e quem perde paga parte do próprio dinheiro ao outro. O militar só vale contra vizinhos e vira notícia; o hacker é secreto.')),
     h('h4', {}, 'O que pode dar errado'),
     h('ul', { class: 'guia-lista' },
-      item('Faltar comida', 'Se o dinheiro não cobrir a comida, o país perde 10% das pessoas.'),
-      item('Área em crise', 'Sem manutenção, surgem greves, crime, protestos ou apagões, e cada um custa caro.'),
+      item('Faltar comida', 'A conta de comida cresce com a população. Se o dinheiro não cobrir, o país perde 10% das pessoas, e nenhuma manutenção é paga naquela rodada.'),
+      item('Área em crise', 'Sem manutenção, a área atinge justamente o que cuida: Saúde derruba a população, Emprego traz greves, Segurança traz crime. Áreas essenciais doem mais.'),
       item('Surpresas', 'Crises e eventos podem atingir todos os países. Guardar um pouco de dinheiro ajuda a atravessá-los.')),
   ];
 }

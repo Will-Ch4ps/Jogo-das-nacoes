@@ -15,7 +15,7 @@ export const HISTORIAS = {
  "p1": {
   "clima": "Costa de ventos fortes",
   "historia": "Nos tempos do império, todo navio de Meridia pagava imposto neste porto. Quando a capital caiu, os fiscais fugiram, mas os comerciantes ficaram, e descobriram que não precisavam de trono nenhum para continuar cobrando.\n\nHoje é a cidade mais bem informada do continente: quase tudo que se compra e se vende passa por estes cais, e pouca coisa acontece sem que alguém aqui fique sabendo. O país nunca precisou de um grande exército, porque sempre foi útil demais para ser atacado.\n\nA pergunta que ninguém faz em voz alta é por quanto tempo isso continua valendo.",
-  "forte": "Infraestrutura nível 4: portos e armazéns deixam a comida 20 moedas mais barata por rodada.",
+  "forte": "Infraestrutura nível 4: portos e armazéns rendem 12 moedas por rodada a cada acordo que traz benefício, até 3 acordos. Emprego nível 3 mantém os cais funcionando.",
   "fraco": "Segurança, Poder militar e Estabilidade em nível 1: o país é rico, e está mal protegido.",
   "desafio": "Continuar indispensável em um continente onde todos gostariam de não depender de ninguém.",
   "dicas": [
@@ -27,8 +27,8 @@ export const HISTORIAS = {
  "p2": {
   "clima": "Montanhas frias e neve",
   "historia": "As moedas do império eram cunhadas com o metal destas montanhas, e as minas foram a última coisa que a capital tentou defender. Não conseguiu. Foi o povo da serra que expulsou os soldados imperiais, túnel por túnel, e essa memória nunca foi embora.\n\nA neve isola as vilas por meses, e essa vida dura criou gente desconfiada, orgulhosa e muito difícil de invadir. Muita riqueza sai da terra, mas pouca fica por aqui. Quem consegue estudar costuma ir embora.\n\nAs minas não vão durar para sempre. O país sabe disso, mesmo fingindo que não.",
-  "forte": "Poder militar nível 4: as montanhas e um povo acostumado à dureza dão +4 em ataques e defesas militares. Emprego nível 3 garante trabalho nas minas.",
-  "fraco": "Educação, Tecnologia e Estabilidade em nível 1: poucas ideias novas, e pouca margem para errar.",
+  "forte": "Poder militar nível 4: as montanhas e um povo acostumado à dureza dão +4 em ataques e defesas militares. Infraestrutura nível 3 sustenta as estradas das minas.",
+  "fraco": "Educação, Tecnologia, Alimentação e Estabilidade em nível 1: poucas ideias novas, comida cara e pouca margem para errar.",
   "desafio": "Transformar minério em futuro antes que as minas acabem.",
   "dicas": [
    "Matéria-prima barata enriquece quem transforma, não quem extrai. Vale perguntar quem está lucrando com o seu minério.",
@@ -40,7 +40,7 @@ export const HISTORIAS = {
   "clima": "Vale gelado e fábricas",
   "historia": "Foi o império que construiu aqui as primeiras oficinas, para fazer armas longe das fronteiras. Quando ele caiu, o vale tinha rios, energia e milhares de pessoas sabendo operar máquinas, e nenhum lugar para vender o que produzia. Então começou a fabricar de tudo.\n\nHoje quase todo mundo tem emprego, e o que sai daqui abastece metade do continente. O preço aparece no ar: a fumaça fica presa entre as montanhas, os hospitais vivem cheios, e os primeiros protestos já chegaram às portas das fábricas.\n\nOs donos das fábricas dizem que é o custo do progresso. Quem respira esse ar começa a discordar.",
   "forte": "Emprego nível 4 e Tecnologia nível 4: a indústria rende 40 moedas por rodada e deixa os projetos 20 moedas mais baratos.",
-  "fraco": "Saúde, Segurança, Poder militar e Estabilidade em nível 1: a população quase não cresce, e o país é exposto.",
+  "fraco": "Saúde, Alimentação, Segurança, Poder militar e Estabilidade em nível 1: a população quase não cresce, e o país é exposto.",
   "desafio": "Crescer sem adoecer quem faz o país funcionar.",
   "dicas": [
    "Neste jogo, gente também é riqueza. Olhem quanto a Saúde baixa está custando no longo prazo.",
@@ -63,8 +63,8 @@ export const HISTORIAS = {
  "p5": {
   "clima": "Clima ameno e muita gente",
   "historia": "Esta foi a capital do império. Os palácios viraram ministérios, e os mercados imperiais nunca fecharam. Depois da Grande Fome, gente de todas as províncias veio para cá atrás de comida, e nunca mais voltou.\n\nÉ a maior cidade do continente. Tem trabalho, oportunidades e uma energia que não existe em mais lugar nenhum. Tem também filas nos hospitais, trânsito, aluguel caro e protestos cada vez mais frequentes.\n\nPor aqui ainda há quem ache que Meridia inteira deveria obedecer a esta cidade. Ninguém diz isso em voz alta fora daqui. Mas todo mundo lembra quem governava antes.",
-  "forte": "Emprego nível 4: a cidade nunca para e rende 40 moedas por rodada. A grande população também pesa muito na riqueza.",
-  "fraco": "Saúde e Estabilidade em nível 1: tanta gente junta vira problema rápido, e a conta da comida é das maiores do continente.",
+  "forte": "Emprego nível 4: a cidade nunca para e rende 40 moedas por rodada. Infraestrutura nível 3 liga a metrópole ao continente.",
+  "fraco": "Saúde, Alimentação e Estabilidade em nível 1: tanta gente junta vira problema rápido, e a conta da comida é das maiores do continente.",
   "desafio": "Manter a metrópole de pé quando tudo fica caro ao mesmo tempo.",
   "dicas": [
    "A cidade já passou fome uma vez, e a memória continua viva. Olhem com atenção a conta de comida.",
@@ -76,7 +76,7 @@ export const HISTORIAS = {
   "clima": "Temperado, no centro do continente",
   "historia": "No centro de Meridia ficava o Observatório Imperial, onde a corte guardava seus cientistas. Quando o império caiu, eles trancaram os portões, salvaram os arquivos e fundaram um país em volta do próprio laboratório.\n\nHoje, esta pequena capital inventa o que o resto do continente vai usar amanhã, e seus jovens são os mais disputados. Só que quase toda a comida vem de fora, as estradas são velhas e o exército quase não existe.\n\nÉ um cérebro enorme em um corpo frágil, com vizinhos por todos os lados. Por enquanto, todos acham mais útil deixar o país em paz.",
   "forte": "Tecnologia nível 5, que vale em dobro: projetos 30 moedas mais baratos e +6 no ataque hacker, o melhor do continente.",
-  "fraco": "Infraestrutura, Segurança e Poder militar em nível 1: depender de fora para comer e se defender é um risco constante.",
+  "fraco": "Alimentação, Segurança e Poder militar em nível 1: depender de fora para comer e se defender é um risco constante.",
   "desafio": "Trocar conhecimento pelo que falta sem perder a vantagem.",
   "dicas": [
    "Conhecimento é a única coisa que dá para vender e continuar tendo. Mas, depois de vendido, os outros também têm.",
@@ -88,7 +88,7 @@ export const HISTORIAS = {
   "clima": "Planalto de lagos e ar seco",
   "historia": "As universidades deste planalto são mais antigas que o próprio império. Reis e generais estudaram aqui, e quase todos os líderes atuais de Meridia passaram por estas salas. Quando o Tratado foi escrito, foi nestes salões, porque nenhum outro lugar era aceito por todos.\n\nPensar nunca foi o problema. O difícil é transformar ideia em emprego antes que os recém-formados arrumem as malas. E, no meio do mapa, cercado de fronteiras, o país é um alvo tão valioso quanto fácil.\n\nDizem que quem controla o planalto controla a próxima geração. Por isso mesmo, ele nunca foi deixado totalmente em paz.",
   "forte": "Educação nível 5, que vale em dobro: +6 no dado de todos os projetos, a maior chance do continente de ter ideias que dão certo.",
-  "fraco": "Segurança, Poder militar, Infraestrutura e Estabilidade em nível 1: muitas fronteiras e pouca defesa.",
+  "fraco": "Alimentação, Segurança, Poder militar e Estabilidade em nível 1: muitas fronteiras, pouca comida e pouca defesa.",
   "desafio": "Fazer o conhecimento virar riqueza antes que os formados partam.",
   "dicas": [
    "Seus projetos raramente falham. Isso muda quais riscos valem a pena.",
@@ -100,7 +100,7 @@ export const HISTORIAS = {
   "clima": "Serras secas e fronteiras tensas",
   "historia": "A última batalha do império aconteceu nestas serras, e a guerra só terminou de verdade quando o Tratado foi assinado. O país que nasceu ali se organizou em torno do exército, e nunca mais soube viver de outro jeito.\n\nAs fronteiras são vigiadas dia e noite, e os vizinhos pensam duas vezes antes de provocar. A segurança custou caro: as escolas ficaram em segundo plano, a economia é pequena para o tamanho das forças armadas, e muita gente jovem só conhece a carreira militar.\n\nOs generais juram defender o Tratado. Mas ele vence em dez anos, e ninguém sabe o que um exército desse tamanho faz quando a paz acaba.",
   "forte": "Poder militar nível 5, que vale em dobro: +6 em ataques e defesas, o maior do continente. Segurança nível 3 protege o dinheiro.",
-  "fraco": "Educação, Tecnologia, Infraestrutura e Estabilidade em nível 1. E manter tudo isso custa caro: a manutenção militar é das mais altas.",
+  "fraco": "Educação, Tecnologia, Infraestrutura e Estabilidade em nível 1: o orçamento foi quase todo para os quartéis.",
   "desafio": "Decidir se o exército serve para proteger, ameaçar ou negociar.",
   "dicas": [
    "Um exército custa todo ano, mesmo parado. Vale fazer as contas do que ele está rendendo.",
@@ -111,8 +111,8 @@ export const HISTORIAS = {
  "p9": {
   "clima": "Campos férteis e chuva regular",
   "historia": "A Grande Fome começou aqui. Três colheitas perdidas, e a corte levou tudo o que restava enquanto o povo do campo morria nas estradas. Ninguém nestas planícies esqueceu, e por isso os silos daqui nunca mais ficaram vazios.\n\nHoje, quase tudo que o continente come passa por estas terras, e a comida custa menos do que em qualquer outro lugar. Mas os jovens vão embora para as cidades, as escolas ficaram para trás, e uma única safra ruim abala o país inteiro.\n\nA riqueza daqui depende da chuva. E a chuva não assina tratados.",
-  "forte": "Infraestrutura nível 4: silos e estradas deixam a comida 20 moedas mais barata por rodada. Vocês têm o que todo mundo precisa todo dia.",
-  "fraco": "Educação, Tecnologia e Estabilidade em nível 1: poucas ideias novas, e o país sofre muito com qualquer crise.",
+  "forte": "Alimentação nível 5, que vale em dobro: a comida fica 60 moedas mais barata por rodada. Vocês têm o que todo mundo precisa todo dia.",
+  "fraco": "Educação, Tecnologia, Infraestrutura e Estabilidade em nível 1: poucas ideias novas, e o país sofre muito com qualquer crise.",
   "desafio": "Usar a comida como força, sem depender só da chuva.",
   "dicas": [
    "Comida é a única conta que nenhum país pode deixar de pagar. Pensem no que isso significa em uma negociação.",
@@ -135,8 +135,8 @@ export const HISTORIAS = {
  "p11": {
   "clima": "Mangues e mar agitado",
   "historia": "Para o império, este litoral servia só para pagar imposto em peixe. Durante a Grande Fome, foram os barcos daqui que levaram comida às cidades, de graça, quando ninguém mais levava. É uma história de que este povo se orgulha, e que os outros costumam esquecer.\n\nEntre mangues e mar aberto, o país vive da pesca. Está acostumado a enchentes e reconstrói tudo depois de cada tempestade, sem pedir ajuda. O mar dá comida e trabalho, mas também leva o que quer.\n\nAs águas estão subindo, e barcos estrangeiros pescam cada vez mais perto da costa. Desta vez, talvez não baste reconstruir.",
-  "forte": "Infraestrutura e Saúde em nível 3: a pesca farta deixa a comida 15 moedas mais barata, e a população cresce 3% por rodada. Emprego nível 3 mantém os barcos no mar.",
-  "fraco": "Educação, Tecnologia e Estabilidade em nível 1: projetos são difíceis aqui, e há pouca defesa contra imprevistos.",
+  "forte": "Alimentação nível 4: a pesca farta deixa a comida 40 moedas mais barata. Saúde nível 3 faz a população crescer 3% por rodada.",
+  "fraco": "Educação, Tecnologia, Infraestrutura e Estabilidade em nível 1: projetos são difíceis aqui, e há pouca defesa contra imprevistos.",
   "desafio": "Proteger a costa de um mar que sobe e de vizinhos que pescam demais.",
   "dicas": [
    "Vocês não são os únicos que produzem comida. Sair na frente pode valer mais do que ter o melhor preço.",
@@ -148,7 +148,7 @@ export const HISTORIAS = {
   "clima": "Deserto escaldante",
   "historia": "O império mandava para este deserto quem queria esquecer: exilados, prisioneiros, gente sem lugar. Quando ele caiu, ninguém veio buscá-los, e ninguém disputou esta terra, porque ninguém a queria.\n\nDurante décadas, sobreviver foi tudo. Até que o calor que parecia uma maldição virou energia. Hoje, painéis solares a perder de vista abastecem boa parte do continente, e o país que todos ignoravam virou indispensável.\n\nSó que água e comida precisam vir de fora e são caríssimas. Os netos dos exilados não esqueceram quem os mandou para cá. Agora, as luzes de Meridia dependem deles.",
   "forte": "Tecnologia nível 4: a energia solar deixa os projetos 20 moedas mais baratos e dá +4 no ataque hacker. Emprego nível 3 sustenta as usinas.",
-  "fraco": "Saúde, Infraestrutura e Estabilidade em nível 1: água e comida custam caro, e a população quase não cresce.",
+  "fraco": "Saúde, Alimentação e Estabilidade em nível 1: água e comida custam caro, e a população quase não cresce.",
   "desafio": "Transformar energia em segurança antes que os outros aprendam a viver sem ela.",
   "dicas": [
    "Muita gente depende da sua energia sem nunca ter pensado nisso. Quando é a hora certa de lembrar?",
@@ -165,7 +165,7 @@ export const PAISES_INICIAIS = [
   "cor": "#3f8fc4",
   "moedas": 100,
   "pop": 100,
-  "renda": 118,
+  "renda": 119,
   "niveis": {
    "emp": 3,
    "edu": 2,
@@ -173,6 +173,7 @@ export const PAISES_INICIAIS = [
    "tec": 2,
    "seg": 1,
    "mil": 1,
+   "alim": 2,
    "inf": 4,
    "est": 1
   },
@@ -191,7 +192,7 @@ export const PAISES_INICIAIS = [
   "cor": "#b9794f",
   "moedas": 125,
   "pop": 95,
-  "renda": 124,
+  "renda": 120,
   "niveis": {
    "emp": 3,
    "edu": 1,
@@ -199,7 +200,8 @@ export const PAISES_INICIAIS = [
    "tec": 1,
    "seg": 2,
    "mil": 4,
-   "inf": 2,
+   "alim": 1,
+   "inf": 3,
    "est": 1
   },
   "projetos": 0,
@@ -218,7 +220,7 @@ export const PAISES_INICIAIS = [
   "cor": "#8b95a5",
   "moedas": 50,
   "pop": 110,
-  "renda": 125,
+  "renda": 126,
   "niveis": {
    "emp": 4,
    "edu": 2,
@@ -226,7 +228,8 @@ export const PAISES_INICIAIS = [
    "tec": 4,
    "seg": 1,
    "mil": 1,
-   "inf": 2,
+   "alim": 1,
+   "inf": 3,
    "est": 1
   },
   "projetos": 0,
@@ -244,7 +247,7 @@ export const PAISES_INICIAIS = [
   "cor": "#2cb5b0",
   "moedas": 150,
   "pop": 90,
-  "renda": 115,
+  "renda": 111,
   "niveis": {
    "emp": 3,
    "edu": 2,
@@ -252,6 +255,7 @@ export const PAISES_INICIAIS = [
    "tec": 1,
    "seg": 1,
    "mil": 1,
+   "alim": 2,
    "inf": 2,
    "est": 3
   },
@@ -278,7 +282,8 @@ export const PAISES_INICIAIS = [
    "tec": 2,
    "seg": 2,
    "mil": 2,
-   "inf": 2,
+   "alim": 1,
+   "inf": 3,
    "est": 1
   },
   "projetos": 0,
@@ -296,7 +301,7 @@ export const PAISES_INICIAIS = [
   "cor": "#8a6be0",
   "moedas": 150,
   "pop": 90,
-  "renda": 129,
+  "renda": 124,
   "niveis": {
    "emp": 2,
    "edu": 2,
@@ -304,7 +309,8 @@ export const PAISES_INICIAIS = [
    "tec": 5,
    "seg": 1,
    "mil": 1,
-   "inf": 1,
+   "alim": 1,
+   "inf": 2,
    "est": 2
   },
   "projetos": 0,
@@ -325,7 +331,7 @@ export const PAISES_INICIAIS = [
   "cor": "#7fae3f",
   "moedas": 100,
   "pop": 100,
-  "renda": 140,
+  "renda": 136,
   "niveis": {
    "emp": 2,
    "edu": 5,
@@ -333,7 +339,8 @@ export const PAISES_INICIAIS = [
    "tec": 3,
    "seg": 1,
    "mil": 1,
-   "inf": 1,
+   "alim": 1,
+   "inf": 2,
    "est": 1
   },
   "projetos": 0,
@@ -355,7 +362,7 @@ export const PAISES_INICIAIS = [
   "cor": "#a39440",
   "moedas": 100,
   "pop": 100,
-  "renda": 144,
+  "renda": 123,
   "niveis": {
    "emp": 2,
    "edu": 1,
@@ -363,6 +370,7 @@ export const PAISES_INICIAIS = [
    "tec": 1,
    "seg": 3,
    "mil": 5,
+   "alim": 2,
    "inf": 1,
    "est": 1
   },
@@ -382,7 +390,7 @@ export const PAISES_INICIAIS = [
   "cor": "#d9a028",
   "moedas": 50,
   "pop": 110,
-  "renda": 129,
+  "renda": 91,
   "niveis": {
    "emp": 3,
    "edu": 1,
@@ -390,7 +398,8 @@ export const PAISES_INICIAIS = [
    "tec": 1,
    "seg": 2,
    "mil": 2,
-   "inf": 4,
+   "alim": 5,
+   "inf": 1,
    "est": 1
   },
   "projetos": 0,
@@ -408,7 +417,7 @@ export const PAISES_INICIAIS = [
   "cor": "#1e9a80",
   "moedas": 150,
   "pop": 90,
-  "renda": 137,
+  "renda": 131,
   "niveis": {
    "emp": 1,
    "edu": 2,
@@ -416,6 +425,7 @@ export const PAISES_INICIAIS = [
    "tec": 1,
    "seg": 1,
    "mil": 1,
+   "alim": 2,
    "inf": 2,
    "est": 3
   },
@@ -435,7 +445,7 @@ export const PAISES_INICIAIS = [
   "cor": "#4a73e0",
   "moedas": 75,
   "pop": 105,
-  "renda": 129,
+  "renda": 106,
   "niveis": {
    "emp": 3,
    "edu": 1,
@@ -443,7 +453,8 @@ export const PAISES_INICIAIS = [
    "tec": 1,
    "seg": 2,
    "mil": 2,
-   "inf": 3,
+   "alim": 4,
+   "inf": 1,
    "est": 1
   },
   "projetos": 0,
@@ -462,7 +473,7 @@ export const PAISES_INICIAIS = [
   "cor": "#e0733a",
   "moedas": 150,
   "pop": 90,
-  "renda": 120,
+  "renda": 113,
   "niveis": {
    "emp": 3,
    "edu": 2,
@@ -470,7 +481,8 @@ export const PAISES_INICIAIS = [
    "tec": 4,
    "seg": 2,
    "mil": 2,
-   "inf": 1,
+   "alim": 1,
+   "inf": 2,
    "est": 1
   },
   "projetos": 0,
