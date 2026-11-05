@@ -137,6 +137,7 @@ export const nivelReal = (c, area, e) => Math.max(0, Math.min(NIVEL_MAX, c.nivei
 // Área sem manutenção paga na rodada anterior está com problema.
 export const problema = (c, area) => ((c.semManutencao?.[area] || 0) > 0 ? 1 : 0);
 // Bônus de uma área nos dados: nível real menos o problema, se houver.
+export const niveisReais = (c, e) => Object.fromEntries(AREAS.map(a => [a.id, nivelReal(c, a.id, e)]));
 export const efetivo = (c, area, e) => forca(nivelReal(c, area, e)) - problema(c, area);
 export const desemprego = (c, e) => Math.min(60, Math.max(0, 30 - forca(nivelReal(c, 'emp', e)) * 3 + problema(c, 'emp') * 8));
 
@@ -553,6 +554,8 @@ export function fecharRodada(original) {
   e.posAnterior = posAntes;
   e.resumo = { rodada: e.rodada, itens };
   e.rodada += 1;
+  // Retrato dos níveis no começo da rodada: a tela pública mostra quem subiu ou caiu desde então.
+  e.niveisInicio = Object.fromEntries(e.paises.map(c => [c.id, niveisReais(c, e)]));
   e.timer = { rodando: false, fimEm: null, restanteMs: p.duracaoMin * 60000 };
   e.acoesExtra = {}; // Ações a mais ou a menos valem só para a rodada em que foram dadas.
   return e;
@@ -828,9 +831,10 @@ export function partePublica(e) {
     janelas: { acoes: !!e.janelas?.acoes, noticias: !!e.janelas?.noticias },
     params: { duracaoMin: e.params.duracaoMin, valorPessoa: e.params.valorPessoa },
     paises: e.paises.map(c => {
-      const it = r.find(x => x.id === c.id), ant = e.posAnterior?.[c.id];
+      const it = r.find(x => x.id === c.id), ant = e.posAnterior?.[c.id], niveis = niveisReais(c, e), inicio = e.niveisInicio?.[c.id];
+      const mudou = inicio ? Object.fromEntries(AREAS.filter(a => inicio[a.id] != null && niveis[a.id] !== inicio[a.id]).map(a => [a.id, niveis[a.id] - inicio[a.id]])) : {};
       return {
-        id: c.id, nome: c.nome, perfil: c.perfil, cor: c.cor, niveis: Object.fromEntries(AREAS.map(a => [a.id, nivelReal(c, a.id, e)])),
+        id: c.id, nome: c.nome, perfil: c.perfil, cor: c.cor, niveis, mudou,
         vizinhos: c.vizinhos, problemas: AREAS.filter(a => problema(c, a.id)).map(a => a.id), riqueza: it.riqueza, pos: it.pos, variacao: ant ? it.riqueza - ant.riqueza : 0, jogou: (c.serie || []).length > 0,
       };
     }),

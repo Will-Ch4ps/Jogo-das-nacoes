@@ -1233,3 +1233,19 @@ test('a ficha não cresce sem parar', () => {
   assert.equal(f.mensagens.length, 20);
   assert.equal(f.mensagens[0].titulo, 'M39');
 });
+
+test('tela pública mostra quem subiu de nível desde o começo da rodada', () => {
+  let s = novo();
+  const id = s.paises[0].id;
+  assert.deepEqual(G.partePublica(s).paises[0].mudou, {}, 'na primeira rodada não há retrato, então nada aparece');
+  s = G.fecharRodada(s);
+  assert.deepEqual(G.partePublica(s).paises.find(c => c.id === id).mudou, {});
+  s.paises[0].moedas = 1000;
+  const antes = G.nivelReal(s.paises[0], 'tec', s);
+  G.subirNiveis(s, id, 'tec', 2);
+  const pub = G.partePublica(s).paises.find(c => c.id === id);
+  assert.equal(pub.niveis.tec, Math.min(G.NIVEL_MAX, antes + 2));
+  assert.equal(pub.mudou.tec, pub.niveis.tec - antes);
+  s = G.fecharRodada(s);
+  assert.equal(G.partePublica(s).paises.find(c => c.id === id).mudou.tec, undefined, 'a rodada nova começa sem setas');
+});

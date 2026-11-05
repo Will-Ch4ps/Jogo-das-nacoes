@@ -244,6 +244,31 @@ li:nth-child(3) > .placar-item .placar-pos { background: #cf8d5c; color: #231305
 .placar-nome { flex: 1; min-width: 0; overflow-wrap: anywhere; font-weight: 600; }
 .placar-var { color: var(--ok); font-size: 14px; white-space: nowrap; }
 .placar-item strong { font: 800 20px var(--display); min-width: 52px; text-align: right; }
+/* Corrida das áreas: todos os países lado a lado */
+.corrida { margin-top: 22px; }
+.corrida-titulo { font-size: 20px; margin-bottom: 8px; }
+.corrida-rolagem { overflow-x: auto; border: 1px solid var(--linha); border-radius: var(--raio-p); background: var(--cartao); }
+.corrida-tabela { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.corrida-tabela th, .corrida-tabela td { padding: 5px 2px; text-align: center; border-bottom: 1px solid var(--linha); }
+.corrida-tabela tbody tr:last-child > * { border-bottom: 0; }
+.corrida-tabela thead th { font-size: 11px; font-weight: 600; color: var(--suave); vertical-align: bottom; }
+.corrida-tabela thead th > span { display: block; margin-top: 2px; }
+.corrida-tabela thead svg { display: block; margin: 0 auto; }
+.corrida-tabela .corrida-pais { text-align: left; padding-left: 10px; max-width: 128px; }
+.corrida-tabela tbody .corrida-pais { border-left: 4px solid var(--cor); font-weight: 600; font-size: 14px; }
+.corrida-tabela tbody .corrida-pais > span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.corrida-tabela tbody tr { cursor: pointer; }
+@media (hover: hover) { .corrida-tabela tbody tr:hover { background: var(--cartao-2); } }
+.corrida-tabela td { position: relative; min-width: 28px; }
+.corrida-tabela td b { display: inline-grid; place-items: center; min-width: 26px; height: 26px; border-radius: 6px; font: 800 15px var(--display); }
+.corrida-tabela td.lider b { background: var(--ouro); color: #231803; }
+.corrida-tabela td.crise b { text-decoration: underline wavy var(--ruim); text-underline-offset: 3px; }
+.corrida-tabela td i { position: absolute; top: 0; right: 0; font-style: normal; font-size: 11px; line-height: 1; }
+.corrida-tabela td.subiu b { box-shadow: inset 0 0 0 2px var(--ok); }
+.corrida-tabela td.caiu b { box-shadow: inset 0 0 0 2px var(--ruim); }
+.corrida-tabela td.subiu i { color: var(--ok); }
+.corrida-tabela td.caiu i { color: var(--ruim); }
+@media (min-width: 1000px) { .corrida-tabela td b { min-width: 28px; height: 28px; font-size: 16px; } }
 
 /* Tabelas */
 .rola-x { overflow-x: auto; }

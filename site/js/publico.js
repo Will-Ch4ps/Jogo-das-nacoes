@@ -147,7 +147,31 @@ function secaoRanking() {
         h('span', { class: 'placar-cor' }),
         h('span', { class: 'placar-nome' }, c.nome),
         c.jogou && h('span', { class: 'placar-var' + (c.variacao < 0 ? ' neg' : '') }, sinal(c.variacao)),
-        h('strong', {}, fmt(c.riqueza)))))));
+        h('strong', {}, fmt(c.riqueza)))))),
+    corridaAreas(lista));
+}
+
+// Todos os países lado a lado em cada área: quem lidera, quem subiu, quem está em crise.
+const SIGLAS = { alim: 'Ali', sau: 'Saú', emp: 'Emp', edu: 'Edu', inf: 'Inf', est: 'Est', tec: 'Tec', seg: 'Seg', mil: 'Mil' };
+function corridaAreas(lista) {
+  const lider = Object.fromEntries(AREAS.map(a => {
+    const vals = lista.map(c => c.niveis[a.id] ?? 0), max = Math.max(...vals);
+    // Se todo mundo está empatado, ninguém lidera.
+    return [a.id, vals.every(v => v === max) ? null : max];
+  }));
+  return h('div', { class: 'corrida' },
+    h('h3', { class: 'corrida-titulo' }, 'Corrida das áreas'),
+    ajuda('corrida', 'O número é o nível que vale agora, com acordos e empréstimos.', 'Em amarelo, quem lidera a área. Contorno verde: subiu nesta rodada. Vermelho: caiu.', 'Sublinhado: a área está em crise, sem manutenção.'),
+    h('div', { class: 'corrida-rolagem' }, h('table', { class: 'corrida-tabela' },
+      h('thead', {}, h('tr', {}, h('th', { scope: 'col', class: 'corrida-pais' }, 'País'),
+        AREAS.map(a => h('th', { scope: 'col', title: a.nome }, icone(a.id, 18), h('span', {}, SIGLAS[a.id] || a.nome.slice(0, 3)))))),
+      h('tbody', {}, lista.map(c => h('tr', { style: `--cor:${c.cor}`, onclick: () => escolher(c.id, true) },
+        h('th', { scope: 'row', class: 'corrida-pais' }, h('span', {}, c.nome)),
+        AREAS.map(a => {
+          const v = c.niveis[a.id] ?? 0, d = c.mudou?.[a.id] || 0, crise = (c.problemas || []).includes(a.id);
+          return h('td', { class: [v === lider[a.id] && 'lider', crise && 'crise', d > 0 && 'subiu', d < 0 && 'caiu'].filter(Boolean).join(' '), title: `${a.nome}: nível ${v}${d ? ` (${d > 0 ? '+' : ''}${d} nesta rodada)` : ''}${crise ? ', em crise' : ''}` },
+            h('b', {}, v), d !== 0 && h('i', { 'aria-hidden': 'true' }, d > 0 ? '▲' : '▼'));
+        })))))));
 }
 
 /* ---------- Pedidos: o grupo manda, o professor aprova ou recusa ---------- */
