@@ -6,14 +6,16 @@ export const CONTINENTE = {
  "historia": [
   "Por séculos, Meridia foi um único império. Suas estradas ligavam as geleiras do norte ao deserto do sul, e seus navios davam a volta inteira no continente. Tudo parava em uma mesma capital, e todo mundo pagava imposto para o mesmo trono.",
   "Há quarenta anos, veio a Grande Fome. Três safras perdidas, uma corte que não abriu os silos e um povo que parou de obedecer. O império caiu em menos de um ano, e cada província ficou com o que tinha: umas com minas, outras com portos, outras só com a fome.",
-  "Para acabar com a guerra que veio depois, doze governos assinaram o Tratado das Doze Bandeiras: fronteiras congeladas, rotas abertas e cinquenta anos de paz. Faltam dez. Quando o Tratado vencer, a nação mais rica vai presidir o novo Conselho de Meridia e escrever as regras do próximo século.",
-  "As velhas estradas imperiais ainda funcionam. As rotas também. O que mudou é que, agora, ninguém é obrigado a dividir nada. E ninguém sobrevive sozinho: esse foi o preço de dividir um império em doze pedaços."
+  "Para acabar com a guerra que veio depois, doze governos assinaram o Tratado das Doze Bandeiras: fronteiras congeladas, rotas abertas e cinquenta anos de paz. O prazo está acabando, e só os guardiões do Tratado sabem o dia exato. Quando ele vencer, a nação mais rica vai presidir o novo Conselho de Meridia e escrever as regras do próximo século.",
+  "As velhas estradas imperiais ainda funcionam. As rotas também. O que mudou é que, agora, ninguém é obrigado a dividir nada. E ninguém sobrevive sozinho: esse foi o preço de dividir um império em doze pedaços. A paz do papel nunca apagou o que cada povo fez ao outro."
  ],
- "regra": "Cada rodada é um ano. Quando o tempo acabar, a nação mais rica assume o Conselho."
+ "regra": "Cada rodada é um ano. Quando o Tratado vencer, a nação mais rica assume o Conselho."
 };
 export const HISTORIAS = {
  "p1": {
   "clima": "Costa de ventos fortes",
+  "lema": "Nada passa sem nós.",
+  "magoa": "Logo depois da Grande Fome, quando os silos de {p9} voltaram a encher, nossos navios foram os primeiros a chegar, e pagaram o triplo por cada saco de trigo. Foi o nosso porto que manteve o continente de pé. {p9} ainda age como dona do prato de todo mundo.",
   "historia": "Nos tempos do império, todo navio de Meridia pagava imposto neste porto. Quando a capital caiu, os fiscais fugiram, mas os comerciantes ficaram, e descobriram que não precisavam de trono nenhum para continuar cobrando.\n\nHoje é a cidade mais bem informada do continente: quase tudo que se compra e se vende passa por estes cais, e pouca coisa acontece sem que alguém aqui fique sabendo. O país nunca precisou de um grande exército, porque sempre foi útil demais para ser atacado.\n\nA pergunta que ninguém faz em voz alta é por quanto tempo isso continua valendo.",
   "forte": "Infraestrutura nível 4: portos e armazéns rendem 12 moedas por rodada a cada acordo que traz benefício, até 3 acordos. Emprego nível 3 mantém os cais funcionando.",
   "fraco": "Segurança, Poder militar e Estabilidade em nível 1: o país é rico, e está mal protegido.",
@@ -26,6 +28,8 @@ export const HISTORIAS = {
  },
  "p2": {
   "clima": "Montanhas frias e neve",
+  "lema": "Aqui ninguém entra à força.",
+  "magoa": "Foi o nosso povo que expulsou os soldados imperiais, túnel por túnel. Depois, {p8} apareceu nos livros como quem ganhou a guerra, e os nomes dos nossos mortos ficaram de fora do Tratado.",
   "historia": "As moedas do império eram cunhadas com o metal destas montanhas, e as minas foram a última coisa que a capital tentou defender. Não conseguiu. Foi o povo da serra que expulsou os soldados imperiais, túnel por túnel, e essa memória nunca foi embora.\n\nA neve isola as vilas por meses, e essa vida dura criou gente desconfiada, orgulhosa e muito difícil de invadir. Muita riqueza sai da terra, mas pouca fica por aqui. Quem consegue estudar costuma ir embora.\n\nAs minas não vão durar para sempre. O país sabe disso, mesmo fingindo que não.",
   "forte": "Poder militar nível 4: as montanhas e um povo acostumado à dureza dão +4 em ataques e defesas militares. Infraestrutura nível 3 sustenta as estradas das minas.",
   "fraco": "Educação, Tecnologia, Alimentação e Estabilidade em nível 1: poucas ideias novas, comida cara e pouca margem para errar.",
@@ -38,6 +42,8 @@ export const HISTORIAS = {
  },
  "p3": {
   "clima": "Vale gelado e fábricas",
+  "lema": "Aqui as coisas saem do papel.",
+  "magoa": "Toda máquina que {p6} inventa só existe porque nossos operários a fazem funcionar. A patente, a fama e o dinheiro ficam lá. Quando alguém adoece nas nossas fábricas, ninguém do Observatório aparece para ver.",
   "historia": "Foi o império que construiu aqui as primeiras oficinas, para fazer armas longe das fronteiras. Quando ele caiu, o vale tinha rios, energia e milhares de pessoas sabendo operar máquinas, e nenhum lugar para vender o que produzia. Então começou a fabricar de tudo.\n\nHoje quase todo mundo tem emprego, e o que sai daqui abastece metade do continente. O preço aparece no ar: a fumaça fica presa entre as montanhas, os hospitais vivem cheios, e os primeiros protestos já chegaram às portas das fábricas.\n\nOs donos das fábricas dizem que é o custo do progresso. Quem respira esse ar começa a discordar.",
   "forte": "Emprego nível 4 e Tecnologia nível 4: a indústria rende 40 moedas por rodada e deixa os projetos 20 moedas mais baratos.",
   "fraco": "Saúde, Alimentação, Segurança, Poder militar e Estabilidade em nível 1: a população quase não cresce, e o país é exposto.",
@@ -49,7 +55,9 @@ export const HISTORIAS = {
   ]
  },
  "p4": {
-  "clima": "Praias quentes e vulcão",
+  "clima": "Praias aquecidas pelo vulcão",
+  "lema": "Aqui todos são bem-vindos.",
+  "magoa": "Na última tempestade, mandamos médicos e abrigo para {p11}. Eles agradeceram dizendo aos turistas que as praias de verdade são as deles, e que as nossas têm um vulcão. Nossos hotéis ficaram vazios a temporada inteira.",
   "historia": "Era aqui que a corte imperial passava os verões. Sobraram os palácios à beira-mar, hoje hotéis, e o costume de receber bem qualquer um que chegue com dinheiro. Delegações de todos os países vêm negociar nestas praias, porque é o único lugar onde ninguém levanta a voz.\n\nO povo vive bem e confia no governo. É, talvez, o lugar onde mais se gosta de viver em toda Meridia.\n\nSó que há um vulcão no horizonte. A última erupção destruiu metade da costa há duzentos anos, e os mais velhos dizem que a montanha anda quente demais. Quase ninguém quer falar disso, e menos ainda pagar por isso.",
   "forte": "Saúde e Estabilidade em nível 3: a população cresce 3% por rodada, e o país leva +3 nas negociações e nos imprevistos.",
   "fraco": "Tecnologia, Segurança e Poder militar em nível 1: o país nunca precisou disso. Até agora.",
@@ -62,6 +70,8 @@ export const HISTORIAS = {
  },
  "p5": {
   "clima": "Clima ameno e muita gente",
+  "lema": "Todos os caminhos vêm dar aqui.",
+  "magoa": "Na Grande Fome, nossa gente esperava no cais, vendo navios de comida que {p1} não deixava descarregar sem pagar imposto. Hoje, os comerciantes de lá enriquecem com o que a nossa cidade consome, e ainda nos chamam de ex-capital.",
   "historia": "Esta foi a capital do império. Os palácios viraram ministérios, e os mercados imperiais nunca fecharam. Depois da Grande Fome, gente de todas as províncias veio para cá atrás de comida, e nunca mais voltou.\n\nÉ a maior cidade do continente. Tem trabalho, oportunidades e uma energia que não existe em mais lugar nenhum. Tem também filas nos hospitais, trânsito, aluguel caro e protestos cada vez mais frequentes.\n\nPor aqui ainda há quem ache que Meridia inteira deveria obedecer a esta cidade. Ninguém diz isso em voz alta fora daqui. Mas todo mundo lembra quem governava antes.",
   "forte": "Emprego nível 4: a cidade nunca para e rende 40 moedas por rodada. Infraestrutura nível 3 liga a metrópole ao continente.",
   "fraco": "Saúde, Alimentação e Estabilidade em nível 1: tanta gente junta vira problema rápido, e a conta da comida é das maiores do continente.",
@@ -74,6 +84,8 @@ export const HISTORIAS = {
  },
  "p6": {
   "clima": "Temperado, no centro do continente",
+  "lema": "O amanhã sai daqui.",
+  "magoa": "Nossos fundadores salvaram os arquivos quando tudo caiu. Mesmo assim, {p7} repete que tudo o que sabemos aprendemos nas salas de lá, e até hoje não reconhece um diploma nosso.",
   "historia": "No centro de Meridia ficava o Observatório Imperial, onde a corte guardava seus cientistas. Quando o império caiu, eles trancaram os portões, salvaram os arquivos e fundaram um país em volta do próprio laboratório.\n\nHoje, esta pequena capital inventa o que o resto do continente vai usar amanhã, e seus jovens são os mais disputados. Só que quase toda a comida vem de fora, as estradas são velhas e o exército quase não existe.\n\nÉ um cérebro enorme em um corpo frágil, com vizinhos por todos os lados. Por enquanto, todos acham mais útil deixar o país em paz.",
   "forte": "Tecnologia nível 5, que vale em dobro: projetos 30 moedas mais baratos e +6 no ataque hacker, o melhor do continente.",
   "fraco": "Alimentação, Segurança e Poder militar em nível 1: depender de fora para comer e se defender é um risco constante.",
@@ -86,6 +98,8 @@ export const HISTORIAS = {
  },
  "p7": {
   "clima": "Planalto de lagos e ar seco",
+  "lema": "Quem pensa escolhe.",
+  "magoa": "Formamos os governantes da capital por gerações, e foram eles que mandaram não abrir os silos. {p5} nunca pediu desculpa por isso. Ainda nos trata como escola do interior, e manda carta pedindo os nossos melhores formados.",
   "historia": "As universidades deste planalto são mais antigas que o próprio império. Reis e generais estudaram aqui, e quase todos os líderes atuais de Meridia passaram por estas salas. Quando o Tratado foi escrito, foi nestes salões, porque nenhum outro lugar era aceito por todos.\n\nPensar nunca foi o problema. O difícil é transformar ideia em emprego antes que os recém-formados arrumem as malas. E, no meio do mapa, cercado de fronteiras, o país é um alvo tão valioso quanto fácil.\n\nDizem que quem controla o planalto controla a próxima geração. Por isso mesmo, ele nunca foi deixado totalmente em paz.",
   "forte": "Educação nível 5, que vale em dobro: +6 no dado de todos os projetos, a maior chance do continente de ter ideias que dão certo.",
   "fraco": "Alimentação, Segurança, Poder militar e Estabilidade em nível 1: muitas fronteiras, pouca comida e pouca defesa.",
@@ -98,7 +112,9 @@ export const HISTORIAS = {
  },
  "p8": {
   "clima": "Serras secas e fronteiras tensas",
-  "historia": "A última batalha do império aconteceu nestas serras, e a guerra só terminou de verdade quando o Tratado foi assinado. O país que nasceu ali se organizou em torno do exército, e nunca mais soube viver de outro jeito.\n\nAs fronteiras são vigiadas dia e noite, e os vizinhos pensam duas vezes antes de provocar. A segurança custou caro: as escolas ficaram em segundo plano, a economia é pequena para o tamanho das forças armadas, e muita gente jovem só conhece a carreira militar.\n\nOs generais juram defender o Tratado. Mas ele vence em dez anos, e ninguém sabe o que um exército desse tamanho faz quando a paz acaba.",
+  "lema": "Alguém precisa ficar de guarda.",
+  "magoa": "Nossos soldados seguraram a última batalha por dois anos, esperando o reforço que viria das montanhas. {p2} fechou os túneis e mandou dizer que aquela guerra não era dela. Cada família daqui tem alguém enterrado nestas serras por causa disso.",
+  "historia": "A última batalha do império aconteceu nestas serras, e a guerra só terminou de verdade quando o Tratado foi assinado. O país que nasceu ali se organizou em torno do exército, e nunca mais soube viver de outro jeito.\n\nAs fronteiras são vigiadas dia e noite, e os vizinhos pensam duas vezes antes de provocar. A segurança custou caro: as escolas ficaram em segundo plano, a economia é pequena para o tamanho das forças armadas, e muita gente jovem só conhece a carreira militar.\n\nOs generais juram defender o Tratado. Mas ele está perto de vencer, e ninguém sabe o que um exército desse tamanho faz quando a paz acaba.",
   "forte": "Poder militar nível 5, que vale em dobro: +6 em ataques e defesas, o maior do continente. Segurança nível 3 protege o dinheiro.",
   "fraco": "Educação, Tecnologia, Infraestrutura e Estabilidade em nível 1: o orçamento foi quase todo para os quartéis.",
   "desafio": "Decidir se o exército serve para proteger, ameaçar ou negociar.",
@@ -110,6 +126,8 @@ export const HISTORIAS = {
  },
  "p9": {
   "clima": "Campos férteis e chuva regular",
+  "lema": "Daqui sai o pão.",
+  "magoa": "Quando nossa gente morria nas estradas da Fome, {p10} fechou a mata. Tinham comida e terra de sobra, e mandaram os famintos de volta. Hoje nos chamam de devastadores, só porque nós plantamos.",
   "historia": "A Grande Fome começou aqui. Três colheitas perdidas, e a corte levou tudo o que restava enquanto o povo do campo morria nas estradas. Ninguém nestas planícies esqueceu, e por isso os silos daqui nunca mais ficaram vazios.\n\nHoje, quase tudo que o continente come passa por estas terras, e a comida custa menos do que em qualquer outro lugar. Mas os jovens vão embora para as cidades, as escolas ficaram para trás, e uma única safra ruim abala o país inteiro.\n\nA riqueza daqui depende da chuva. E a chuva não assina tratados.",
   "forte": "Alimentação nível 5, que vale em dobro: a comida fica 60 moedas mais barata por rodada. Vocês têm o que todo mundo precisa todo dia.",
   "fraco": "Educação, Tecnologia, Infraestrutura e Estabilidade em nível 1: poucas ideias novas, e o país sofre muito com qualquer crise.",
@@ -122,6 +140,8 @@ export const HISTORIAS = {
  },
  "p10": {
   "clima": "Floresta densa e úmida",
+  "lema": "A mata lembra.",
+  "magoa": "A fumaça de {p3} desce com a chuva, e as árvores do norte da mata já estão morrendo. Quando os operários de lá adoecem, nós mandamos remédio a preço de custo. A conta da fumaça, até hoje, nunca chegou.",
   "historia": "O império nunca conseguiu dominar esta floresta. Mandou três expedições, e nenhuma voltou inteira. Quando tudo desabou, enquanto as outras províncias passavam fome, o povo daqui continuou vivendo da mata, como sempre tinha vivido.\n\nAs plantas daqui viraram remédio para o continente, e a qualidade de vida é invejada por todos. Só que há pouca indústria e pouco emprego fixo, e os jovens começam a perguntar por que tanta riqueza fica de pé enquanto falta dinheiro.\n\nMuita gente lá fora está de olho nas árvores. Alguns aqui dentro também.",
   "forte": "Saúde nível 5, que vale em dobro: a população cresce 6% por rodada, a maior do continente. Estabilidade nível 3 mantém o povo unido.",
   "fraco": "Emprego, Tecnologia, Segurança e Poder militar em nível 1: pouca renda vinda do trabalho, e crescer rápido sai caro em comida.",
@@ -134,6 +154,8 @@ export const HISTORIAS = {
  },
  "p11": {
   "clima": "Mangues e mar agitado",
+  "lema": "O mar leva, e a gente volta.",
+  "magoa": "Na Grande Fome, nossos barcos levaram peixe de graça até o deserto, quando ninguém mais lembrava que {p12} existia. Hoje, quando a tempestade derruba nossos postes, a conta de luz deles chega igual, e mais cara.",
   "historia": "Para o império, este litoral servia só para pagar imposto em peixe. Durante a Grande Fome, foram os barcos daqui que levaram comida às cidades, de graça, quando ninguém mais levava. É uma história de que este povo se orgulha, e que os outros costumam esquecer.\n\nEntre mangues e mar aberto, o país vive da pesca. Está acostumado a enchentes e reconstrói tudo depois de cada tempestade, sem pedir ajuda. O mar dá comida e trabalho, mas também leva o que quer.\n\nAs águas estão subindo, e barcos estrangeiros pescam cada vez mais perto da costa. Desta vez, talvez não baste reconstruir.",
   "forte": "Alimentação nível 4: a pesca farta deixa a comida 40 moedas mais barata. Saúde nível 3 faz a população crescer 3% por rodada.",
   "fraco": "Educação, Tecnologia, Infraestrutura e Estabilidade em nível 1: projetos são difíceis aqui, e há pouca defesa contra imprevistos.",
@@ -146,6 +168,8 @@ export const HISTORIAS = {
  },
  "p12": {
   "clima": "Deserto escaldante",
+  "lema": "Ninguém nos quis. Agora precisam de nós.",
+  "magoa": "Nossos avós foram condenados ao deserto por juízes que passavam o verão nos palácios de {p4}. Os palácios viraram hotéis, ninguém pediu desculpa, e os turistas de lá gelam a bebida com a nossa energia.",
   "historia": "O império mandava para este deserto quem queria esquecer: exilados, prisioneiros, gente sem lugar. Quando ele caiu, ninguém veio buscá-los, e ninguém disputou esta terra, porque ninguém a queria.\n\nDurante décadas, sobreviver foi tudo. Até que o calor que parecia uma maldição virou energia. Hoje, painéis solares a perder de vista abastecem boa parte do continente, e o país que todos ignoravam virou indispensável.\n\nSó que água e comida precisam vir de fora e são caríssimas. Os netos dos exilados não esqueceram quem os mandou para cá. Agora, as luzes de Meridia dependem deles.",
   "forte": "Tecnologia nível 4: a energia solar deixa os projetos 20 moedas mais baratos e dá +4 no ataque hacker. Emprego nível 3 sustenta as usinas.",
   "fraco": "Saúde, Alimentação e Estabilidade em nível 1: água e comida custam caro, e a população quase não cresce.",

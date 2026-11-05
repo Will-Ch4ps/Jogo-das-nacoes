@@ -96,6 +96,13 @@ try {
   confere(fila.filter(p => p.estado === 'fila').length === 3, 'professor vê a fila');
   const decidiu = await tenta('select public.jn_admin_decidir($1, $2, $3, $4) as ok', [SENHA_ADMIN, idAcordo, 'recusado', 'Refaçam']);
   confere(decidiu.r?.rows[0].ok === true && (await visto('AAAAAA')).usadas === 1, 'recusa devolve a ação');
+  await db.query('reset role');
+  await db.query(`update jogo_das_nacoes.estado_privado set dados = jsonb_set(jsonb_set(dados, '{janelas,noticias}', 'true'), '{params,textosPorRodada}', '1') where id = 1`);
+  await db.query('set local role anon');
+  const texto = await pedir('BBBBBB', 'noticia', { titulo: 'Primeiro' });
+  confere(!!texto.r, 'primeiro texto entra');
+  confere(/sem_textos/.test((await pedir('BBBBBB', 'noticia', { titulo: 'Segundo' })).erro), 'texto acima do limite é recusado');
+  confere((await visto('BBBBBB')).textos === 1 && (await visto('BBBBBB')).limiteTextos === 1, 'celular vê quantos textos restam');
   await db.query('rollback');
 } catch (err) {
   FALHA(err.message);

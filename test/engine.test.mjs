@@ -703,7 +703,11 @@ test('todo país tem história completa e rotas válidas', () => {
     assert.ok(h.historia.split('\n\n').length >= 3, `${c.id} tem três parágrafos`);
     assert.equal(h.dicas.length, 3, c.id);
     assert.equal(h.parceiros, undefined, `${c.id}: a história não diz quem procurar`);
-    assert.ok(!JSON.stringify(h).includes('{p'), `${c.id}: a história não cita outros países`);
+    const { magoa, ...semMagoa } = h;
+    assert.ok(!JSON.stringify(semMagoa).includes('{p'), `${c.id}: fora da mágoa, a história não cita outros países`);
+    assert.ok(h.lema?.length > 5 && magoa?.length > 40, `${c.id} tem lema e mágoa`);
+    const alvos = [...magoa.matchAll(/\{(p\d+)\}/g)].map(m => m[1]);
+    assert.ok(alvos.length >= 1 && alvos.every(id => id !== c.id && PAISES_INICIAIS.some(x => x.id === id)), `${c.id}: a mágoa aponta para outro país que existe`);
     // O que a história promete tem de bater com os níveis iniciais.
     for (const [, nome, nivel] of `${h.forte} ${h.fraco}`.matchAll(/(Emprego|Educação|Saúde|Tecnologia|Segurança|Poder militar|Infraestrutura|Estabilidade) nível (\d+)/g)) {
       const a = G.AREAS.find(x => x.nome === nome);
@@ -784,8 +788,9 @@ test('missão: prazo, a partir de uma rodada, e rivalidade', () => {
   const rival = c2.missoes[3];
   s.rodada = 5;
   c2.moedas = 9999;
-  assert.equal(G.progressoMissao(rival, c2, s).estado, 'andamento'); // ainda não é o ano 9
-  s.rodada = 9;
+  s.rodada = 3;
+  assert.equal(G.progressoMissao(rival, c2, s).estado, 'andamento'); // ainda não é a rodada 4
+  s.rodada = 4;
   assert.equal(G.progressoMissao(rival, c2, s).estado, 'cumprida');
 });
 
@@ -1180,4 +1185,51 @@ test('projeto de verdade: a rolagem decidida antes dá o mesmo resultado na pré
   assert.deepEqual([previa.nome, previa.total, previa.textoEfeito], [real.nome, real.total, real.textoEfeito]);
   assert.equal(s.paises[0].projetos, 1);
   assert.equal(s.paises[0].moedas, 170);
+});
+
+test('toda mágoa tem resposta: nenhum país fica sem rival, e as missões valem em jogo curto', () => {
+  const alvos = new Set(PAISES_INICIAIS.flatMap(c => [...HISTORIAS[c.id].magoa.matchAll(/\{(p\d+)\}/g)].map(m => m[1])));
+  assert.equal(alvos.size, 12, 'cada país é alvo de alguma mágoa');
+  for (const lista of Object.values(MISSOES)) for (const m of lista) {
+    assert.ok(!/\bano\b/i.test(m.texto), m.titulo);
+    assert.ok((m.aPartir ?? 1) <= 5, `${m.titulo} não pode exigir um jogo muito longo`);
+  }
+  assert.ok(!CONTINENTE.historia.join(' ').includes('Faltam dez'), 'a história não marca data para acabar');
+});
+
+test('rodadas não têm limite, e a tela pública continua leve depois de muitas', () => {
+  let e = novo();
+  for (const c of e.paises) c.moedas = 1e6; // Sem fome: a fome também gera notícia.
+  for (let i = 0; i < 30; i++) {
+    e.noticias.push(G.novaNoticia(e, { titulo: `Notícia ${i}`, estado: 'publicada' }), G.novaNoticia(e, { titulo: `Outra ${i}`, estado: 'publicada' }));
+    G.adicionarMarca(e, 'p1', 'festa', `Festa ${i}`);
+    e = G.fecharRodada(e);
+  }
+  assert.equal(e.rodada, 31);
+  const pub = G.partePublica(e);
+  assert.equal(pub.noticias.length, G.MAX_NOTICIAS_PUBLICAS);
+  assert.equal(pub.noticias.at(-1).titulo, 'Outra 29', 'ficam as mais novas');
+  assert.equal(e.noticias.length, 60, 'o admin continua com tudo');
+  assert.deepEqual(pub.marcas.map(m => m.titulo), ['Festa 29'], 'um acontecimento por país, recente');
+  G.fecharRodada(e);
+  assert.equal(G.partePublica(G.fecharRodada(G.fecharRodada(e))).marcas.length, 0, 'o acontecimento some do mapa');
+});
+
+test('limite de textos: recusado conta, cancelado devolve, e vale por rodada', () => {
+  const s = jogoPedidos();
+  assert.equal(G.limiteTextos(s), 2);
+  const lista = [ped('noticia', {}, { estado: 'fila' }), ped('noticia', {}, { estado: 'recusado' }), ped('noticia', {}, { estado: 'aprovado' }), ped('noticia', {}, { estado: 'cancelado' }), ped('noticia', {}, { rodada: 2, estado: 'fila' }), ped('subir', {}, { estado: 'fila' })];
+  assert.equal(G.textosUsados(lista, 'm', 1), 3);
+  assert.equal(G.acoesUsadas(lista, 'm', 1), 1, 'texto não gasta ação');
+});
+
+test('a ficha não cresce sem parar', () => {
+  const s = jogoPedidos();
+  s.paises[0].tentativas = Array.from({ length: 50 }, (_, i) => ({ titulo: `T${i}`, rodada: 1, resultado: 'Sucesso', dado: 1, total: 1, custo: 0, efeito: '' }));
+  for (let i = 0; i < 40; i++) s.noticias.push(G.novaNoticia(s, { titulo: `M${i}`, tipo: 'mensagem', de: 'o', para: 'm', privada: true, estado: 'publicada' }));
+  const f = G.visaoDoPais(s.paises[0], s);
+  assert.equal(f.tentativas.length, 15);
+  assert.equal(f.tentativas[0].titulo, 'T49');
+  assert.equal(f.mensagens.length, 20);
+  assert.equal(f.mensagens[0].titulo, 'M39');
 });

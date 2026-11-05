@@ -123,7 +123,7 @@ export const MANCHETES = {
       ['[B] pede ajuda em [Area], e [A] aparece com um manual de 900 páginas', 'O manual tem índice, apêndice e uma seção só de agradecimentos. Em [B], já estão usando o volume para calçar a mesa da reunião, mas com muito respeito.'],
     ],
     comida: [
-      ['Navio de comida sai de [A] rumo a [B], e o cheiro chega antes', 'A população de [B] foi para o porto bem antes de o navio aparecer. Em [A], os agricultores acenam, fazendo as contas de quanto isso vai render.'],
+      ['Carga de comida sai de [A] rumo a [B], e o cheiro chega antes', 'A população de [B] foi para a rua bem antes de a carga aparecer. Em [A], os produtores acenam, fazendo as contas de quanto isso vai render.'],
       ['[B] agora almoça por conta de [A]', 'O acordo garante comida na mesa e uma ligação de [A] toda semana, perguntando se está gostando. Dizem que, em [B], até o tempero já mudou de sotaque.'],
     ],
     secreto: [
@@ -201,11 +201,11 @@ export const MANCHETES = {
   variedade: [
     { t: 'Previsão do tempo: 100% de chance de alguém culpar o professor', x: 'A frente fria de reclamações chega ainda nesta rodada. Recomenda-se levar um guarda-chuva, um bom argumento e a calma que puder.' },
     { t: 'Horóscopo de Meridia: hoje os astros mandam não confiar em quem diz "confia"', x: 'Quem nasceu em qualquer dia do ano deve evitar assinar coisas sem ler. Número da sorte: o valor que estão escondendo de você.' },
-    { t: 'Classificados: troca-se ilha pequena por ilha maior. Tratar com a marinha de [País]', x: 'Ilha em bom estado, com pouco uso e uma gaivota de estimação. Aceita-se carro como parte do pagamento. Não respondemos a curiosos.' },
+    { t: 'Classificados: troca-se tanque pouco usado por trator novo. Tratar com o quartel de [País]', x: 'Tanque em bom estado, com poucas batalhas e um pombo de estimação. Aceita-se carro como parte do pagamento. Não respondemos a curiosos.' },
     { t: 'Capivara é eleita vereadora em [País] e já é a mais trabalhadora da câmara', x: 'Ela não falta, não briga e não faz discurso. Os colegas tentaram criticar, mas ela apenas continuou comendo, com muita tranquilidade.' },
-    { t: 'Final do campeonato de [País] termina empatada: os dois times perderam a bola', x: 'A bola caiu no rio aos dez minutos, e ninguém tinha outra. Os torcedores comemoraram mesmo assim, por garantia.' },
+    { t: 'Final do campeonato de [País] termina empatada: os dois times perderam a bola', x: 'A bola foi parar do outro lado da fronteira aos dez minutos, e ninguém tinha outra. Os torcedores comemoraram mesmo assim, por garantia.' },
     { t: 'Pesquisa: nove em cada dez ministros não leem o que assinam', x: 'O décimo leu, entendeu tudo e assinou mesmo assim. Ele é considerado o caso mais preocupante.' },
-    { t: 'Gaivota pousa em estátua de herói de [País] e recebe mais votos que o prefeito', x: 'A ave não prometeu nada, o que agradou bastante o eleitorado. A estátua segue sem comentar o assunto.' },
+    { t: 'Pombo pousa em estátua de herói de [País] e recebe mais votos que o prefeito', x: 'A ave não prometeu nada, o que agradou bastante o eleitorado. A estátua segue sem comentar o assunto.' },
     { t: 'Coluna social: dois embaixadores vão ao jantar com a mesma roupa', x: 'O clima ficou pesado entre a entrada e a sobremesa. Analistas temem uma crise diplomática, e pedem que alguém troque de paletó.' },
     { t: '[País] bate o recorde de maior fila do mundo, e ninguém sabe para quê', x: 'As pessoas viram uma fila e entraram, por precaução. Quem está na frente foi perguntado sobre o motivo e respondeu que também estava esperando.' },
     { t: 'Cientistas de Meridia comprovam: esta reunião podia ter sido um e-mail', x: 'O estudo durou anos e foi apresentado em uma reunião de seis horas. Ao final, os participantes combinaram de marcar outra para discutir o resultado.' },

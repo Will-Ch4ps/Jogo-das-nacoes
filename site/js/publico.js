@@ -26,6 +26,19 @@ function guardarCodigo(k) {
   try { if (k) localStorage.setItem('jn_codigo', k); else localStorage.removeItem('jn_codigo'); } catch { /* só um atalho: pede o código de novo */ }
 }
 
+// Ajuda curta de cada parte. Fica fechada, e continua aberta se a tela for redesenhada.
+function ajuda(chave, ...linhas) {
+  ui.ajudas ||= new Set();
+  return h('details', { class: 'ajuda', open: ui.ajudas.has(chave), ontoggle: ev => { if (ev.target.open) ui.ajudas.add(chave); else ui.ajudas.delete(chave); } },
+    h('summary', {}, 'Como funciona'), h('ul', {}, linhas.map(t => h('li', {}, t))));
+}
+// Mostra só os primeiros itens de uma lista longa, com um botão para ver o resto.
+function verMais(chave, lista, n) {
+  ui.verTudo ||= {};
+  if (ui.verTudo[chave] || lista.length <= n) return { itens: lista, botao: null };
+  return { itens: lista.slice(0, n), botao: h('button', { class: 'btn peq leve ver-mais', onclick: () => { ui.verTudo[chave] = true; render(); } }, `Ver mais ${lista.length - n}`) };
+}
+const comNomes = t => t.replace(/\{(p\d+)\}/g, (_, id) => nomeDe(id));
 const paisDe = id => J.paises.find(c => c.id === id);
 const nomeDe = id => paisDe(id)?.nome || 'país removido';
 const telaGrande = () => window.matchMedia('(min-width: 1000px)').matches;
@@ -48,8 +61,9 @@ function topo() {
 function colunaMapa() {
   const porId = J.paises.slice().sort((a, b) => a.id.slice(1) - b.id.slice(1));
   return h('section', { class: 'col-mapa', 'data-aba': 'mapa' },
+    ajuda('mapa', 'Toque em um país para ver a posição, as áreas, os vizinhos e as rotas.', 'Os ícones mostram o que aconteceu nas últimas rodadas.', 'As rotas são só desenho. Cobrar ou bloquear uma rota é um acordo entre os países.'),
     h('div', { class: 'mapa-quadro' }, mapaSVG(J.paises, ui.pais, id => escolher(id === ui.pais ? null : id, true), J.marcas || [])),
-    (J.marcas || []).length > 0 && h('ul', { class: 'lista-marcas', 'aria-label': 'Acontecimentos no mapa' }, J.marcas.slice().reverse().map(m => h('li', {},
+    (J.marcas || []).length > 0 && h('ul', { class: 'lista-marcas', 'aria-label': 'Acontecimentos no mapa' }, J.marcas.slice(-4).reverse().map(m => h('li', {},
       h('button', { class: `marca-item ${m.tipo}`, onclick: () => escolher(m.paisId, true) }, icone(m.tipo, 20), h('span', {}, h('strong', {}, m.titulo || nomeMarca(m.tipo)), h('small', {}, nomeDe(m.paisId))))))),
     h('div', { class: 'lista-paises' + (ui.pais ? ' compacta' : '') }, porId.map(c =>
       h('button', { class: 'pais-chip' + (c.id === ui.pais ? ' ativo' : ''), style: `--cor:${c.cor}`, 'aria-pressed': String(c.id === ui.pais), onclick: () => escolher(c.id === ui.pais ? null : c.id, true) }, h('span', {}, c.nome)))));
@@ -61,8 +75,10 @@ const destaque = (v, r, cls) => h('div', { class: 'destaque' }, h('strong', { cl
 function dossie(id) {
   const hs = HISTORIAS[id];
   return [
+    hs.lema && h('p', { class: 'lema' }, `“${hs.lema}”`),
     h('p', { class: 'clima' }, hs.clima),
     hs.historia.split('\n\n').map(par => h('p', { class: 'historia' }, par)),
+    hs.magoa && h('div', { class: 'magoa' }, h('h4', {}, 'O que não perdoam'), h('p', {}, comNomes(hs.magoa))),
     h('dl', { class: 'tracos' },
       h('div', { class: 'forte' }, h('dt', {}, 'Ponto forte'), h('dd', {}, hs.forte)),
       h('div', { class: 'fraco' }, h('dt', {}, 'Ponto fraco'), h('dd', {}, hs.fraco)),
@@ -112,7 +128,7 @@ function secaoPaises() {
   return h('section', { class: 'secao', 'data-aba': 'paises' },
     h('h2', { class: 'titulo' }, 'Os países'),
     loreContinente(),
-    h('p', { class: 'meta explica' }, 'Toque em um país para ler a história, a força e a fraqueza dele. Quem pode ajudar, e quem pode atrapalhar, vocês descobrem.'),
+    ajuda('paises', 'Toque em um país para ler a história, a força, a fraqueza e a mágoa dele.', 'Cada povo conta a própria versão. Nem sempre os dois lados concordam.', 'Quem pode ajudar, e quem pode atrapalhar, vocês descobrem.'),
     h('div', { class: 'dossies' }, porId.map(c => h('details', { id: `dossie-${c.id}`, class: 'dossie', style: `--cor:${c.cor}`, open: ui.abertos.has(c.id), ontoggle: ev => { if (ev.target.open) ui.abertos.add(c.id); else ui.abertos.delete(c.id); } },
       h('summary', {}, h('span', { class: 'dossie-nome' }, h('strong', {}, c.nome), h('small', {}, c.perfil)), h('span', { class: 'dossie-pos' }, `${c.pos}º`)),
       h('div', { class: 'dossie-corpo' }, dossie(c.id),
@@ -124,7 +140,7 @@ function secaoRanking() {
   const lista = J.paises.slice().sort((a, b) => a.pos - b.pos);
   return h('section', { class: 'secao', 'data-aba': 'ranking' },
     h('h2', { class: 'titulo' }, 'Ranking'),
-    h('p', { class: 'meta explica' }, `Riqueza = dinheiro + ${J.params.valorPessoa} moedas por mil pessoas.`),
+    ajuda('ranking', `Riqueza = dinheiro + ${J.params.valorPessoa} moedas por mil pessoas.`, 'Vence quem estiver na frente quando o professor encerrar o jogo.', 'Em empate, fica na frente quem tem mais pessoas.'),
     h('ol', { class: 'placar' }, lista.map(c => h('li', {},
       h('button', { class: 'placar-item', style: `--cor:${c.cor}`, onclick: () => escolher(c.id, true) },
         h('span', { class: 'placar-pos' }, c.pos),
@@ -137,7 +153,7 @@ function secaoRanking() {
 /* ---------- Pedidos: o grupo manda, o professor aprova ou recusa ---------- */
 const ERROS_PEDIDO = {
   janela_noticias_fechada: 'O professor fechou a janela do jornal.', janela_fechada: 'O professor fechou a janela de ações.', sem_acoes: 'Acabaram as ações desta rodada.',
-  muitas_noticias: 'Vocês já têm 5 textos esperando o professor.', muitos_pedidos: 'Muitos pedidos nesta rodada. Fale com o professor.', jogo_encerrado: 'O jogo acabou.', pedido_invalido: 'Confira o pedido e tente de novo.', codigo_invalido: 'Código não encontrado.',
+  sem_textos: 'Acabaram os textos desta rodada.', muitos_pedidos: 'Muitos pedidos nesta rodada. Fale com o professor.', jogo_encerrado: 'O jogo acabou.', pedido_invalido: 'Confira o pedido e tente de novo.', codigo_invalido: 'Código não encontrado.',
 };
 const erroPedido = err => Object.entries(ERROS_PEDIDO).find(([k]) => err.message.includes(k))?.[1] || 'Sem conexão. Tente de novo.';
 const ESTADOS_PEDIDO = { aguardando: 'Esperando o outro país', fila: 'Com o professor', aprovado: 'Aprovado', recusado: 'Recusado', cancelado: 'Cancelado' };
@@ -326,20 +342,24 @@ function formTexto(f) {
     mensagem && h('label', {}, 'Para quem?', h('select', { onchange: ev => { st.para = ev.target.value; render(); } }, opcoesOutros(f, st.para, 'Aberta a todos'))),
     mensagem && st.para && h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: st.privada, onchange: ev => { st.privada = ev.target.checked; render(); } }), 'Só quem recebe pode ler'),
     h('label', {}, 'Manchete', h('input', { maxlength: 140, required: true, value: st.titulo, oninput: ev => { st.titulo = ev.target.value; }, onchange: () => render() })),
-    h('label', {}, 'Texto', h('textarea', { rows: 5, maxlength: 3000, oninput: ev => { st.texto = ev.target.value; } }, st.texto)),
+    h('label', {}, 'Texto', h('textarea', { rows: 5, maxlength: 1500, oninput: ev => { st.texto = ev.target.value; } }, st.texto)),
     h('button', { class: 'btn', disabled: !ok || ui.enviando }, 'Mandar ao professor'));
 }
 function telaPedidos(f) {
   const P = ui.ped, jan = J.janelas || {}, lista = P?.pedidos || [], livres = P ? Math.max(0, P.limite - P.usadas) : null;
   const propostas = lista.filter(p => p.para === f.id && p.estado === 'aguardando' && p.rodada === J.rodada);
-  const meus = lista.filter(p => !propostas.includes(p) && p.estado !== 'cancelado');
+  const visiveis = lista.filter(p => !propostas.includes(p) && p.estado !== 'cancelado');
+  const emAberto = p => p.estado === 'fila' || (p.estado === 'aguardando' && p.rodada === J.rodada);
+  const meus = visiveis.filter(p => p.rodada === J.rodada || emAberto(p)), antigos = visiveis.filter(p => !meus.includes(p));
+  const textosLivres = P ? Math.max(0, (P.limiteTextos ?? 2) - (P.textos ?? 0)) : null;
   const nomeOk = id => (id === f.id ? f.nome : nomeDe(id));
   const podeAcao = jan.acoes && livres > 0;
   const botao = (id, sub, pode) => h('button', { class: 'btn-pedir' + (ui.pedForm === id ? ' ativo' : ''), disabled: !pode, 'aria-expanded': String(ui.pedForm === id), onclick: () => { ui.pedForm = ui.pedForm === id ? null : id; ui.pedMsg = null; render(); } }, h('strong', {}, ROTULOS_FORM[id]), h('small', {}, sub));
   const forms = { subir: formSubir, manutencao: formManutencao, dinheiro: formDinheiro, acordo: formAcordo, projeto: formProjeto, noticia: formTexto };
-  const aberto = ui.pedForm && (ui.pedForm === 'noticia' ? jan.noticias : podeAcao) ? forms[ui.pedForm] : null;
+  const aberto = ui.pedForm && (ui.pedForm === 'noticia' ? jan.noticias && textosLivres !== 0 : podeAcao) ? forms[ui.pedForm] : null;
   const ctx = contaDosPedidos(f), itemDe = p => ctx?.sim.itens.find(i => i.p.id === p.id);
   return [
+    ajuda('pedidos', 'Cada pedido vai para o professor. Nada vale até aprovar.', 'Os botões acendem quando o professor abre a janela.', 'Toda rodada traz ações novas. Pedido recusado ou cancelado devolve a ação.', 'Para atacar ou avisar que cumpriram uma missão, chamem o professor.'),
     h('div', { class: 'acoes-faixa' + (jan.acoes ? '' : ' fechada') }, h('strong', {}, livres == null ? 'Ações' : `${livres} ${livres === 1 ? 'ação livre' : 'ações livres'}`), h('span', {}, jan.acoes ? (livres === 0 ? 'Acabaram nesta rodada.' : 'nesta rodada') : 'A janela de ações está fechada.')),
     ui.pedMsg && h('p', { class: `mensagem ${ui.pedMsg.tipo}`, role: 'status' }, ui.pedMsg.texto),
     ctx && ctx.lista.some(p => p.tipo !== 'noticia') && caixaConta(ctx.sim, 'Se tudo for aprovado', f),
@@ -357,10 +377,13 @@ function telaPedidos(f) {
     h('h4', {}, 'O que vocês querem fazer?'),
     h('div', { class: 'pedido-botoes' },
       botao('subir', 'usa 1 ação', podeAcao), botao('acordo', 'usa 1 ação', podeAcao), botao('dinheiro', 'usa 1 ação', podeAcao), botao('manutencao', 'usa 1 ação', podeAcao), botao('projeto', 'usa 1 ação', podeAcao),
-      botao('noticia', jan.noticias ? 'não usa ação' : 'janela fechada', !!jan.noticias)),
+      botao('noticia', !jan.noticias ? 'janela fechada' : textosLivres === 0 ? 'acabaram os textos' : `não usa ação · ${textosLivres ?? ''} ${textosLivres === 1 ? 'texto' : 'textos'}`, !!jan.noticias && textosLivres !== 0)),
     aberto && h('div', { class: 'pedido-form' }, aberto(f, ctx)),
     h('h4', {}, 'Pedidos de vocês'),
-    meus.length ? h('ul', { class: 'lista' }, meus.map(p => {
+    meus.length ? h('ul', { class: 'lista' }, meus.map(cartaoMeu)) : h('p', { class: 'vazio-txt' }, 'Nenhum pedido nesta rodada.'),
+    antigos.length > 0 && h('details', { class: 'mais-antigos', open: !!ui.pedAntigos, ontoggle: ev => { ui.pedAntigos = ev.target.open; } }, h('summary', {}, `Rodadas anteriores (${antigos.length})`), h('ul', { class: 'lista' }, antigos.map(cartaoMeu))),
+  ];
+  function cartaoMeu(p) {
       const passou = p.estado === 'aguardando' && p.rodada !== J.rodada, cls = p.estado === 'aprovado' ? ' ok' : p.estado === 'recusado' || passou ? ' nao' : '', simples = p.para !== f.id && ['subir', 'manutencao', 'dinheiro', 'projeto'].includes(p.tipo);
       return h('li', { class: 'cartao pedido-meu' },
         h('div', { class: 'cartao-topo' }, h('strong', {}, p.para === f.id ? `Proposta de ${nomeDe(p.pais)}` : simples ? frasePedido(p, nomeOk) : ROTULOS_FORM[p.tipo]), h('span', { class: `etiqueta estado-pedido${cls}` }, passou ? 'Acabou o prazo' : p.tipo === 'projeto' && p.estado === 'aprovado' ? 'Dado rolado' : ESTADOS_PEDIDO[p.estado])),
@@ -370,8 +393,7 @@ function telaPedidos(f) {
         p.editado && h('p', { class: 'meta' }, 'O professor ajustou este pedido antes de aprovar.'),
         p.resposta && h('p', { class: 'meta' }, h('b', {}, 'Resposta: '), p.resposta),
         p.pais === f.id && !passou && ['aguardando', 'fila'].includes(p.estado) && h('div', { class: 'linha-acoes' }, h('button', { class: 'btn peq leve', onclick: () => responder(p.id, 'cancelar', p.tipo === 'noticia' ? 'Texto cancelado.' : 'Cancelado. A ação voltou.') }, 'Cancelar')));
-    })) : h('p', { class: 'vazio-txt' }, 'Nenhum pedido ainda.'),
-  ];
+  }
 }
 
 /* ---------- Meu país ---------- */
@@ -389,7 +411,7 @@ const rotuloDura = r => (r == null ? 'até o fim' : r === 1 ? 'última rodada' :
 const linhaConta = (x, sinalTxt) => h('div', { class: 'conta' + (x.ruim ? ' ruim' : '') },
   h('span', {}, x.rotulo, x.restantes !== undefined && h('em', { class: 'dura' }, rotuloDura(x.restantes))),
   h('strong', {}, `${sinalTxt}${fmt(Math.abs(x.valor))}`));
-const ABAS_FICHA = [['conta', 'Conta'], ['pedidos', 'Pedidos'], ['areas', 'Áreas'], ['acordos', 'Acordos'], ['projetos', 'Projetos'], ['missoes', 'Missões'], ['mensagens', 'Mensagens'], ['pais', 'Nosso país'], ['guia', 'Como jogar']];
+const ABAS_FICHA = [['conta', 'Conta'], ['pedidos', 'Pedidos'], ['areas', 'Áreas'], ['acordos', 'Acordos'], ['projetos', 'Projetos'], ['missoes', 'Missões'], ['mensagens', 'Mensagens'], ['pais', 'Nosso país']];
 function fichaPais(f) {
   const area = id => f.areas.find(a => a.id === id);
   const acordos = f.acordos.filter(a => a.origem === 'acordo'), efeitos = f.acordos.filter(a => a.origem === 'efeito'), emProjeto = f.acordos.filter(a => a.origem === 'projeto');
@@ -405,6 +427,7 @@ function fichaPais(f) {
   const telas = {
     pedidos: () => telaPedidos(f),
     conta: () => [
+      ajuda('conta', 'Vai receber: tudo o que entra no fim da rodada.', 'Comida: 1 moeda por mil pessoas, menos os descontos. Se não der para pagar, o país perde pessoas.', 'Manutenção: é paga com o que sobra. A área que ficar sem pagar entra em crise.', 'Sobra: é o que fica no cofre depois de tudo.'),
       h('div', { class: 'contas' },
         h('h5', {}, h('span', {}, 'Vai receber'), h('span', { class: 'pos' }, `+${fmt(f.recebe)}`)),
         f.entradas.map(x => linhaConta(x, '+')),
@@ -425,7 +448,7 @@ function fichaPais(f) {
           h('tbody', {}, f.serie.slice().reverse().map(s => h('tr', {}, h('td', {}, s.r), h('td', {}, fmt(s.moedas)), h('td', {}, fmt(Math.round(s.pop))), h('td', {}, `${s.pos}º`))))))),
     ],
     areas: () => [
-      h('p', { class: 'meta explica' }, `Comprar sobe o nível, e custa igual em todas as áreas. A manutenção é por rodada e depende do peso: essencial custa 3 por nível, importante 2 e estratégica 1. Sem pagar, a área entra em crise e, a cada ${f.rodadasParaPerderNivel} rodadas sem pagar, perde um nível. Os níveis 5 e 10 valem em dobro. Acima do 10, o nível só serve para emprestar.`),
+      ajuda('areas', 'Subir um nível custa o próximo nível × 10 moedas, uma vez só.', 'Manutenção por nível, a cada rodada: essencial 3, importante 2, estratégica 1.', `Sem pagar, a área entra em crise e, a cada ${f.rodadasParaPerderNivel} rodadas sem pagar, perde um nível.`, 'Os níveis 5 e 10 valem em dobro. Acima do 10, o nível só serve para emprestar.', 'Comprado é o que vocês pagaram. Real é o que vale agora, com acordos e efeitos.'),
       areasDoPais(Object.fromEntries(f.areas.map(a => [a.id, a.real])), { comprados: Object.fromEntries(f.areas.map(a => [a.id, a.nivel])), problemas: f.areas.filter(a => a.problema).map(a => a.id), extra: a => {
         const d = area(a.id), semPagar = d.manut.estado !== 'paga';
         return h('div', { class: 'area-ficha' },
@@ -439,18 +462,20 @@ function fichaPais(f) {
       } }),
     ],
     acordos: () => [
+      ajuda('acordos', 'Um acordo muda dinheiro, comida ou níveis por um tempo.', 'Para fazer um: aba Pedidos, Propor acordo. O outro país aceita, e o professor aprova.', 'Emprestar níveis: quem empresta perde a força deles enquanto durar. A manutenção continua igual.', 'Acordo secreto: só os dois países veem.'),
       acordos.length ? h('ul', { class: 'lista' }, acordos.map(cartaoCompromisso)) : h('p', { class: 'vazio-txt' }, 'Nenhum acordo ainda.'),
       efeitos.length > 0 && h('div', {}, h('h4', {}, 'O que está afetando vocês'), h('ul', { class: 'lista' }, efeitos.map(cartaoCompromisso))),
     ],
     projetos: () => [
       h('div', { class: 'previsao neutra' }, h('span', {}, 'O próximo projeto custa cerca de'), h('strong', {}, `${f.proximoProjeto} moedas`)),
-      h('p', { class: 'meta explica' }, 'Mandem a ideia na aba Pedidos. O professor julga e rola o dado.'),
+      ajuda('projetos', 'Mandem a ideia na aba Pedidos. O professor julga e rola o dado.', 'Total = dado + nível da área + bônus da ideia.', 'Tirou 1: o efeito sai ao contrário. Abaixo da dificuldade: nada muda, e o preço é cobrado.', 'Quanto mais passar da dificuldade, maior o efeito. Cada projeto novo custa mais que o anterior.'),
       emProjeto.length > 0 && h('div', {}, h('h4', {}, 'Rendendo agora'), h('ul', { class: 'lista' }, emProjeto.map(cartaoCompromisso))),
       h('h4', {}, 'Tentativas'),
-      (f.tentativas || []).length ? h('ul', { class: 'lista' }, f.tentativas.map(t => h('li', { class: 'cartao' },
+      (f.tentativas || []).length ? h('ul', { class: 'lista' }, verMais('tentativas', f.tentativas, 4).itens.map(t => h('li', { class: 'cartao' },
         h('div', { class: 'cartao-topo' }, h('strong', {}, t.titulo), h('span', { class: 'etiqueta' }, `Rodada ${t.rodada}`)),
         h('p', {}, `${t.resultado}: tirou ${t.dado} no dado, total ${t.total}.`),
         h('p', { class: 'meta' }, `${t.efeito ? `${t.efeito}.` : 'Nada mudou.'}${t.custo ? ` Custou ${t.custo} moedas.` : ''}`)))) : h('p', { class: 'vazio-txt' }, 'Nenhuma tentativa ainda.'),
+      verMais('tentativas', f.tentativas || [], 4).botao,
     ],
     missoes: () => [
       h('p', { class: 'missoes-sigilo' }, h('strong', {}, 'Só o seu grupo vê isto.'), ' Cumpra e chame o professor: ele confirma e paga o prêmio. Os outros países têm as próprias missões, e não sabem das suas.'),
@@ -462,16 +487,17 @@ function fichaPais(f) {
     ],
     mensagens: () => [
       h('p', { class: 'missoes-sigilo' }, h('strong', {}, 'Mensagens privadas.'), ' Só quem manda e quem recebe veem o que está aqui.'),
-      (f.mensagens || []).length ? h('ul', { class: 'lista' }, f.mensagens.map(n => h('li', {}, h('button', { class: 'cartao mensagem-item', onclick: () => abrirNoticia(n.id) },
+      (f.mensagens || []).length ? h('ul', { class: 'lista' }, verMais('mensagens', f.mensagens, 6).itens.map(n => h('li', {}, h('button', { class: 'cartao mensagem-item', onclick: () => abrirNoticia(n.id) },
         h('span', { class: 'cartao-topo' }, h('strong', {}, n.titulo), h('span', { class: 'etiqueta' }, `Rodada ${n.rodada}`)),
         h('span', { class: 'meta' }, `${n.de === f.id ? `Enviada para ${nomeDe(n.para)}` : fonteDe(n)}`))))) : h('p', { class: 'vazio-txt' }, 'Nenhuma mensagem por enquanto.'),
+      verMais('mensagens', f.mensagens || [], 6).botao,
     ],
     pais: () => [
+      ajuda('nosso-pais', 'Esta é a história que todos podem ler sobre vocês.', '"Para pensar" só o seu grupo vê.'),
       dossie(f.id),
       h('h4', {}, 'Para pensar'),
       h('ul', { class: 'dicas' }, HISTORIAS[f.id].dicas.map(d => h('li', {}, d))),
     ],
-    guia: () => conteudoGuia(),
   };
   return h('article', { class: 'detalhe ficha', style: `--cor:${f.cor}` },
     h('header', { class: 'detalhe-topo' },
@@ -486,7 +512,7 @@ function fichaPais(f) {
       h('div', { class: 'ficha-tela' }, telas[aba]())));
 }
 function secaoMeu() {
-  return h('section', { class: 'secao', 'data-aba': 'meu' }, ui.ficha ? fichaPais(ui.ficha) : telaCodigo(), regras());
+  return h('section', { class: 'secao', 'data-aba': 'meu' }, ui.ficha ? fichaPais(ui.ficha) : telaCodigo());
 }
 async function entrar(codigo) {
   ui.entrando = true; ui.erroCodigo = null; render();
@@ -584,17 +610,22 @@ function secaoJornal() {
     h('header', { class: 'jornal-capa' },
       h('p', { class: 'jornal-linha' }, h('span', {}, `Rodada ${J.rodada}`), h('span', {}, `${J.noticias.length} ${J.noticias.length === 1 ? 'matéria' : 'matérias'}`)),
       h('h2', {}, `A Voz de ${CONTINENTE.nome}`)),
+    ajuda('jornal', 'Toque em uma notícia para ler a matéria inteira.', 'Nem tudo é verdade. Olhem sempre quem publicou.', 'Use os filtros para achar o que procura. As rodadas antigas ficam fechadas.', 'Para publicar: Meu país, aba Pedidos, com a janela do jornal aberta.'),
     h('div', { class: 'jornal-abas' }, aba('noticias', `Notícias (${J.noticias.length})`), aba('acordos', `Acordos (${J.acordos.length})`)),
     vista === 'acordos'
-      ? (J.acordos.length ? h('ul', { class: 'lista' }, J.acordos.map(cartaoAcordo)) : h('p', { class: 'jornal-vazio' }, 'Nenhum acordo público em vigor.'))
+      ? (J.acordos.length ? [h('ul', { class: 'lista' }, verMais('jornal-acordos', J.acordos.slice().reverse(), 8).itens.map(cartaoAcordo)), verMais('jornal-acordos', J.acordos, 8).botao] : h('p', { class: 'jornal-vazio' }, 'Nenhum acordo público em vigor.'))
       : [
         h('div', { class: 'jornal-filtros' },
           chip('todas', 'Tudo'), chip('oficial', 'Oficial'), chip('imprensa', 'Imprensa'), chip('boato', 'Boatos'), chip('mensagem', 'Mensagens'),
           h('label', { class: 'sr', for: 'filtro-pais' }, 'Filtrar por país'),
           h('select', { id: 'filtro-pais', class: 'jornal-select', onchange: ev => { ui.jornalPais = ev.target.value; render(); } }, h('option', { value: '' }, 'Todos os países'), J.paises.map(c => h('option', { value: c.id, selected: c.id === filtroPais }, c.nome)))),
-        manchete ? cartaoNoticia(manchete, true) : h('p', { class: 'jornal-vazio' }, J.noticias.length ? 'Nada com esse filtro.' : 'Nenhuma notícia ainda. Tem algo a contar? Mande para o professor.'),
-        porRodada.map(([r, ns]) => h('div', { class: 'jornal-rodada' }, h('h3', {}, `Rodada ${r}`), h('ul', { class: 'jornal-lista' }, ns.map(n => cartaoNoticia(n))))),
-        h('p', { class: 'jornal-dica' }, 'Quer publicar algo? Mande o texto para o professor, no formato que quiser.'),
+        manchete ? cartaoNoticia(manchete, true) : h('p', { class: 'jornal-vazio' }, J.noticias.length ? 'Nada com esse filtro.' : 'Nenhuma notícia ainda.'),
+        porRodada.map(([r, ns], i) => {
+          if (i === 0) { const v = verMais(`jornal-${r}`, ns, 5); return h('div', { class: 'jornal-rodada' }, h('h3', {}, `Rodada ${r}`), h('ul', { class: 'jornal-lista' }, v.itens.map(n => cartaoNoticia(n))), v.botao); }
+          ui.jornalAbertas ||= new Set();
+          return h('details', { class: 'jornal-antiga', open: ui.jornalAbertas.has(r), ontoggle: ev => { if (ev.target.open) ui.jornalAbertas.add(r); else ui.jornalAbertas.delete(r); } },
+            h('summary', {}, `Rodada ${r}`, h('span', {}, `${ns.length} ${ns.length === 1 ? 'matéria' : 'matérias'}`)), h('ul', { class: 'jornal-lista' }, ns.map(n => cartaoNoticia(n))));
+        }),
       ]);
 }
 // Faixa com a última notícia, para ninguém perder o que acabou de sair.
@@ -603,39 +634,6 @@ function ultimaHora() {
   if (!n || ui.aba === 'jornal') return null;
   return h('button', { class: 'ultima-hora', onclick: () => abrirNoticia(n.id) }, h('b', {}, n.chapeu || 'Última hora'), h('span', {}, n.titulo));
 }
-// Como jogar: o que acontece em cada rodada e o que pedir ao professor.
-function conteudoGuia() {
-  const item = (t, d) => h('li', {}, h('strong', {}, t), h('p', { class: 'meta' }, d));
-  return [
-    h('h4', {}, 'O objetivo'),
-    h('p', {}, `Quando o Tratado vencer, a nação mais rica presidirá o Conselho de ${CONTINENTE.nome}. Riqueza é o dinheiro mais ${J.params.valorPessoa} moedas por mil pessoas, então cuidar da população também conta.`),
-    h('h4', {}, 'O que fazer em cada rodada'),
-    h('ol', { class: 'guia-lista' },
-      item('Leiam a conta', 'Em "Meu país", vejam quanto entra, quanto sai e com quanto vão terminar a rodada.'),
-      item('Leiam o jornal', 'As notícias mostram quem está em crise, quem cresceu e o que está mudando no continente.'),
-      item('Decidam juntos', 'O que vale mais agora: subir uma área, fechar um acordo, tentar um projeto?'),
-      item('Negociem', 'Um representante pode visitar as salas dos outros países e combinar o que quiser.'),
-      item('Mandem o pedido', 'Em "Meu país", na aba Pedidos, quando o professor abrir a janela. Nada vale até o professor aprovar. Pedido recusado ou cancelado devolve a ação.')),
-    h('h4', {}, 'O que dá para pedir'),
-    h('ul', { class: 'guia-lista' },
-      item('Subir uma área', 'Usem o + e o −: vários níveis na mesma área gastam 1 ação só. Custa uma vez, e a área passa a render mais. Todo nível aumenta a manutenção. Dá para comprar até o 15: acima do 10 não rende mais, mas serve para emprestar sem perder força.'),
-      item('Cortar uma manutenção', 'Usa 1 ação. Sobra dinheiro agora, mas a área entra em crise na rodada seguinte, e depois perde níveis.'),
-      item('Fazer um acordo', 'Quem monta usa 1 ação; o outro país só aceita. Pode ser dinheiro por rodada, comida, empréstimo de níveis ou o que combinarem. Pode ser secreto. Quem empresta perde a força daqueles níveis enquanto durar e continua pagando a manutenção normal. Antes de mandar ou aceitar, a tela mostra o que muda na conta.'),
-      item('Passar dinheiro', 'Usa 1 ação. Uma transferência única para outro país, para ajudar ou pagar por algo.'),
-      item('Tentar um projeto', 'Usa 1 ação. Mandem o nome, a ideia e o que esperam ganhar na aba Pedidos. O professor julga a ideia e rola o dado. O preço é cobrado mesmo se der errado.'),
-      item('Publicar no jornal', 'Quando a janela do jornal abrir, mandem o texto na aba Pedidos. Não gasta ação. Pode ser verdade, propaganda, boato, ou uma mensagem para outro país, aberta ou só para quem recebe.'),
-      item('Confirmar uma missão', 'Cada país tem missões secretas, com prêmio em moedas. Quando cumprirem uma, chamem o professor.'),
-      item('Atacar', 'Chamem o professor. O dado decide, e quem perde paga parte do próprio dinheiro ao outro. O militar só vale contra vizinhos e vira notícia; o hacker é secreto.')),
-    h('h4', {}, 'O que pode dar errado'),
-    h('ul', { class: 'guia-lista' },
-      item('Faltar comida', 'A conta de comida cresce com a população. Se o dinheiro não cobrir, o país perde 10% das pessoas, e nenhuma manutenção é paga naquela rodada.'),
-      item('Área em crise', 'Sem manutenção, a área atinge justamente o que cuida: Saúde derruba a população, Emprego traz greves, Segurança traz crime. Áreas essenciais doem mais.'),
-      item('Surpresas', 'Crises e eventos podem atingir todos os países. Guardar um pouco de dinheiro ajuda a atravessá-los.')),
-  ];
-}
-function guia() { return h('details', { class: 'regras' }, h('summary', {}, 'Como jogar'), h('div', { class: 'guia' }, conteudoGuia())); }
-const regras = guia;
-
 function navegacao() {
   const novas = Math.max(0, J.noticias.length - ui.noticiasVistas);
   const item = (id, ic, t, extra) => h('button', { class: 'nav-item' + (ui.aba === id ? ' ativo' : ''), 'aria-current': ui.aba === id ? 'page' : null, onclick: () => trocaAba(id) }, icone(ic), t, extra);

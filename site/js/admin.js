@@ -63,6 +63,11 @@ const nomeDe = id => E.paises.find(c => c.id === id)?.nome || 'removido';
 const opcoesPaises = sel => E.paises.map(c => h('option', { value: c.id, selected: c.id === sel }, c.nome));
 const dadosForm = f => Object.fromEntries(new FormData(f).entries());
 const campo = (rot, el, cls) => h('label', { class: cls }, rot, el);
+function verMais(chave, lista, n) {
+  ui.verTudo ||= {};
+  if (ui.verTudo[chave] || lista.length <= n) return { itens: lista, botao: null };
+  return { itens: lista.slice(0, n), botao: h('button', { class: 'btn peq leve ver-mais', onclick: () => { ui.verTudo[chave] = true; render(); } }, `Ver mais ${lista.length - n}`) };
+}
 const painel = (t, ...c) => h('section', { class: 'painel' }, t && h('h2', {}, t), c);
 
 function botaoConfirma(id, rotulo, rotuloConfirma, acao, cls = 'perigo') {
@@ -276,6 +281,7 @@ function abaAcordos() {
         ? h('button', { class: 'btn peq leve', onclick: () => commit(() => { a.estado = 'encerrado'; }) }, 'Encerrar')
         : h('button', { class: 'btn peq leve', onclick: () => commit(() => { a.estado = 'ativo'; if (a.restantes != null && a.restantes <= 0) a.restantes = 1; }) }, 'Reativar'),
       botaoConfirma('ap' + a.id, 'Apagar', 'Confirmar', () => commit(e => { e.acordos = e.acordos.filter(x => x.id !== a.id); }))));
+  const ativosLista = E.acordos.filter(a => a.estado === 'ativo').reverse(), encerradosLista = E.acordos.filter(a => a.estado !== 'ativo').reverse();
   const registrar = () => {
     let titulo = '';
     const ok = commit(e => { titulo = G.registrarAcordoDoForm(e, F).titulo; }, { render: false });
@@ -286,7 +292,8 @@ function abaAcordos() {
       h('div', { class: 'form' },
         camposAcordo(F),
         h('button', { type: 'button', class: 'btn', onclick: registrar }, 'Registrar acordo'))),
-    E.acordos.length > 0 && painel('Acordos e efeitos ativos', h('ul', { class: 'lista' }, E.acordos.slice().reverse().map(cartao))),
+    ativosLista.length > 0 && painel(`Acordos e efeitos ativos (${ativosLista.length})`, h('ul', { class: 'lista' }, verMais('acordos', ativosLista, 10).itens.map(cartao)), verMais('acordos', ativosLista, 10).botao),
+    encerradosLista.length > 0 && h('details', { class: 'painel painel-dobra' }, h('summary', {}, h('h2', {}, `Encerrados (${encerradosLista.length})`)), h('ul', { class: 'lista' }, encerradosLista.slice(0, 30).map(cartao))),
   ].filter(Boolean);
 }
 
@@ -377,7 +384,11 @@ function cartaoProjeto(p, item) {
   return h('li', { class: 'cartao pedido' },
     h('div', { class: 'cartao-topo' }, h('strong', {}, p.dados.nome), h('span', { class: 'etiqueta' }, 'Projeto')),
     (item?.detalhe || []).map(t => h('p', { class: 'meta pedido-detalhe' }, t)),
-    ui.recusando === p.id
+    ui.projetoAberto !== p.id && ui.recusando !== p.id
+      ? h('div', { class: 'linha-acoes' },
+        h('button', { class: 'btn peq', disabled: ocupado, onclick: () => { ui.projetoAberto = p.id; render(); } }, 'Definir e rolar'),
+        h('button', { class: 'btn peq leve', disabled: ocupado, onclick: () => { ui.recusando = p.id; render(); } }, 'Recusar'))
+      : ui.recusando === p.id
       ? h('div', { class: 'linha-acoes' }, h('span', { class: 'meta' }, 'Motivo:'),
         ['Ideia fraca', 'Refaçam o pedido', 'Agora não'].map(m => h('button', { class: 'btn peq leve', disabled: ocupado, onclick: () => recusarPedido(p, m) }, m)),
         h('button', { class: 'btn peq leve', disabled: ocupado, onclick: () => recusarPedido(p, null) }, 'Sem motivo'),
@@ -392,6 +403,7 @@ function cartaoProjeto(p, item) {
         h('div', { class: 'frase' }, marcar(F, 'exibir', 'Rolar na tela de todos'), marcar(F, 'noticia', 'Publicar no jornal')),
         h('div', { class: 'linha-acoes', style: 'width:100%;margin:0' },
           h('button', { type: 'button', class: 'btn btn-rolar', disabled: ocupado, onclick: () => rolarProjeto(p, F) }, icone('dado', 20), ocupado ? 'Rolando…' : 'Rolar'),
+          h('button', { type: 'button', class: 'btn leve', disabled: ocupado, onclick: () => { ui.projetoAberto = null; render(); } }, 'Fechar'),
           h('button', { type: 'button', class: 'btn leve', disabled: ocupado, onclick: () => { ui.recusando = p.id; render(); } }, 'Recusar'))));
 }
 function abrirEdicao(p) {
@@ -416,9 +428,9 @@ function cartaoPedido(p, item) {
   let frase;
   try { frase = G.frasePedido(p, nomes); } catch { frase = 'Pedido com dados inválidos'; }
   return h('li', { class: 'cartao pedido' + (teste.ok ? '' : ' com-erro') },
-    h('div', { class: 'cartao-topo' }, h('strong', {}, NOME_PEDIDO[p.tipo]), h('span', { class: 'etiquetas' }, p.rodada !== E.rodada && h('span', { class: 'etiqueta aviso' }, `Rodada ${p.rodada}`), item?.ok && p.tipo !== 'noticia' && h('span', { class: 'etiqueta' }, G.textoCusto(item)))),
+    h('div', { class: 'cartao-topo' }, h('strong', {}, p.tipo === 'noticia' ? `Imprensa de ${nomeDe(p.pais)}` : NOME_PEDIDO[p.tipo]), h('span', { class: 'etiquetas' }, p.rodada !== E.rodada && h('span', { class: 'etiqueta aviso' }, `Rodada ${p.rodada}`), item?.ok && p.tipo !== 'noticia' && h('span', { class: 'etiqueta' }, G.textoCusto(item)))),
     h('p', { class: 'pedido-frase' }, frase),
-    (item?.detalhe || G.detalhePedido(E, p)).map(t => h('p', { class: 'meta pedido-detalhe' }, t)),
+    (item?.detalhe || G.detalhePedido(E, p)).map(t => h('p', { class: 'meta pedido-detalhe' + (p.tipo === 'noticia' ? ' curto' : '') }, t)),
     p.tipo === 'acordo' && p.dados.modelo === 'livre' && !ed && h('p', { class: 'meta' }, 'Combinado livre, sem números. Se quiser que mude algo no jogo, use Ajustar.'),
     !teste.ok && h('p', { class: 'pedido-erro' }, teste.erro),
     item?.ok && p.tipo === 'acordo' && item.linhas.length > 0 && h('div', { class: 'peso-acordo' }, h('p', { class: 'resumo-titulo' }, 'Por rodada'), item.linhas.map(l => h('div', { class: 'resumo-linha' }, h('span', {}, l.rotulo), h('strong', {}, `${l.valor > 0 ? '+' : ''}${fmt(l.valor)}`)))),
@@ -434,28 +446,40 @@ function cartaoPedido(p, item) {
           h('button', { class: 'btn peq leve', disabled: ocupado, onclick: () => recusarPedido(p, null) }, 'Sem motivo'),
           h('button', { class: 'btn peq leve', onclick: () => { ui.recusando = null; render(); } }, 'Voltar'))
         : h('div', { class: 'linha-acoes' },
-          h('button', { class: 'btn peq', disabled: ocupado || !teste.ok, onclick: () => aprovarPedido(p) }, ocupado ? 'Salvando…' : 'Aprovar'),
+          h('button', { class: 'btn peq', disabled: ocupado || !teste.ok, onclick: () => aprovarPedido(p) }, ocupado ? 'Salvando…' : p.tipo === 'noticia' ? 'Publicar' : 'Aprovar'),
           h('button', { class: 'btn peq leve', disabled: ocupado, onclick: () => abrirEdicao(p) }, 'Ajustar'),
           h('button', { class: 'btn peq leve', disabled: ocupado, onclick: () => { ui.recusando = p.id; render(); } }, 'Recusar')));
 }
 // Tudo o que um país pediu, com a conta final: dá para aprovar de uma vez.
-function pacotePedidos(id, fila) {
-  const doPais = fila.filter(p => p.pais === id), sim = G.simularPedidos(E, id, fila.filter(p => p.pais === id || p.para === id));
+function pacotePedidos(id, fila, recolher) {
+  const doPais = fila.filter(p => p.pais === id), sim = G.simularPedidos(E, id, naFila().filter(p => p.tipo !== 'noticia' && (p.pais === id || p.para === id)));
   const aprovaveis = doPais.filter(p => p.tipo !== 'projeto');
   const itemDe = p => sim.itens.find(i => i.p.id === p.id), tudoCabe = aprovaveis.every(p => itemDe(p)?.ok), { antes, depois } = sim;
-  const dinheiro = doPais.some(p => p.tipo !== 'noticia');
+  ui.pacotes ||= {};
+  const aberto = ui.pacotes[id] ?? !recolher, frase = p => { try { return G.frasePedido(p, nomeDe); } catch { return 'Pedido inválido'; } };
+  const sinalDe = v => `${v > 0 ? '+' : ''}${fmt(v)}`;
   return h('section', { class: 'pacote' },
     h('div', { class: 'pacote-topo' }, h('strong', {}, nomeDe(id)), h('span', { class: 'etiqueta' }, `${doPais.length} ${doPais.length === 1 ? 'pedido' : 'pedidos'}`)),
-    dinheiro && h('p', { class: 'pacote-conta' }, `Moedas ${fmt(antes.moedas)} → ${fmt(depois.moedas)} · Sobra por rodada ${antes.sobra > 0 ? '+' : ''}${fmt(antes.sobra)} → ${depois.sobra > 0 ? '+' : ''}${fmt(depois.sobra)} · Fim da rodada: ${depois.falta ? `faltam ${fmt(depois.falta)}` : fmt(depois.fim)}`),
-    dinheiro && depois.falta > 0 && h('p', { class: 'pedido-erro' }, `Se aprovar tudo, ${nomeDe(id)} passa fome nesta rodada.`),
-    dinheiro && depois.semManutencao.length > 0 && h('p', { class: 'pedido-erro' }, `Falta dinheiro para a manutenção de ${depois.semManutencao.join(', ')}.`),
-    aprovaveis.length > 1 && h('div', { class: 'linha-acoes', style: 'margin:6px 0 8px' },
-      h('button', { class: 'btn peq', disabled: !tudoCabe, onclick: () => aprovarTodos(p => p.pais === id && p.tipo !== 'projeto') }, `Aprovar tudo (${aprovaveis.length})`),
-      !tudoCabe && h('span', { class: 'meta' }, 'Nem tudo cabe: aprove um por um ou recuse algum.')),
-    h('ul', { class: 'lista' }, doPais.map(p => cartaoPedido(p, itemDe(p)))));
+    h('p', { class: 'pacote-conta' }, `Moedas ${fmt(antes.moedas)} → ${fmt(depois.moedas)} · Sobra ${sinalDe(antes.sobra)} → ${sinalDe(depois.sobra)} · Fim: ${depois.falta ? `faltam ${fmt(depois.falta)}` : fmt(depois.fim)}`),
+    depois.falta > 0 && h('p', { class: 'pedido-erro' }, `Se aprovar tudo, ${nomeDe(id)} passa fome nesta rodada.`),
+    depois.semManutencao.length > 0 && h('p', { class: 'pedido-erro' }, `Falta dinheiro para a manutenção de ${depois.semManutencao.join(', ')}.`),
+    !aberto && h('p', { class: 'pacote-resumo' }, doPais.map(frase).join(' · ')),
+    h('div', { class: 'linha-acoes', style: 'margin:6px 0 8px' },
+      (aprovaveis.length > 1 || (!aberto && aprovaveis.length === 1)) && h('button', { class: 'btn peq', disabled: !tudoCabe, onclick: () => aprovarTodos(p => p.pais === id && p.tipo !== 'projeto') }, aprovaveis.length > 1 ? `Aprovar tudo (${aprovaveis.length})` : 'Aprovar'),
+      h('button', { class: 'btn peq leve', onclick: () => { ui.pacotes[id] = !aberto; render(); } }, aberto ? 'Recolher' : 'Ver pedidos'),
+      !tudoCabe && h('span', { class: 'meta' }, 'Nem tudo cabe: abra e veja um por um.')),
+    aberto && h('ul', { class: 'lista' }, doPais.map(p => cartaoPedido(p, itemDe(p)))));
+}
+async function recusarTextos(lista) {
+  for (const p of lista) await recusarPedido(p, 'Sem espaço no jornal agora');
+  ui.msg = { tipo: 'ok', texto: `${lista.length} ${lista.length === 1 ? 'texto recusado' : 'textos recusados'}.` };
+  render();
 }
 function abaPedidos() {
-  const fila = naFila(), jan = E.janelas || {}, investimentos = fila.filter(p => p.tipo === 'subir').length;
+  const fila = naFila(), jan = E.janelas || {}, investimentos = fila.filter(p => p.tipo === 'subir').length, tipo = ui.filaTipo || '';
+  const textos = fila.filter(p => p.tipo === 'noticia'), projetos = fila.filter(p => p.tipo === 'projeto'), acoes = fila.filter(p => p.tipo !== 'noticia' && p.tipo !== 'projeto');
+  const deAcao = tipo === 'jornal' ? [] : tipo === 'projeto' ? projetos : tipo === 'acoes' ? acoes : [...acoes, ...projetos].sort((a, b) => a.id - b.id);
+  const mostraTextos = textos.length > 0 && (tipo === '' || tipo === 'jornal'), recolher = deAcao.length > 8;
   const janela = (k, nome, aberta, fechada) => h('div', { class: 'janela' + (jan[k] ? ' aberta' : '') },
     h('div', {}, h('strong', {}, nome), h('small', {}, jan[k] ? aberta : fechada)),
     h('button', { class: 'btn' + (jan[k] ? ' leve' : ''), onclick: () => commit(e => { e.janelas = { ...e.janelas, [k]: !jan[k] }; }, { msg: `${nome}: ${jan[k] ? 'janela fechada' : 'janela aberta'}.` }) }, jan[k] ? 'Fechar' : 'Abrir'));
@@ -466,17 +490,24 @@ function abaPedidos() {
       h('div', { class: 'janelas' },
         janela('acoes', 'Ações', 'Os grupos já podem mandar pedidos.', 'Os grupos ainda não podem pedir.'),
         janela('noticias', 'Jornal', 'Os grupos já podem mandar textos.', 'Os grupos ainda não podem mandar textos.'))),
-    painel(`Fila (${fila.length})`,
-      investimentos > 1 && h('div', { class: 'linha-acoes', style: 'margin:0 0 10px' }, h('button', { class: 'btn peq leve', onclick: () => aprovarTodos(p => p.tipo === 'subir') }, `Aprovar todos os investimentos (${investimentos})`)),
-      fila.length ? [...new Set(fila.map(p => p.pais))].map(id => pacotePedidos(id, fila)) : h('p', { class: 'vazio-txt' }, 'Nada esperando por você.')),
+    painel('Fila',
+      h('div', { style: 'margin-bottom:10px' }, pilulas([{ v: '', t: `Tudo (${fila.length})` }, { v: 'acoes', t: `Ações (${acoes.length})` }, { v: 'projeto', t: `Projetos (${projetos.length})` }, { v: 'jornal', t: `Jornal (${textos.length})` }], tipo, v => { ui.filaTipo = v; })),
+      investimentos > 1 && tipo !== 'jornal' && tipo !== 'projeto' && h('div', { class: 'linha-acoes', style: 'margin:0 0 10px' }, h('button', { class: 'btn peq leve', onclick: () => aprovarTodos(p => p.tipo === 'subir') }, `Aprovar todos os investimentos (${investimentos})`)),
+      deAcao.length
+        ? [...new Set(deAcao.map(p => p.pais))].map(id => pacotePedidos(id, deAcao, recolher))
+        : tipo !== 'jornal' && !mostraTextos && h('p', { class: 'vazio-txt' }, 'Nada esperando por você.')),
+    mostraTextos && painel(`Jornal (${textos.length})`,
+      h('div', { class: 'linha-acoes', style: 'margin:0 0 10px' }, botaoConfirma('rec-textos', `Recusar todos (${textos.length})`, `Confirmar: recusar ${textos.length}`, () => recusarTextos(textos))),
+      h('ul', { class: 'lista' }, verMais('fila-textos', textos, 6).itens.map(p => cartaoPedido(p, null))), verMais('fila-textos', textos, 6).botao),
     h('details', { class: 'painel painel-dobra', open: ui.acoesAberto, ontoggle: ev => { ui.acoesAberto = ev.target.open; } },
-      h('summary', {}, h('h2', {}, 'Ações por rodada')),
+      h('summary', {}, h('h2', {}, 'Limites por rodada')),
       h('div', { class: 'form', style: 'margin-bottom:10px' },
         bloco('Cada país pode pedir', pilulas([3, 5, 8].map(v => ({ v, t: `${v} ações` })), E.params.acoesPorRodada, v => commit(e => { e.params.acoesPorRodada = v; }))),
+        bloco('Textos para o jornal, por país', pilulas([1, 2, 3, 5].map(v => ({ v, t: `${v} ${v === 1 ? 'texto' : 'textos'}` })), G.limiteTextos(E), v => commit(e => { e.params.textosPorRodada = v; }))),
         bloco('Para todos os países, só nesta rodada', h('div', { class: 'linha-acoes', style: 'margin:0' },
           h('button', { class: 'btn peq leve', onclick: () => mudar(todos, 1) }, 'Dar 1 ação'),
           h('button', { class: 'btn peq leve', onclick: () => mudar(todos, -1) }, 'Tirar 1 ação')))),
-      h('p', { class: 'meta', style: 'margin-bottom:8px' }, 'Pedido recusado ou cancelado devolve a ação. Quem aceita um acordo não gasta nada.'),
+      h('p', { class: 'meta', style: 'margin-bottom:8px' }, 'Ação recusada ou cancelada volta para o grupo. Texto recusado continua contando, para não virar spam. Quem aceita um acordo não gasta nada.'),
       h('ul', { class: 'acoes-paises' }, E.paises.map(c => h('li', {},
         h('span', {}, c.nome), h('b', {}, `${G.acoesUsadas(PED, c.id, E.rodada)} de ${G.limiteAcoes(E, c.id)}`),
         h('span', { class: 'acoes' },
@@ -619,8 +650,8 @@ function abaNoticias() {
     fila.length > 0 && painel(`Guardadas (${fila.length})`, h('ul', { class: 'lista' }, fila.map(n => item(n, [
       h('button', { class: 'btn peq', onclick: () => commit(e => { G.publicarNoticia(e, n); }, { msg: 'Publicado.' }) }, 'Publicar'), editar(n),
       h('button', { class: 'btn peq leve', onclick: () => commit(e => { e.noticias = e.noticias.filter(x => x.id !== n.id); }) }, 'Descartar')])))),
-    pubs.length > 0 && painel(`Publicadas (${pubs.length})`, h('ul', { class: 'lista' }, pubs.map(n => item(n, [editar(n),
-      h('button', { class: 'btn peq leve', onclick: () => commit(() => { n.estado = 'rascunho'; }, { msg: 'Retirado do jornal.' }) }, 'Retirar')])))),
+    pubs.length > 0 && painel(`Publicadas (${pubs.length})`, h('ul', { class: 'lista' }, verMais('pubs', pubs, 8).itens.map(n => item(n, [editar(n),
+      h('button', { class: 'btn peq leve', onclick: () => commit(() => { n.estado = 'rascunho'; }, { msg: 'Retirado do jornal.' }) }, 'Retirar')]))), verMais('pubs', pubs, 8).botao),
   ].filter(Boolean);
 }
 
@@ -636,11 +667,12 @@ function painelMarcas() {
       campo('O que aconteceu', h('select', { name: 'tipo' }, G.TIPOS_MARCA.map(t => h('option', { value: t.id }, t.nome)))),
       campo('Texto curto (opcional)', h('input', { name: 'titulo', maxlength: 60 }), 'largo'),
       h('button', { class: 'btn' }, 'Marcar no mapa')),
-    marcas.length > 0 && h('ul', { class: 'lista', style: 'margin-top:12px' }, marcas.slice().reverse().map(m => h('li', { class: 'cartao' },
+    marcas.length > 0 && h('p', { class: 'meta', style: 'margin-top:12px' }, 'No mapa, cada país mostra só o acontecimento mais recente, e ele some depois de duas rodadas.'),
+    marcas.length > 0 && h('ul', { class: 'lista', style: 'margin-top:8px' }, verMais('marcas', marcas.slice().reverse(), 6).itens.map(m => h('li', { class: 'cartao' },
       h('div', { class: 'cartao-topo' },
         h('span', { class: 'area-nome' }, icone(m.tipo, 19), h('strong', {}, m.titulo || nomeMarca(m.tipo))),
         h('button', { class: 'btn peq leve', onclick: () => commit(e => G.removerMarca(e, m.id), { msg: 'Marca retirada.' }) }, 'Retirar')),
-      h('p', { class: 'meta' }, `${nomeDe(m.paisId)} · rodada ${m.rodada}`)))));
+      h('p', { class: 'meta' }, `${nomeDe(m.paisId)} · rodada ${m.rodada}`)))), verMais('marcas', marcas, 6).botao);
 }
 
 /* ---------- dado: modelos prontos, sem precisar adivinhar números ---------- */
@@ -691,7 +723,7 @@ function abaDado() {
   const modos = [{ v: 'acao', t: 'Ação ou projeto' }, { v: 'ataque', t: 'Ataque' }];
   const registro = E.acoes.length > 0 && painel('Registro (só você vê)', h('div', { class: 'rola-x' }, h('table', { class: 'tabela' },
     h('thead', {}, h('tr', {}, ['Rodada', 'O quê', 'Quem', 'Alvo', 'Dados', 'Resultado', 'Efeito', 'Nota'].map(t => h('th', { scope: 'col' }, t)))),
-    h('tbody', {}, E.acoes.slice().reverse().map(a => h('tr', {}, h('td', {}, a.rodada), h('td', {}, a.tipo), h('td', {}, nomeDe(a.autor)), h('td', {}, a.alvo ? nomeDe(a.alvo) : ''), h('td', {}, (a.rolagens || []).join(', ')), h('td', {}, a.resultado), h('td', {}, a.efeito || ''), h('td', {}, a.nota || '')))))));
+    h('tbody', {}, E.acoes.slice().reverse().slice(0, 20).map(a => h('tr', {}, h('td', {}, a.rodada), h('td', {}, a.tipo), h('td', {}, nomeDe(a.autor)), h('td', {}, a.alvo ? nomeDe(a.alvo) : ''), h('td', {}, (a.rolagens || []).join(', ')), h('td', {}, a.resultado), h('td', {}, a.efeito || ''), h('td', {}, a.nota || '')))))));
   const troca = pilulas(modos, ui.modoDado, v => { ui.modoDado = v; ui.resultado = null; });
   const fechaDado = E.dado?.exibir && h('div', { class: 'linha-acoes' }, h('button', { class: 'btn peq leve', onclick: () => commit(e => { e.dado = null; }) }, 'Tirar o resultado da tela dos alunos'));
   const maisOpcoes = (F, ...c) => h('details', { class: 'mais-opcoes', open: !!F.mais, ontoggle: ev => { F.mais = ev.target.open; } }, h('summary', {}, 'Mais opções'), c);

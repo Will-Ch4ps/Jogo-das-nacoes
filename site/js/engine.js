@@ -26,7 +26,7 @@ const nomeArea = id => AREAS.find(a => a.id === id)?.nome || id;
 
 export const PARAMS_INICIAIS = {
   duracaoMin: 15, valorPessoa: 5, moedasPorEmprego: 10, crescimentoPorSaude: 1, economiaAlimentacao: 10, moedasPorAcordo: 3, maxAcordosInfra: 3, descontoTecnologia: 5, perdaFome: 10,
-  acoesPorRodada: 5, precoNivel: 10, custoProjeto: 30, premioAtaque: 20, manutencaoPct: 100, rodadasParaPerderNivel: 2,
+  acoesPorRodada: 5, textosPorRodada: 2, precoNivel: 10, custoProjeto: 30, premioAtaque: 20, manutencaoPct: 100, rodadasParaPerderNivel: 2,
   multaEssencial: 20, multaImportante: 10, perdaSaude: 2, multaTecnologia: 10, crimePct: 5,
 };
 
@@ -813,6 +813,14 @@ export function missoesParaConfirmar(e) {
 
 /* ---------- O que cada um vê ---------- */
 // O que todos podem ver. Dinheiro, pessoas, contas e tudo que é oculto ficam de fora.
+// A tela pública leva só o que cabe na tela: as notícias mais novas e os acontecimentos recentes.
+// O admin continua com tudo. Isso mantém o jogo leve, mesmo depois de muitas rodadas.
+export const MAX_NOTICIAS_PUBLICAS = 40;
+export function marcasVisiveis(e) {
+  const porPais = new Map();
+  for (const m of e.marcas || []) if (m.rodada >= e.rodada - 1) porPais.set(m.paisId, m);
+  return [...porPais.values()];
+}
 export function partePublica(e) {
   const r = ranking(e);
   return {
@@ -828,8 +836,8 @@ export function partePublica(e) {
     }),
     acordos: e.acordos.filter(a => a.visibilidade === 'publico' && a.estado === 'ativo' && (a.origem || 'acordo') === 'acordo')
       .map(({ id, titulo, descricao, tipo, paises, efeitos, restantes, inicio }) => ({ id, titulo, descricao, tipo, paises, efeitos, restantes, inicio })),
-    noticias: e.noticias.filter(n => n.estado === 'publicada' && !n.privada).map(n => noticiaParaLeitor(n, e)),
-    marcas: e.marcas || [],
+    noticias: e.noticias.filter(n => n.estado === 'publicada' && !n.privada).slice(-MAX_NOTICIAS_PUBLICAS).map(n => noticiaParaLeitor(n, e)),
+    marcas: marcasVisiveis(e),
     dado: e.dado?.exibir ? e.dado : null,
   };
 }
@@ -855,8 +863,8 @@ export function visaoDoPais(c, e) {
       id: a.id, nivel: c.niveis[a.id], real: nivelReal(c, a.id, e), bonus: bonusDaArea(c, a.id, e), agora: efeitoAgora(c, a.id, e),
       problema: problema(c, a.id), rodadasSem: c.semManutencao?.[a.id] || 0, cortada: !!c.cortadas?.[a.id], manut: manutencao.linhas.find(l => l.area === a.id), proximo: c.niveis[a.id] >= NIVEL_COMPRA_MAX ? null : custoSubir(c.niveis[a.id], p),
     })),
-    projetos: c.projetos || 0, proximoProjeto: custoDoProjeto(c, e), tentativas: (c.tentativas || []).slice().reverse(), acordos,
-    mensagens: e.noticias.filter(n => n.privada && n.estado === 'publicada' && (n.para === c.id || n.de === c.id)).map(n => noticiaParaLeitor(n, e)).reverse(),
+    projetos: c.projetos || 0, proximoProjeto: custoDoProjeto(c, e), tentativas: (c.tentativas || []).slice(-15).reverse(), acordos,
+    mensagens: e.noticias.filter(n => n.privada && n.estado === 'publicada' && (n.para === c.id || n.de === c.id)).slice(-20).map(n => noticiaParaLeitor(n, e)).reverse(),
     missoes: (c.missoes || []).map(m => { const pr = progressoMissao(m, c, e); return { id: m.id, titulo: m.titulo, dificuldade: m.dificuldade, premio: m.premio, texto: comNomesPaises(m.texto, e), estado: pr.estado, progresso: pr.texto }; }), serie: (c.serie || []).slice(-6), proximas: [],
     // O que o celular precisa para fazer a conta dos pedidos antes de enviar. Só dados do próprio país.
     base: {
@@ -949,6 +957,9 @@ export function fraseAcordo(F, nomeDe) {
 
 /* ---------- Pedidos dos grupos: nada muda no jogo até o professor aprovar ---------- */
 export const VERSAO_FICHA = 2; // Sobe quando a ficha ganha campos novos: o admin grava de novo ao abrir.
+export const limiteTextos = e => Math.max(0, Number(e.params.textosPorRodada ?? 2));
+// Texto recusado continua contando: assim, mandar de novo não vira spam na fila. Só cancelar devolve.
+export const textosUsados = (pedidos, id, rodada) => pedidos.filter(p => p.pais === id && p.rodada === rodada && p.tipo === 'noticia' && ['fila', 'aprovado', 'recusado'].includes(p.estado)).length;
 export const limiteAcoes = (e, id) => Math.max(0, Number(e.params.acoesPorRodada ?? 5) + Number(e.acoesExtra?.[id] || 0));
 // Recusado e cancelado devolvem a ação. Notícia não gasta. No acordo, só quem montou gasta.
 export const acoesUsadas = (pedidos, id, rodada) => pedidos.filter(p => p.pais === id && p.rodada === rodada && p.tipo !== 'noticia' && ['aguardando', 'fila', 'aprovado'].includes(p.estado)).length;

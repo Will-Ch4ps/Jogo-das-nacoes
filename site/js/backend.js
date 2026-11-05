@@ -89,6 +89,7 @@ const demoJogo = () => JSON.parse(localStorage.getItem(K_PRIV) || '{}').dados ||
 const demoPais = codigo => JSON.parse(localStorage.getItem(K_VIS) || '{}')[String(codigo).trim().toUpperCase()]?.id || null;
 const demoLimite = (d, id) => Math.max(0, Number(d.params?.acoesPorRodada ?? 5) + Number(d.acoesExtra?.[id] || 0));
 const demoUsadas = (l, id, r) => l.filter(p => p.pais === id && p.rodada === r && p.tipo !== 'noticia' && ['aguardando', 'fila', 'aprovado'].includes(p.estado)).length;
+const demoTextos = (l, id, r) => l.filter(p => p.pais === id && p.rodada === r && p.tipo === 'noticia' && ['fila', 'aprovado', 'recusado'].includes(p.estado)).length;
 async function chamar(fn, args) {
   const c = await db();
   const { data, error } = await c.rpc(fn, args);
@@ -104,7 +105,7 @@ export async function enviarPedido(codigo, tipo, dados, para = null) {
   if (d.encerrado) throw new Error('jogo_encerrado');
   if (tipo === 'noticia') {
     if (!d.janelas?.noticias) throw new Error('janela_noticias_fechada');
-    if (l.filter(p => p.pais === id && p.tipo === 'noticia' && p.estado === 'fila').length >= 5) throw new Error('muitas_noticias');
+    if (demoTextos(l, id, d.rodada) >= Number(d.params?.textosPorRodada ?? 2)) throw new Error('sem_textos');
   } else {
     if (!d.janelas?.acoes) throw new Error('janela_fechada');
     if (demoUsadas(l, id, d.rodada) >= demoLimite(d, id)) throw new Error('sem_acoes');
@@ -118,7 +119,7 @@ export async function verPedidos(codigo) {
   if (!DEMO) return chamar('jn_pais_pedidos', { p_codigo: codigo });
   const id = demoPais(codigo), d = demoJogo(), l = demoLista();
   if (!id) return null;
-  return { rodada: d.rodada, limite: demoLimite(d, id), usadas: demoUsadas(l, id, d.rodada), pedidos: l.filter(p => p.pais === id || p.para === id).reverse().slice(0, 40) };
+  return { rodada: d.rodada, limite: demoLimite(d, id), usadas: demoUsadas(l, id, d.rodada), limiteTextos: Number(d.params?.textosPorRodada ?? 2), textos: demoTextos(l, id, d.rodada), pedidos: l.filter(p => p.pais === id || p.para === id).reverse().slice(0, 40) };
 }
 export async function responderPedido(codigo, idPedido, acao) {
   if (!DEMO) return chamar('jn_pais_responder', { p_codigo: codigo, p_id: idPedido, p_acao: acao });

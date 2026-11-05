@@ -636,3 +636,29 @@ body.com-artigo { overflow: hidden; }
 .subir-total .btn { width: 100%; }
 .resumo-corte { margin: 5px 0; border: 0; border-top: 1px solid var(--linha); }
 .detalhe.ficha, .ficha .detalhe-corpo, .ficha-tela { overflow: clip; }
+
+/* Ajuda de cada parte: pequena e fechada, para não ocupar a tela */
+.ajuda { margin-bottom: 10px; font-size: 14px; }
+.ajuda > summary { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 2px 10px; color: var(--acento); border: 1px solid var(--linha); border-radius: 16px; cursor: pointer; list-style: none; font-weight: 600; font-size: 13px; }
+.ajuda > summary::-webkit-details-marker { display: none; }
+.ajuda > summary::before { content: "?"; display: inline-grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; background: var(--acento); color: #071018; font-size: 11px; font-weight: 800; }
+.ajuda[open] > summary { margin-bottom: 6px; }
+.ajuda ul { margin: 0; padding: 9px 12px 9px 28px; background: var(--fundo-2); border: 1px solid var(--linha); border-radius: var(--raio-p); color: var(--suave); }
+.ajuda li + li { margin-top: 4px; }
+.col-mapa > .ajuda { margin-bottom: 8px; }
+
+/* Identidade de cada povo */
+.lema { margin: 2px 0 8px; font: 700 19px/1.25 var(--display); color: var(--cor, var(--ouro)); }
+.magoa { margin: 12px 0; padding: 10px 13px; background: var(--fundo-2); border-left: 3px solid var(--ouro); border-radius: 0 var(--raio-p) var(--raio-p) 0; }
+.magoa h4 { margin: 0 0 4px; color: var(--ouro); }
+.magoa p { margin: 0; }
+
+/* Listas que crescem com o jogo */
+.ver-mais { display: block; width: 100%; margin-top: 8px; }
+.mais-antigos { margin-top: 10px; }
+.mais-antigos > summary, .jornal-antiga > summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 42px; padding: 6px 12px; color: var(--suave); background: var(--cartao); border: 1px solid var(--linha); border-radius: var(--raio-p); cursor: pointer; font-weight: 600; }
+.jornal-antiga { margin-top: 8px; }
+.jornal-antiga > summary span { font-weight: 500; font-size: 13px; }
+.jornal-antiga[open] > summary, .mais-antigos[open] > summary { margin-bottom: 8px; }
+.pacote-resumo { margin: 3px 0; color: var(--suave); font-size: 14px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.pedido-detalhe.curto { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; white-space: normal; }

@@ -160,6 +160,14 @@ returns int language sql immutable set search_path = '' as $$
 $$;
 revoke all on function jogo_das_nacoes.limite_acoes(jsonb, text) from public, anon, authenticated;
 
+-- Textos para o jornal na rodada. Recusado continua contando, para não virar spam. Só cancelar devolve.
+create or replace function jogo_das_nacoes.textos_usados(p_pais text, p_rodada int)
+returns int language sql stable security definer set search_path = '' as $$
+  select count(*)::int from jogo_das_nacoes.pedidos
+  where pais = p_pais and rodada = p_rodada and tipo = 'noticia' and estado in ('fila', 'aprovado', 'recusado');
+$$;
+revoke all on function jogo_das_nacoes.textos_usados(text, int) from public, anon, authenticated;
+
 create or replace function public.jn_pais_pedir(p_codigo text, p_tipo text, p_dados jsonb, p_para text default null)
 returns bigint language plpgsql security definer set search_path = '' as $$
 declare v_id text; d jsonb; v_rodada int; v_novo bigint;
@@ -174,7 +182,7 @@ begin
   if (select count(*) from jogo_das_nacoes.pedidos where pais = v_id and rodada = v_rodada) >= 60 then raise exception 'muitos_pedidos'; end if;
   if p_tipo = 'noticia' then
     if not coalesce((d #>> '{janelas,noticias}')::boolean, false) then raise exception 'janela_noticias_fechada'; end if;
-    if (select count(*) from jogo_das_nacoes.pedidos where pais = v_id and tipo = 'noticia' and estado = 'fila') >= 5 then raise exception 'muitas_noticias'; end if;
+    if jogo_das_nacoes.textos_usados(v_id, v_rodada) >= coalesce((d #>> '{params,textosPorRodada}')::int, 2) then raise exception 'sem_textos'; end if;
   else
     if not coalesce((d #>> '{janelas,acoes}')::boolean, false) then raise exception 'janela_fechada'; end if;
     if jogo_das_nacoes.acoes_usadas(v_id, v_rodada) >= jogo_das_nacoes.limite_acoes(d, v_id) then raise exception 'sem_acoes'; end if;
@@ -198,6 +206,7 @@ begin
   v_rodada := (d ->> 'rodada')::int;
   return jsonb_build_object(
     'rodada', v_rodada, 'limite', jogo_das_nacoes.limite_acoes(d, v_id), 'usadas', jogo_das_nacoes.acoes_usadas(v_id, v_rodada),
+    'limiteTextos', coalesce((d #>> '{params,textosPorRodada}')::int, 2), 'textos', jogo_das_nacoes.textos_usados(v_id, v_rodada),
     'pedidos', coalesce((select jsonb_agg(to_jsonb(x) order by x.id desc) from (
       select id, rodada, pais, para, tipo, dados, estado, resposta, editado from jogo_das_nacoes.pedidos
       where pais = v_id or para = v_id order by id desc limit 40) x), '[]'::jsonb));

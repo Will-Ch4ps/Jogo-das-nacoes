@@ -5,7 +5,7 @@ Cada grupo governa um país. **Vence o país mais rico no fim da última rodada.
 **Riqueza = dinheiro + 5 moedas para cada mil pessoas.** Todos começam com a mesma riqueza: 600.
 
 ## A história
-O continente de Meridia foi um império até a Grande Fome, há quarenta anos. Doze países assinaram o Tratado das Doze Bandeiras, que vence em dez anos. Cada rodada é um ano, e a nação mais rica vai presidir o novo Conselho.
+O continente de Meridia foi um império até a Grande Fome, há quarenta anos. Doze países assinaram o Tratado das Doze Bandeiras, que está perto de vencer, e só os guardiões sabem o dia exato. Cada rodada é um ano. O jogo não tem número fixo de rodadas: quando o professor encerra, a nação mais rica preside o novo Conselho. Cada povo tem um lema e uma mágoa contra outro país, contada na sua própria versão.
 
 ## Missões secretas
 Cada país tem 4 missões, com prêmio em moedas, que só o próprio grupo vê em **Meu país**: uma média, uma difícil, uma muito difícil e uma de rivalidade contra outro país. O sistema avisa o professor quando uma parece cumprida, e ele confirma e paga. O professor também pode criar novos desafios durante o jogo.
@@ -22,7 +22,7 @@ O professor abre e fecha duas janelas: a de **ações** e a do **jornal**. Com a
 - **Cada país tem 5 ações por rodada.** O professor pode mudar para 3 ou 8, e dar ou tirar ações de um país ou de todos naquela rodada.
 - **Usam 1 ação:** subir uma área (vários níveis na mesma área, no mesmo pedido, contam como 1), cortar ou retomar a manutenção, mandar dinheiro, propor um acordo e propor um projeto.
 - **Acordo:** só o país que montou gasta a ação. O outro país aceita ou recusa, sem gastar nada, e só depois o pedido chega ao professor.
-- **Jornal:** não usa ação. O texto só sai se o professor aprovar.
+- **Jornal:** não usa ação. Cada país pode mandar 2 textos por rodada (o professor pode mudar para 1, 3 ou 5), e o texto só sai se o professor aprovar. Texto recusado continua contando; só cancelar devolve.
 - **Recusado ou cancelado:** a ação volta para o grupo.
 - **Peso do acordo:** antes de mandar ou aceitar, o grupo vê linha a linha o que muda na conta (pagamento, desconto, o que ganha e o que perde) e o que acontece com cada lado. Depois de aprovado, isso continua na aba Acordos, e a conta da rodada mostra a ajuda em linhas próprias.
 - **Conta antes de enviar:** a aba mostra quanto cada pedido custa, somado ao que já foi pedido, e com quanto o país fica. O que não cabe não pode ser enviado.
