@@ -5,7 +5,7 @@ Cada grupo governa um país. **Vence o país mais rico no fim da última rodada.
 **Riqueza = dinheiro + 5 moedas para cada mil pessoas.** Todos começam com a mesma riqueza: 600.
 
 ## A história
-O continente de Meridia foi um império até a Grande Fome, há quarenta anos. Doze países assinaram o Tratado das Doze Bandeiras, que está perto de vencer, e só os guardiões sabem o dia exato. Cada rodada é um ano. O jogo não tem número fixo de rodadas: quando o professor encerra, a nação mais rica preside o novo Conselho. Cada povo tem um lema e uma mágoa contra outro país, contada na sua própria versão.
+O continente de Meridia foi um império até a Grande Fome, há mais de meio século. Doze países assinaram o Tratado das Doze Bandeiras, que está perto de vencer, e só os guardiões sabem o dia exato. Cada rodada é um ano. O jogo não tem número fixo de rodadas: quando o professor encerra, a nação mais rica preside o novo Conselho. Cada povo tem um lema e uma mágoa contra outro país, contada na sua própria versão.
 
 ## Missões secretas
 Cada país tem 4 missões, com prêmio em moedas, que só o próprio grupo vê em **Meu país**: uma média, uma difícil, uma muito difícil e uma de rivalidade contra outro país. O sistema avisa o professor quando uma parece cumprida, e ele confirma e paga. O professor também pode criar novos desafios durante o jogo.

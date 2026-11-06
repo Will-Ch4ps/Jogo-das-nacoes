@@ -5,7 +5,7 @@ export const CONTINENTE = {
  "nome": "Meridia",
  "historia": [
   "Por séculos, Meridia foi um único império. Suas estradas ligavam as geleiras do norte ao deserto do sul, e seus navios davam a volta inteira no continente. Tudo parava em uma mesma capital, e todo mundo pagava imposto para o mesmo trono.",
-  "Há quarenta anos, veio a Grande Fome. Três safras perdidas, uma corte que não abriu os silos e um povo que parou de obedecer. O império caiu em menos de um ano, e cada província ficou com o que tinha: umas com minas, outras com portos, outras só com a fome.",
+  "Há mais de meio século, veio a Grande Fome. Três safras perdidas, uma corte que não abriu os silos e um povo que parou de obedecer. O império caiu em menos de um ano, e cada província ficou com o que tinha: umas com minas, outras com portos, outras só com a fome.",
   "Para acabar com a guerra que veio depois, doze governos assinaram o Tratado das Doze Bandeiras: fronteiras congeladas, rotas abertas e cinquenta anos de paz. O prazo está acabando, e só os guardiões do Tratado sabem o dia exato. Quando ele vencer, a nação mais rica vai presidir o novo Conselho de Meridia e escrever as regras do próximo século.",
   "As velhas estradas imperiais ainda funcionam. As rotas também. O que mudou é que, agora, ninguém é obrigado a dividir nada. E ninguém sobrevive sozinho: esse foi o preço de dividir um império em doze pedaços. A paz do papel nunca apagou o que cada povo fez ao outro."
  ],
